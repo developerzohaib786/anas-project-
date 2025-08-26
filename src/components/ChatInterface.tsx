@@ -60,30 +60,34 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-chat-background rounded-xl border border-border">
+    <div className="flex flex-col h-full bg-chat-background rounded-2xl border border-border shadow-lg">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-border">
-        <h3 className="font-semibold text-foreground">Chat with Nino</h3>
-        <p className="text-sm text-muted-foreground">Describe your image idea</p>
+      <div className="px-6 py-5 border-b border-border/50">
+        <h3 className="font-semibold text-foreground text-lg">Chat with Nino</h3>
+        <p className="text-sm text-muted-foreground mt-1">Describe your image idea</p>
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 px-6 py-4">
-        <div className="space-y-4">
-          {messages.map((message) => (
+      <ScrollArea className="flex-1 px-6 py-6">
+        <div className="space-y-6">
+          {messages.map((message, index) => (
             <div
               key={message.id}
-              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"} animate-fade-in`}
+              style={{
+                animationDelay: `${index * 0.1}s`,
+                animationFillMode: 'both'
+              }}
             >
               <div
-                className={`max-w-[80%] px-4 py-3 rounded-2xl ${
+                className={`group max-w-[85%] px-5 py-4 transition-all duration-200 ${
                   message.role === "user"
-                    ? "bg-chat-user text-foreground"
-                    : "bg-chat-assistant text-foreground border border-border"
+                    ? "bg-primary text-primary-foreground rounded-[24px] rounded-br-[8px] shadow-chat-bubble hover:shadow-chat-bubble-hover"
+                    : "bg-secondary/50 text-foreground rounded-[24px] rounded-bl-[8px] shadow-chat-bubble hover:shadow-chat-bubble-hover border border-border/30"
                 }`}
               >
-                <p className="text-sm leading-relaxed">{message.content}</p>
-                <p className="text-xs text-muted-foreground mt-2">
+                <p className="text-[15px] leading-relaxed font-medium">{message.content}</p>
+                <p className="text-xs text-muted-foreground/70 mt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                   {message.timestamp.toLocaleTimeString([], {
                     hour: "2-digit",
                     minute: "2-digit",
@@ -96,20 +100,22 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
       </ScrollArea>
 
       {/* Input */}
-      <div className="p-6 border-t border-border">
-        <div className="flex gap-3">
-          <Input
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Describe your image..."
-            className="flex-1 bg-background border-input"
-          />
+      <div className="p-6 border-t border-border/50">
+        <div className="flex gap-3 items-end">
+          <div className="flex-1 relative">
+            <Input
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Describe your image..."
+              className="w-full bg-secondary/30 border-border/30 rounded-2xl px-4 py-3 text-[15px] placeholder:text-muted-foreground/60 focus:bg-background focus:border-border focus:shadow-sm transition-all duration-200"
+            />
+          </div>
           <Button 
             onClick={handleSendMessage}
             disabled={!inputValue.trim()}
             size="icon"
-            className="shrink-0"
+            className="shrink-0 w-10 h-10 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
           >
             <Send className="h-4 w-4" />
           </Button>
