@@ -16,21 +16,19 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <div className="min-h-screen bg-gray-50/30 p-6">
-          <div className="max-h-[800px] h-fit bg-white/40 backdrop-blur-2xl rounded-[32px] border border-white/20 shadow-2xl shadow-black/5 overflow-hidden">
-            <SidebarProvider>
-              <div className="flex h-full w-full">
-                <AppSidebar />
-                <main className="flex-1 overflow-hidden">
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </main>
-              </div>
-            </SidebarProvider>
-          </div>
+        <div className="min-h-screen bg-gray-50">
+          <SidebarProvider>
+            <div className="flex min-h-screen w-full">
+              <AppSidebar />
+              <main className="flex-1">
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </main>
+            </div>
+          </SidebarProvider>
         </div>
       </BrowserRouter>
     </TooltipProvider>
