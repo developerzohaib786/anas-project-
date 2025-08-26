@@ -22,7 +22,7 @@ export function ImagePreview({ currentPrompt, isGenerating = false }: ImagePrevi
   const aspectRatios: AspectRatio[] = ["1:1", "4:5", "9:16"];
 
   return (
-    <div className="flex flex-col h-[600px] bg-white/80 backdrop-blur-xl rounded-3xl border border-black/5 shadow-2xl shadow-black/5">
+    <div className="flex flex-col h-[80vh] bg-white/80 backdrop-blur-xl rounded-3xl border border-black/5 shadow-2xl shadow-black/5">
       {/* Aspect Ratio Controls */}
       <div className="p-8 pb-4">
         <div className="flex gap-2 justify-center">

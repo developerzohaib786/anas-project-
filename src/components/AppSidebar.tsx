@@ -32,9 +32,9 @@ export function AppSidebar() {
   const isActive = (path: string) => currentPath === path;
 
   return (
-    <Sidebar className="w-60 bg-white/60 backdrop-blur-xl border-r border-black/5">
+    <Sidebar className="w-60 bg-white/60 backdrop-blur-xl border-r border-black/5 flex flex-col">
       <SidebarHeader className="p-8">
-        <div className="font-bold text-2xl text-black tracking-tight">
+        <div className="font-medium text-2xl text-black tracking-tight" style={{ fontFamily: 'Inter, sans-serif' }}>
           Nino
         </div>
       </SidebarHeader>
