@@ -17,18 +17,21 @@ const Index = () => {
   };
 
   return (
-    <div className="h-full flex">
-      {/* Chat Interface */}
-      <div className="flex-1 p-6">
-        <ChatInterface onGenerateImage={handleGenerateImage} />
-      </div>
-
-      {/* Image Preview */}
-      <div className="w-96 p-6 pl-0">
-        <ImagePreview 
-          currentPrompt={currentPrompt}
-          isGenerating={isGenerating}
-        />
+    <div className="h-full flex max-h-[900px]">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col p-8">
+        {/* Top Section - Chat */}
+        <div className="h-[400px] mb-6">
+          <ChatInterface onGenerateImage={handleGenerateImage} />
+        </div>
+        
+        {/* Bottom Section - Preview */}
+        <div className="flex-1 min-h-[300px]">
+          <ImagePreview 
+            currentPrompt={currentPrompt}
+            isGenerating={isGenerating}
+          />
+        </div>
       </div>
     </div>
   );
