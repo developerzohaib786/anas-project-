@@ -17,14 +17,14 @@ const Index = () => {
   };
 
   return (
-    <div className="h-full flex">
+    <div className="flex p-6 gap-6">
       {/* Chat Interface */}
-      <div className="flex-1 p-6">
+      <div className="flex-1">
         <ChatInterface onGenerateImage={handleGenerateImage} />
       </div>
 
       {/* Image Preview */}
-      <div className="w-96 p-6 pl-0">
+      <div className="w-96">
         <ImagePreview 
           currentPrompt={currentPrompt}
           isGenerating={isGenerating}

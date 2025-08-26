@@ -17,7 +17,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <div className="min-h-screen bg-gray-50/30 p-6">
-          <div className="h-[calc(100vh-3rem)] bg-white/40 backdrop-blur-2xl rounded-[32px] border border-white/20 shadow-2xl shadow-black/5 overflow-hidden">
+          <div className="max-h-[800px] h-fit bg-white/40 backdrop-blur-2xl rounded-[32px] border border-white/20 shadow-2xl shadow-black/5 overflow-hidden">
             <SidebarProvider>
               <div className="flex h-full w-full">
                 <AppSidebar />

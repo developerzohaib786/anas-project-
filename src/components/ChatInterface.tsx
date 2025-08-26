@@ -60,7 +60,7 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white/80 backdrop-blur-xl rounded-3xl border border-black/5 shadow-2xl shadow-black/5">
+    <div className="flex flex-col h-[600px] bg-white/80 backdrop-blur-xl rounded-3xl border border-black/5 shadow-2xl shadow-black/5">
       {/* Messages */}
       <ScrollArea className="flex-1 px-8 py-8">
         <div className="space-y-8">
