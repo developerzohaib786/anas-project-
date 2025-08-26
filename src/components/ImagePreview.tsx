@@ -22,86 +22,70 @@ export function ImagePreview({ currentPrompt, isGenerating = false }: ImagePrevi
   const aspectRatios: AspectRatio[] = ["1:1", "4:5", "9:16"];
 
   return (
-    <div className="flex flex-col h-full bg-background rounded-2xl border border-border shadow-lg">
-      {/* Header */}
-      <div className="px-6 py-5 border-b border-border/50">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-semibold text-foreground text-lg">Preview</h3>
-            <p className="text-sm text-muted-foreground mt-1">Your generated image</p>
-          </div>
-          
-          {/* Aspect Ratio Controls */}
-          <div className="flex gap-1 p-1.5 bg-secondary/50 rounded-xl border border-border/30">
-            {aspectRatios.map((ratio) => (
-              <Button
-                key={ratio}
-                variant={selectedRatio === ratio ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setSelectedRatio(ratio)}
-                className={`text-xs h-8 px-4 rounded-lg transition-all duration-200 font-medium ${
-                  selectedRatio === ratio 
-                    ? "shadow-sm" 
-                    : "hover:bg-secondary/80"
-                }`}
-              >
-                {ratio}
-              </Button>
-            ))}
-          </div>
+    <div className="flex flex-col h-full bg-white/80 backdrop-blur-xl rounded-3xl border border-black/5 shadow-2xl shadow-black/5">
+      {/* Aspect Ratio Controls */}
+      <div className="p-8 pb-4">
+        <div className="flex gap-2 justify-center">
+          {aspectRatios.map((ratio) => (
+            <Button
+              key={ratio}
+              variant={selectedRatio === ratio ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setSelectedRatio(ratio)}
+              className={`text-sm h-10 px-5 rounded-2xl transition-all duration-300 font-medium border-0 ${
+                selectedRatio === ratio 
+                  ? "bg-black text-white shadow-lg shadow-black/20" 
+                  : "hover:bg-gray-100 text-gray-600"
+              }`}
+            >
+              {ratio}
+            </Button>
+          ))}
         </div>
       </div>
 
       {/* Preview Area */}
-      <div className="flex-1 p-6">
+      <div className="flex-1 px-8 pb-4">
         <div className="flex items-center justify-center h-full">
           <div
-            className={`${aspectRatioClasses[selectedRatio]} w-full max-w-sm bg-preview-background border-2 border-dashed border-preview-border rounded-2xl flex items-center justify-center relative overflow-hidden transition-all duration-300 hover:border-primary/30`}
+            className={`${aspectRatioClasses[selectedRatio]} w-full max-w-xs bg-gray-50/50 border-2 border-dashed border-gray-200 rounded-3xl flex items-center justify-center relative overflow-hidden transition-all duration-500 hover:border-gray-300`}
           >
             {isGenerating ? (
               <div className="text-center animate-fade-in">
-                <div className="animate-spin w-10 h-10 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-                <p className="text-sm text-muted-foreground font-medium">Generating...</p>
+                <div className="animate-spin w-8 h-8 border-2 border-black border-t-transparent rounded-full mx-auto mb-6"></div>
               </div>
             ) : generatedImage ? (
               <img
                 src={generatedImage}
                 alt="Generated"
-                className="w-full h-full object-cover rounded-2xl shadow-inner animate-scale-in"
+                className="w-full h-full object-cover rounded-3xl animate-scale-in"
               />
             ) : (
-              <div className="text-center animate-float">
-                <div className="w-20 h-20 bg-muted rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-sm">
-                  <div className="w-10 h-10 bg-muted-foreground/20 rounded-xl"></div>
-                </div>
-                <p className="text-sm text-muted-foreground font-medium leading-relaxed max-w-[200px]">
-                  {currentPrompt ? "Ready to generate" : "Start a conversation to generate an image"}
-                </p>
-              </div>
+              <div className="w-16 h-16 bg-gray-200 rounded-2xl animate-float opacity-40"></div>
             )}
           </div>
         </div>
       </div>
 
       {/* Actions */}
-      <div className="px-6 py-5 border-t border-border/50">
+      <div className="px-8 pb-8">
         <div className="flex gap-3">
           <Button
             variant="secondary"
             size="sm"
             disabled={!generatedImage}
-            className="flex-1 h-10 rounded-xl font-medium shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.02] disabled:hover:scale-100"
+            className="flex-1 h-12 rounded-2xl font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 border-0 transition-all duration-300 hover:scale-[1.02] disabled:hover:scale-100 disabled:opacity-30"
           >
-            <RotateCcw className="w-4 h-4 mr-2" />
+            <RotateCcw className="w-4 h-4 mr-3" />
             Regenerate
           </Button>
           <Button
             variant="secondary"
             size="sm"
             disabled={!generatedImage}
-            className="flex-1 h-10 rounded-xl font-medium shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.02] disabled:hover:scale-100"
+            className="flex-1 h-12 rounded-2xl font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 border-0 transition-all duration-300 hover:scale-[1.02] disabled:hover:scale-100 disabled:opacity-30"
           >
-            <Download className="w-4 h-4 mr-2" />
+            <Download className="w-4 h-4 mr-3" />
             Download
           </Button>
         </div>

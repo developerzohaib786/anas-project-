@@ -19,7 +19,7 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      content: "Hello! I'm Nino, your AI image generator. Describe what you'd like me to create and I'll generate it for you.",
+      content: "Hello! Describe what you'd like me to create.",
       role: "assistant",
       timestamp: new Date(),
     },
@@ -43,7 +43,7 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
 
     const assistantMessage: Message = {
       id: (Date.now() + 1).toString(),
-      content: "Generating your image... This will appear in the preview area once ready.",
+      content: "Creating your image...",
       role: "assistant",
       timestamp: new Date(),
     };
@@ -60,16 +60,10 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-chat-background rounded-2xl border border-border shadow-lg">
-      {/* Header */}
-      <div className="px-6 py-5 border-b border-border/50">
-        <h3 className="font-semibold text-foreground text-lg">Chat with Nino</h3>
-        <p className="text-sm text-muted-foreground mt-1">Describe your image idea</p>
-      </div>
-
+    <div className="flex flex-col h-full bg-white/80 backdrop-blur-xl rounded-3xl border border-black/5 shadow-2xl shadow-black/5">
       {/* Messages */}
-      <ScrollArea className="flex-1 px-6 py-6">
-        <div className="space-y-6">
+      <ScrollArea className="flex-1 px-8 py-8">
+        <div className="space-y-8">
           {messages.map((message, index) => (
             <div
               key={message.id}
@@ -80,19 +74,13 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
               }}
             >
               <div
-                className={`group max-w-[85%] px-5 py-4 transition-all duration-200 ${
+                className={`group max-w-[75%] px-6 py-4 transition-all duration-300 ${
                   message.role === "user"
-                    ? "bg-primary text-primary-foreground rounded-[24px] rounded-br-[8px] shadow-chat-bubble hover:shadow-chat-bubble-hover"
-                    : "bg-secondary/50 text-foreground rounded-[24px] rounded-bl-[8px] shadow-chat-bubble hover:shadow-chat-bubble-hover border border-border/30"
+                    ? "bg-black text-white rounded-[26px] rounded-br-[12px]"
+                    : "bg-gray-50/80 text-black rounded-[26px] rounded-bl-[12px] border border-black/5"
                 }`}
               >
-                <p className="text-[15px] leading-relaxed font-medium">{message.content}</p>
-                <p className="text-xs text-muted-foreground/70 mt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                  {message.timestamp.toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </p>
+                <p className="text-[16px] leading-relaxed font-normal">{message.content}</p>
               </div>
             </div>
           ))}
@@ -100,24 +88,24 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
       </ScrollArea>
 
       {/* Input */}
-      <div className="p-6 border-t border-border/50">
-        <div className="flex gap-3 items-end">
+      <div className="p-8">
+        <div className="flex gap-4 items-center">
           <div className="flex-1 relative">
             <Input
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Describe your image..."
-              className="w-full bg-secondary/30 border-border/30 rounded-2xl px-4 py-3 text-[15px] placeholder:text-muted-foreground/60 focus:bg-background focus:border-border focus:shadow-sm transition-all duration-200"
+              placeholder="Message"
+              className="w-full bg-gray-50/50 border-0 rounded-3xl px-6 py-4 text-[16px] placeholder:text-gray-400 focus:bg-white focus:ring-1 focus:ring-black/10 transition-all duration-300"
             />
           </div>
           <Button 
             onClick={handleSendMessage}
             disabled={!inputValue.trim()}
             size="icon"
-            className="shrink-0 w-10 h-10 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
+            className="shrink-0 w-12 h-12 rounded-full bg-black hover:bg-gray-800 disabled:bg-gray-200 transition-all duration-300 disabled:hover:scale-100 hover:scale-105"
           >
-            <Send className="h-4 w-4" />
+            <Send className="h-5 w-5" />
           </Button>
         </div>
       </div>
