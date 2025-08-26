@@ -32,14 +32,15 @@ export function AppSidebar() {
   const isActive = (path: string) => currentPath === path;
 
   return (
-    <Sidebar className="w-60 bg-white/60 backdrop-blur-xl border-r border-black/5 flex flex-col">
+    <Sidebar className="w-60 bg-white/60 backdrop-blur-xl border-r border-black/5 h-full flex flex-col">
+      <div className="flex flex-col h-full">
       <SidebarHeader className="p-8">
         <div className="font-medium text-2xl text-black tracking-tight" style={{ fontFamily: 'Inter, sans-serif' }}>
           Nino
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-6">
+      <SidebarContent className="px-6 flex-1">
         {/* Main Navigation */}
         <SidebarGroup>
           <SidebarGroupContent>
@@ -98,7 +99,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-6">
+      <SidebarFooter className="p-6 mt-auto">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
@@ -119,6 +120,7 @@ export function AppSidebar() {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
+      </div>
     </Sidebar>
   );
 }
