@@ -24,7 +24,7 @@ const Auth = () => {
     setLoading(true);
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -34,17 +34,35 @@ const Auth = () => {
 
         if (error) {
           toast.error(error.message);
-        } else {
-          toast.success("Account created! Check your email to verify.");
+        } else if (data.user && !data.session) {
+          // User created but needs email verification
+          toast.success("Account created! Check your email to verify and complete setup.");
+        } else if (data.session) {
+          // User created and logged in (email confirmation disabled)
+          toast.success("Account created! Welcome to Nino!");
+          navigate("/onboarding");
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
         if (error) {
           toast.error(error.message);
+        } else if (data.session) {
+          // Check if user has completed onboarding
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('onboarding_completed')
+            .eq('id', data.session.user.id)
+            .single();
+
+          if (profile?.onboarding_completed) {
+            navigate("/dashboard");
+          } else {
+            navigate("/onboarding");
+          }
         }
       }
     } catch (error) {
