@@ -1,9 +1,10 @@
-import { Paintbrush, FolderOpen, Palette, Settings, ChevronRight, User, LogOut, MessageSquare } from "lucide-react";
+import { Paintbrush, FolderOpen, Palette, Settings, ChevronRight, User, LogOut, MessageSquare, X } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChat } from "@/contexts/ChatContext";
 import { useBrand } from "@/contexts/BrandContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -35,12 +36,25 @@ export function AppSidebar() {
   const location = useLocation();
   const currentPath = location.pathname;
   const { user, signOut } = useAuth();
-  const { sessions } = useChat();
+  const { sessions, deleteSession } = useChat();
   const { brandProfile } = useBrand();
   const isActive = (path: string) => currentPath === path;
   const brandName = brandProfile?.brand_name || "Your Brand";
-  const logoUrl = brandProfile?.logo_url;
+  
+  // Fix logo URL handling - check if it's a full URL or needs to be constructed
+  const logoUrl = brandProfile?.logo_url ? 
+    (brandProfile.logo_url.startsWith('http') ? 
+      brandProfile.logo_url : 
+      supabase.storage.from('brand-assets').getPublicUrl(brandProfile.logo_url).data.publicUrl
+    ) : null;
+    
   const initials = brandName.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
+
+  const handleDeleteSession = (sessionId: string, event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    deleteSession(sessionId);
+  };
 
   return (
     <Sidebar className="w-60 bg-white border-r border-gray-200 md:w-60 w-16">
@@ -112,23 +126,32 @@ export function AppSidebar() {
                 {sessions.slice(0, 5).map((session) => (
                   <SidebarMenuItem key={session.id}>
                     <SidebarMenuButton asChild>
-                      <NavLink
-                        to={`/chat/${session.id}`}
-                        className={({ isActive }) =>
-                          `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 font-medium text-sm mb-1 relative ${
-                            isActive
-                              ? "bg-gray-100 text-gray-900"
-                              : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                          }`
-                        }
-                        title={session.title}
-                      >
-                        <MessageSquare className="h-4 w-4 flex-shrink-0" />
-                        <span className="truncate flex-1">{session.title}</span>
-                        {!session.isCompleted && (
-                          <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0" title="Incomplete" />
-                        )}
-                      </NavLink>
+                      <div className="group relative">
+                        <NavLink
+                          to={`/chat/${session.id}`}
+                          className={({ isActive }) =>
+                            `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 font-medium text-sm mb-1 relative ${
+                              isActive
+                                ? "bg-gray-100 text-gray-900"
+                                : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                            }`
+                          }
+                          title={session.title}
+                        >
+                          <MessageSquare className="h-4 w-4 flex-shrink-0" />
+                          <span className="truncate flex-1">{session.title}</span>
+                          {!session.isCompleted && (
+                            <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0" title="Incomplete" />
+                          )}
+                        </NavLink>
+                        <button
+                          onClick={(e) => handleDeleteSession(session.id, e)}
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 rounded hover:bg-red-100 text-red-500 hover:text-red-700"
+                          title="Delete chat"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
