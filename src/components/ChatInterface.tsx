@@ -78,53 +78,65 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
   };
 
   return (
-    <div className="flex flex-col h-[80vh]">
+    <div className="flex flex-col h-screen">
       {/* Messages */}
-      <ScrollArea className="flex-1 px-8 py-8">
-        <div className="space-y-8">
-          {messages.map((message, index) => (
-            <div
-              key={message.id}
-              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"} animate-fade-in`}
-              style={{
-                animationDelay: `${index * 0.1}s`,
-                animationFillMode: 'both'
-              }}
-            >
+      <ScrollArea className="flex-1 minimal-scroll">
+        <div className="max-w-3xl mx-auto px-6 py-12">
+          <div className="space-y-6">
+            {messages.map((message, index) => (
               <div
-                className={`group max-w-[75%] px-6 py-4 transition-all duration-300 ${
-                  message.role === "user"
-                    ? "bg-black text-white rounded-[26px] rounded-br-[12px]"
-                    : "bg-gray-50/80 text-black rounded-[26px] rounded-bl-[12px] border border-black/5"
-                }`}
+                key={message.id}
+                className={`flex ${message.role === "user" ? "justify-end" : "justify-start"} animate-fade-in`}
+                style={{
+                  animationDelay: `${index * 0.05}s`,
+                  animationFillMode: 'both'
+                }}
               >
-                <p className="text-[16px] leading-relaxed font-normal">{message.content}</p>
+                <div
+                  className={`max-w-[85%] px-5 py-3.5 transition-all duration-200 ${
+                    message.role === "user"
+                      ? "bg-[hsl(var(--chat-user-bubble))] text-[hsl(var(--chat-user-text))] rounded-[20px] rounded-br-[8px]"
+                      : "bg-[hsl(var(--chat-assistant-bubble))] text-[hsl(var(--chat-assistant-text))] rounded-[20px] rounded-bl-[8px]"
+                  }`}
+                  style={{
+                    boxShadow: 'var(--shadow-minimal)'
+                  }}
+                >
+                  <p className="text-[15px] leading-relaxed font-normal">{message.content}</p>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </ScrollArea>
 
-      {/* Input */}
-      <div className="p-8">
-        <div className="flex gap-4 items-center">
-          <div className="flex-1 relative">
-            <Input
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Describe the hotel marketing photo you want to create..."
-              className="w-full bg-gray-50/50 border-0 rounded-3xl px-6 py-4 text-[16px] placeholder:text-gray-400 focus:bg-white focus:ring-1 focus:ring-black/10 transition-all duration-300"
-            />
+      {/* Input Area - Fixed at bottom */}
+      <div className="border-t border-[hsl(var(--border))] bg-[hsl(var(--background))]">
+        <div className="max-w-3xl mx-auto px-6 py-6">
+          <div className="flex items-end gap-3">
+            <div className="flex-1">
+              <div className="relative">
+                <Input
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Describe your hotel marketing photo..."
+                  className="w-full h-12 bg-[hsl(var(--chat-input-bg))] border border-[hsl(var(--chat-input-border))] rounded-full px-5 text-[15px] placeholder:text-muted-foreground focus:bg-background focus:border-ring/20 focus:ring-2 focus:ring-ring/10 transition-all duration-200 resize-none"
+                />
+              </div>
+            </div>
+            <Button 
+              onClick={handleSendMessage}
+              disabled={!inputValue.trim()}
+              size="icon"
+              className="apple-button h-12 w-12 rounded-full bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground shrink-0"
+              style={{
+                boxShadow: !inputValue.trim() ? 'none' : 'var(--shadow-button)'
+              }}
+            >
+              <Send className="h-5 w-5" />
+            </Button>
           </div>
-          <Button 
-            onClick={handleSendMessage}
-            disabled={!inputValue.trim()}
-            size="icon"
-            className="shrink-0 w-12 h-12 rounded-full bg-black hover:bg-gray-800 disabled:bg-gray-200 transition-all duration-300 disabled:hover:scale-100 hover:scale-105"
-          >
-            <Send className="h-5 w-5" />
-          </Button>
         </div>
       </div>
     </div>

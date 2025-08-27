@@ -17,20 +17,18 @@ const Chat = () => {
   };
 
   return (
-    <div className="p-8">
-      {/* Chat Interface */}
-      <div className="flex gap-8">
-        <div className="flex-1">
-          <ChatInterface onGenerateImage={handleGenerateImage} />
-        </div>
+    <div className="flex h-screen">
+      {/* Chat Interface - Full width on left */}
+      <div className="flex-1 border-r border-border">
+        <ChatInterface onGenerateImage={handleGenerateImage} />
+      </div>
 
-        {/* Image Preview */}
-        <div className="w-96">
-          <ImagePreview 
-            currentPrompt={currentPrompt}
-            isGenerating={isGenerating}
-          />
-        </div>
+      {/* Image Preview - Fixed sidebar */}
+      <div className="w-80 bg-card">
+        <ImagePreview 
+          currentPrompt={currentPrompt}
+          isGenerating={isGenerating}
+        />
       </div>
     </div>
   );
