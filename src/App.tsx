@@ -15,6 +15,7 @@ import BrandKit from "./pages/BrandKit";
 import Settings from "./pages/Settings";
 import Chat from "./pages/Chat";
 import Auth from "./pages/Auth";
+import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
             <div className="min-h-screen bg-background">
               <Routes>
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/onboarding" element={<Onboarding />} />
                 <Route path="/*" element={
                   <ProtectedRoute>
                     <SidebarProvider>
@@ -37,7 +39,10 @@ const App = () => (
                         <AppSidebar />
                         <main className="flex-1">
                           <Routes>
-                            <Route path="/" element={<Chat />} />
+                            <Route path="/" element={<Dashboard />} />
+                            <Route path="/dashboard" element={<Dashboard />} />
+                            <Route path="/create" element={<Create />} />
+                            <Route path="/chat" element={<Chat />} />
                             <Route path="/projects" element={<Projects />} />
                             <Route path="/brand-kit" element={<BrandKit />} />
                             <Route path="/settings" element={<Settings />} />

@@ -15,6 +15,45 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  const handleAuth = async () => {
+    if (!email || !password) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      if (isSignUp) {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/onboarding`,
+          },
+        });
+
+        if (error) {
+          toast.error(error.message);
+        } else {
+          toast.success("Account created! Check your email to verify.");
+        }
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) {
+          toast.error(error.message);
+        }
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleForgotPassword = async () => {
     if (!email) {
       toast.error("Please enter your email address first");
@@ -44,7 +83,18 @@ const Auth = () => {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        navigate("/");
+        // Check if user has completed onboarding
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('onboarding_completed')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profile?.onboarding_completed) {
+          navigate("/dashboard");
+        } else {
+          navigate("/onboarding");
+        }
       }
     };
     checkUser();
@@ -94,9 +144,14 @@ const Auth = () => {
                   <Eye className="h-5 w-5" />
                 )}
               </button>
-              <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+              <button
+                type="button"
+                onClick={handleAuth}
+                disabled={loading || !email || !password}
+                className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <ArrowRight className="h-4 w-4 text-gray-500" />
-              </div>
+              </button>
             </div>
           </div>
         </div>
