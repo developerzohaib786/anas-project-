@@ -15,6 +15,22 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  // Thoroughly clear any stale Supabase auth state to avoid limbo
+  const cleanupAuthState = () => {
+    try {
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith("supabase.auth.") || key.includes("sb-")) {
+          localStorage.removeItem(key);
+        }
+      });
+      Object.keys(sessionStorage || {}).forEach((key) => {
+        if (key.startsWith("supabase.auth.") || key.includes("sb-")) {
+          sessionStorage.removeItem(key);
+        }
+      });
+    } catch {}
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -25,31 +41,46 @@ const Auth = () => {
 
     setLoading(true);
     try {
+      // Ensure a clean state before any auth action
+      cleanupAuthState();
+      try {
+        // Attempt a global sign out; ignore errors
+        await supabase.auth.signOut({ scope: "global" });
+      } catch {}
+
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/`
-          }
+            emailRedirectTo: `${window.location.origin}/`,
+          },
         });
 
         if (error) {
           toast.error(error.message);
+        } else if (data?.session) {
+          toast.success("Welcome to Nino!");
+          window.location.href = "/";
         } else {
-          toast.success("Account created! Check your email to verify your account.");
+          // Fallback for projects that still require email confirmation
+          toast.success("Account created! Please check your inbox to verify your email.");
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
         if (error) {
           toast.error(error.message);
-        } else {
+        } else if (data?.session) {
           toast.success("Welcome back!");
-          navigate("/");
+          window.location.href = "/";
+        } else {
+          // Should not happen, but handle gracefully
+          toast.success("Signed in. Redirecting…");
+          window.location.href = "/";
         }
       }
     } catch (error) {
@@ -58,7 +89,6 @@ const Auth = () => {
       setLoading(false);
     }
   };
-
   const handleForgotPassword = async () => {
     if (!email) {
       toast.error("Please enter your email address first");
