@@ -7,6 +7,8 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  onboardingCompleted: boolean | null;
+  checkOnboardingStatus: (userId: string) => Promise<boolean>;
   signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -26,6 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -37,18 +40,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setLoading(false);
 
         if (event === 'SIGNED_IN' && session?.user) {
-          setTimeout(() => {
-            checkOnboardingStatus(session.user.id);
+          setTimeout(async () => {
+            const completed = await checkOnboardingStatus(session.user.id);
+            setOnboardingCompleted(completed);
           }, 0);
+        }
+
+        if (event === 'SIGNED_OUT') {
+          setOnboardingCompleted(null);
         }
       }
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      
+      if (session?.user) {
+        const completed = await checkOnboardingStatus(session.user.id);
+        setOnboardingCompleted(completed);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -62,11 +75,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('id', userId)
         .single();
 
-      if (profile && !profile.onboarding_completed) {
-        window.location.href = '/onboarding';
-      }
+      // Don't redirect, just return the status for modal handling
+      return profile?.onboarding_completed || false;
     } catch (error) {
       console.error('Error checking onboarding status:', error);
+      return false;
     }
   };
 
@@ -180,6 +193,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     session,
     user,
     loading,
+    onboardingCompleted,
+    checkOnboardingStatus,
     signUp,
     signIn,
     signOut,
