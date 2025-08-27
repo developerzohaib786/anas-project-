@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowUp } from "lucide-react";
+import { ArrowUp, Copy, ThumbsUp, ThumbsDown, Volume2, Share, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -94,8 +94,8 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
     <div className="flex flex-col h-screen">
       {/* Messages */}
       <ScrollArea className="flex-1 minimal-scroll">
-        <div className="max-w-3xl mx-auto px-6 py-12">
-          <div className="space-y-6">
+        <div className="max-w-4xl mx-auto px-6 py-12">
+          <div className="space-y-8">
             {messages.map((message, index) => (
               <div
                 key={message.id}
@@ -105,17 +105,36 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
                   animationFillMode: 'both'
                 }}
               >
-                <div
-                  className={`max-w-[85%] px-5 py-3.5 transition-all duration-200 ${
-                    message.role === "user"
-                      ? "bg-[hsl(var(--chat-user-bubble))] text-[hsl(var(--chat-user-text))] rounded-[20px] rounded-br-[8px]"
-                      : "bg-[hsl(var(--chat-assistant-bubble))] text-[hsl(var(--chat-assistant-text))] rounded-[20px] rounded-bl-[8px]"
-                  }`}
-                  style={{
-                    boxShadow: 'var(--shadow-minimal)'
-                  }}
-                >
-                  <p className="text-[15px] leading-relaxed font-normal">{message.content}</p>
+                <div className={`max-w-[85%] group ${message.role === "user" ? "text-right" : "text-left"}`}>
+                  <div className="mb-2">
+                    <p className="text-[15px] leading-relaxed text-foreground font-normal">
+                      {message.content}
+                    </p>
+                  </div>
+                  
+                  {/* Action buttons for AI messages */}
+                  {message.role === "assistant" && (
+                    <div className="flex items-center gap-2 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
+                        <Copy className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                      <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
+                        <ThumbsUp className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                      <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
+                        <ThumbsDown className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                      <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
+                        <Volume2 className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                      <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
+                        <Share className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                      <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
+                        <RotateCcw className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -125,17 +144,17 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
 
       {/* Input Area - Fixed at bottom */}
       <div className="border-t border-[hsl(var(--border))] bg-[hsl(var(--background))]">
-        <div className="max-w-3xl mx-auto px-6 py-6">
+        <div className="max-w-4xl mx-auto px-6 py-6">
           {/* Example Prompts - Show when conversation is minimal and input is empty */}
           {messages.length <= 1 && !inputValue.trim() && (
             <div className="mb-6">
-              <p className="text-sm text-muted-foreground mb-3 font-medium">Try these examples:</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <p className="text-sm text-muted-foreground mb-4 font-medium">Try these examples:</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {examplePrompts.map((prompt, index) => (
                   <button
                     key={index}
                     onClick={() => handlePromptClick(prompt)}
-                    className="text-left p-3 rounded-2xl bg-muted/50 hover:bg-muted/80 text-sm text-muted-foreground hover:text-foreground transition-all duration-200 border border-transparent hover:border-border/50"
+                    className="text-left p-4 rounded-xl bg-muted/30 hover:bg-muted/60 text-sm text-muted-foreground hover:text-foreground transition-all duration-200"
                   >
                     {prompt}
                   </button>
@@ -152,7 +171,7 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Describe your hotel marketing photo..."
-                  className="w-full h-12 bg-[hsl(var(--chat-input-bg))] border border-[hsl(var(--chat-input-border))] rounded-full px-5 text-[15px] placeholder:text-muted-foreground focus-visible:outline-none transition-all duration-200 resize-none"
+                  className="w-full h-12 bg-transparent border border-[hsl(var(--border))] rounded-2xl px-5 text-[15px] placeholder:text-muted-foreground focus-visible:outline-none transition-all duration-200 resize-none"
                 />
               </div>
             </div>
@@ -160,10 +179,7 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
               onClick={handleSendMessage}
               disabled={!inputValue.trim()}
               size="icon"
-              className="apple-button h-12 w-12 rounded-full bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground shrink-0"
-              style={{
-                boxShadow: !inputValue.trim() ? 'none' : 'var(--shadow-button)'
-              }}
+              className="h-12 w-12 rounded-2xl bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground shrink-0"
             >
               <ArrowUp className="h-5 w-5" />
             </Button>
