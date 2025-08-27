@@ -4,10 +4,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { TeamInvitations } from "@/components/TeamInvitations";
 // Auth removed - Settings page disabled
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useSettings } from "@/contexts/SettingsContext";
 import { Loader2, LogOut } from "lucide-react";
 
 interface UserProfile {
@@ -23,13 +25,13 @@ interface Team {
 }
 
 export default function Settings() {
-  const [profile, setProfile] = useState<UserProfile>({ first_name: '', last_name: '', email: '' });
   const [teams, setTeams] = useState<Team[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const user = null; // Auth removed
   const signOut = () => {}; // Auth removed
   const { toast } = useToast();
+  const { profile, brandSettings, updateProfile, updateBrandSettings } = useSettings();
 
   useEffect(() => {
     if (user) {
@@ -49,7 +51,7 @@ export default function Settings() {
         .single();
 
       if (profileData) {
-        setProfile(profileData);
+        updateProfile(profileData);
       }
 
       // Load user's teams
@@ -130,8 +132,9 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 max-w-md">
+        <TabsList className="grid w-full grid-cols-4 max-w-lg">
           <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="brand">Brand</TabsTrigger>
           <TabsTrigger value="teams">Teams</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
         </TabsList>
@@ -152,7 +155,7 @@ export default function Settings() {
                     <Input 
                       id="first-name" 
                       value={profile.first_name}
-                      onChange={(e) => setProfile({...profile, first_name: e.target.value})}
+                      onChange={(e) => updateProfile({ first_name: e.target.value })}
                       className="mt-2 rounded-full" 
                     />
                   </div>
@@ -161,7 +164,7 @@ export default function Settings() {
                     <Input 
                       id="last-name" 
                       value={profile.last_name}
-                      onChange={(e) => setProfile({...profile, last_name: e.target.value})}
+                      onChange={(e) => updateProfile({ last_name: e.target.value })}
                       className="mt-2 rounded-full" 
                     />
                   </div>
@@ -184,6 +187,100 @@ export default function Settings() {
               </form>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="brand" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Brand Information</CardTitle>
+              <CardDescription>
+                Basic information about your brand
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="brand-name">Brand Name</Label>
+                <Input 
+                  id="brand-name" 
+                  value={brandSettings.name}
+                  onChange={(e) => updateBrandSettings({ name: e.target.value })}
+                  placeholder="Your Hotel/Resort Name" 
+                  className="mt-2 rounded-full" 
+                />
+                <p className="text-xs text-gray-500 mt-1">The official name of your property</p>
+              </div>
+              <div>
+                <Label htmlFor="brand-description">Description</Label>
+                <Textarea 
+                  id="brand-description" 
+                  value={brandSettings.description}
+                  onChange={(e) => updateBrandSettings({ description: e.target.value })}
+                  placeholder="Brief description of your brand and what makes it unique..."
+                  className="mt-2 min-h-[100px]"
+                />
+                <p className="text-xs text-gray-500 mt-1">A short overview of your property and its unique features</p>
+              </div>
+              <div>
+                <Label htmlFor="brand-location">Location</Label>
+                <Input 
+                  id="brand-location" 
+                  value={brandSettings.location}
+                  onChange={(e) => updateBrandSettings({ location: e.target.value })}
+                  placeholder="e.g., Waikiki Beach, Honolulu, Hawaii" 
+                  className="mt-2 rounded-full" 
+                />
+                <p className="text-xs text-gray-500 mt-1">Primary location of your property</p>
+              </div>
+              <div>
+                <Label htmlFor="brand-industry">Industry</Label>
+                <Input 
+                  id="brand-industry" 
+                  value={brandSettings.industry} 
+                  disabled 
+                  className="mt-2 rounded-full bg-muted" 
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Brand Voice & Tone</CardTitle>
+              <CardDescription>
+                How should your brand communicate and what personality should it convey?
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="brand-tone">Brand Tone</Label>
+                <Input 
+                  id="brand-tone" 
+                  value={brandSettings.tone}
+                  onChange={(e) => updateBrandSettings({ tone: e.target.value })}
+                  placeholder="e.g., Luxurious, Friendly, Professional, Sophisticated" 
+                  className="mt-2 rounded-full"
+                />
+                <p className="text-xs text-gray-500 mt-1">Describe the personality and feeling your brand should convey</p>
+              </div>
+              <div>
+                <Label htmlFor="brand-voice">Brand Voice</Label>
+                <Textarea 
+                  id="brand-voice" 
+                  value={brandSettings.voice}
+                  onChange={(e) => updateBrandSettings({ voice: e.target.value })}
+                  placeholder="e.g., We speak with confidence and warmth, using inclusive language that makes every guest feel valued..."
+                  className="mt-2 min-h-[100px]"
+                />
+                <p className="text-xs text-gray-500 mt-1">How does your brand communicate? What words and phrases do you use?</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-end">
+            <Button className="rounded-full">
+              Save Brand Settings
+            </Button>
+          </div>
         </TabsContent>
 
         <TabsContent value="teams" className="space-y-6">

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { SettingsProvider } from "@/contexts/SettingsContext";
 import Dashboard from "./pages/Dashboard";
 import Create from "./pages/Create";
 import Projects from "./pages/Projects";
@@ -17,28 +18,30 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <div className="min-h-screen bg-background">
-          <SidebarProvider>
-            <div className="flex min-h-screen w-full">
-              <AppSidebar />
-              <main className="flex-1">
-                <Routes>
-                  <Route path="/" element={<Chat />} />
-                  <Route path="/projects" element={<Projects />} />
-                  <Route path="/brand-kit" element={<BrandKit />} />
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </main>
-            </div>
-          </SidebarProvider>
-        </div>
-      </BrowserRouter>
-    </TooltipProvider>
+    <SettingsProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <div className="min-h-screen bg-background">
+            <SidebarProvider>
+              <div className="flex min-h-screen w-full">
+                <AppSidebar />
+                <main className="flex-1">
+                  <Routes>
+                    <Route path="/" element={<Chat />} />
+                    <Route path="/projects" element={<Projects />} />
+                    <Route path="/brand-kit" element={<BrandKit />} />
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </main>
+              </div>
+            </SidebarProvider>
+          </div>
+        </BrowserRouter>
+      </TooltipProvider>
+    </SettingsProvider>
   </QueryClientProvider>
 );
 

@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { useSettings } from "@/contexts/SettingsContext";
 
 const mockNotes = {
   restaurant: "Our signature restaurant 'Ocean's Edge' features Mediterranean cuisine with locally sourced ingredients. Open for dinner only (6pm-11pm). Dress code is smart casual. We specialize in fresh seafood and have an extensive wine cellar with over 200 selections.",
@@ -46,6 +47,7 @@ export default function BrandKit() {
   const [notes, setNotes] = useState(mockNotes);
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { brandSettings, updateBrandSettings } = useSettings();
 
   const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -110,10 +112,9 @@ export default function BrandKit() {
         </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="photos">Photos</TabsTrigger>
           <TabsTrigger value="guidelines">Guidelines</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="photos" className="mt-6">
@@ -238,6 +239,8 @@ export default function BrandKit() {
                   <Label htmlFor="brand-tone">Brand Tone</Label>
                   <Input 
                     id="brand-tone" 
+                    value={brandSettings.tone}
+                    onChange={(e) => updateBrandSettings({ tone: e.target.value })}
                     placeholder="e.g., Luxurious, Friendly, Professional, Sophisticated" 
                     className="mt-2"
                   />
@@ -247,6 +250,8 @@ export default function BrandKit() {
                   <Label htmlFor="brand-voice">Brand Voice</Label>
                   <Textarea 
                     id="brand-voice" 
+                    value={brandSettings.voice}
+                    onChange={(e) => updateBrandSettings({ voice: e.target.value })}
                     placeholder="e.g., We speak with confidence and warmth, using inclusive language that makes every guest feel valued..."
                     className="mt-2 min-h-[100px]"
                   />
@@ -267,6 +272,8 @@ export default function BrandKit() {
                   <Label htmlFor="brand-keywords">Key Messages</Label>
                   <Input 
                     id="brand-keywords" 
+                    value={brandSettings.keyMessages}
+                    onChange={(e) => updateBrandSettings({ keyMessages: e.target.value })}
                     placeholder="e.g., Exceptional service, Unforgettable experiences, Sustainable luxury" 
                     className="mt-2"
                   />
@@ -276,6 +283,8 @@ export default function BrandKit() {
                   <Label htmlFor="brand-values">Core Values</Label>
                   <Textarea 
                     id="brand-values" 
+                    value={brandSettings.coreValues}
+                    onChange={(e) => updateBrandSettings({ coreValues: e.target.value })}
                     placeholder="e.g., Sustainability, Guest satisfaction, Cultural authenticity, Innovation in hospitality..."
                     className="mt-2 min-h-[100px]"
                   />
@@ -296,6 +305,8 @@ export default function BrandKit() {
                   <Label htmlFor="content-dos">Always Include</Label>
                   <Textarea 
                     id="content-dos" 
+                    value={brandSettings.contentDos}
+                    onChange={(e) => updateBrandSettings({ contentDos: e.target.value })}
                     placeholder="e.g., Ocean views, Local culture, Premium amenities, Personalized service..."
                     className="mt-2 min-h-[80px]"
                   />
@@ -305,6 +316,8 @@ export default function BrandKit() {
                   <Label htmlFor="content-donts">Never Include</Label>
                   <Textarea 
                     id="content-donts" 
+                    value={brandSettings.contentDonts}
+                    onChange={(e) => updateBrandSettings({ contentDonts: e.target.value })}
                     placeholder="e.g., Crowded spaces, Generic stock photo feel, Overly promotional language..."
                     className="mt-2 min-h-[80px]"
                   />
@@ -321,56 +334,6 @@ export default function BrandKit() {
           </div>
         </TabsContent>
 
-        <TabsContent value="settings" className="mt-6">
-          <div className="w-full">
-            <h2 className="text-xl font-medium text-gray-900 mb-2">Brand Settings</h2>
-            <p className="text-gray-600 mb-6">
-              Configure your brand's basic information and account preferences
-            </p>
-            
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Brand Information</CardTitle>
-                  <CardDescription>
-                    Basic information about your brand
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="brand-name">Brand Name</Label>
-                    <Input id="brand-name" placeholder="Your Hotel/Resort Name" className="mt-2" />
-                    <p className="text-xs text-gray-500 mt-1">The official name of your property</p>
-                  </div>
-                  <div>
-                    <Label htmlFor="brand-description">Description</Label>
-                    <Textarea 
-                      id="brand-description" 
-                      placeholder="Brief description of your brand and what makes it unique..."
-                      className="mt-2 min-h-[100px]"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">A short overview of your property and its unique features</p>
-                  </div>
-                  <div>
-                    <Label htmlFor="brand-location">Location</Label>
-                    <Input id="brand-location" placeholder="e.g., Waikiki Beach, Honolulu, Hawaii" className="mt-2" />
-                    <p className="text-xs text-gray-500 mt-1">Primary location of your property</p>
-                  </div>
-                  <div>
-                    <Label htmlFor="brand-industry">Industry</Label>
-                    <Input id="brand-industry" value="Hospitality & Travel" disabled className="mt-2" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="flex justify-end">
-                <Button style={{ boxShadow: 'var(--shadow-button)' }}>
-                  Save Changes
-                </Button>
-              </div>
-            </div>
-          </div>
-        </TabsContent>
       </Tabs>
     </div>
   );
