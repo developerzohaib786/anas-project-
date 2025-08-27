@@ -7,6 +7,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ChatProvider } from "@/contexts/ChatContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import Create from "./pages/Create";
@@ -22,8 +23,9 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <SettingsProvider>
-        <TooltipProvider>
+      <ChatProvider>
+        <SettingsProvider>
+          <TooltipProvider>
           <Toaster />
           <Sonner />
           <BrowserRouter>
@@ -38,6 +40,7 @@ const App = () => (
                         <main className="flex-1">
                           <Routes>
                             <Route path="/" element={<Chat />} />
+                            <Route path="/chat/:sessionId" element={<Chat />} />
                             <Route path="/projects" element={<Projects />} />
                             <Route path="/brand-kit" element={<BrandKit />} />
                             <Route path="/settings" element={<Settings />} />
@@ -51,8 +54,9 @@ const App = () => (
               </Routes>
             </div>
           </BrowserRouter>
-        </TooltipProvider>
-      </SettingsProvider>
+          </TooltipProvider>
+        </SettingsProvider>
+      </ChatProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

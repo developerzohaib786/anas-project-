@@ -3,6 +3,8 @@ import { ArrowUp, Copy, ThumbsUp, ThumbsDown, Volume2, Share, RotateCcw } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useChat } from "@/contexts/ChatContext";
+import { useParams } from "react-router-dom";
 
 interface Message {
   id: string;
@@ -16,6 +18,8 @@ interface ChatInterfaceProps {
 }
 
 export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
+  const { sessionId } = useParams();
+  const { sessions, currentSessionId, createSession, updateSession, setCurrentSession, getCurrentSession } = useChat();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -27,6 +31,46 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
   const [inputValue, setInputValue] = useState("");
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Load session data when sessionId changes
+  useEffect(() => {
+    if (sessionId) {
+      const session = sessions.find(s => s.id === sessionId);
+      if (session) {
+        setCurrentSession(sessionId);
+        setMessages(session.messages.length > 0 ? session.messages : [
+          {
+            id: "1",
+            content: "What are we creating today?",
+            role: "assistant",
+            timestamp: new Date(),
+          },
+        ]);
+      }
+    } else if (!currentSessionId) {
+      // Create a new session if none exists
+      const newSessionId = createSession();
+      window.history.replaceState(null, '', `/chat/${newSessionId}`);
+    }
+  }, [sessionId, sessions, currentSessionId, createSession, setCurrentSession]);
+
+  // Save messages to session when they change
+  useEffect(() => {
+    if (currentSessionId && messages.length > 1) {
+      updateSession(currentSessionId, { 
+        messages,
+        title: generateSessionTitle(messages)
+      });
+    }
+  }, [messages, currentSessionId, updateSession]);
+
+  const generateSessionTitle = (msgs: Message[]): string => {
+    const userMessage = msgs.find(m => m.role === "user");
+    if (userMessage) {
+      return userMessage.content.slice(0, 30) + (userMessage.content.length > 30 ? "..." : "");
+    }
+    return `Chat ${new Date().toLocaleDateString()}`;
+  };
 
   // Auto-scroll to bottom when new messages are added
   const scrollToBottom = () => {
@@ -81,6 +125,10 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
         assistantResponse += "Should I include people in the scene? If so, what type of guests? (e.g., couples, families, business travelers)";
       } else {
         assistantResponse = "Perfect! I have enough information to create your image. Generating your hotel marketing photo now...";
+        // Mark session as completed when generating image
+        if (currentSessionId) {
+          updateSession(currentSessionId, { isCompleted: true });
+        }
         // Trigger image generation
         onGenerateImage(inputValue);
       }

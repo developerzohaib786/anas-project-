@@ -1,6 +1,7 @@
-import { Paintbrush, FolderOpen, Palette, Settings, ChevronRight, User, LogOut } from "lucide-react";
+import { Paintbrush, FolderOpen, Palette, Settings, ChevronRight, User, LogOut, MessageSquare } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useChat } from "@/contexts/ChatContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,6 +34,7 @@ export function AppSidebar() {
   const location = useLocation();
   const currentPath = location.pathname;
   const { user, signOut } = useAuth();
+  const { sessions } = useChat();
   const [profile, setProfile] = useState<{ brand_name?: string; avatar_url?: string } | null>(null);
 
   useEffect(() => {
@@ -121,15 +123,37 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Projects Section - Hide dummy data for now */}
-        {false && (
+        {/* Chat Sessions Section */}
+        {sessions.length > 0 && (
           <SidebarGroup className="mt-8 md:block hidden">
             <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              Recent
+              Recent Chats
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {/* Will be populated with real project data */}
+                {sessions.slice(0, 5).map((session) => (
+                  <SidebarMenuItem key={session.id}>
+                    <SidebarMenuButton asChild>
+                      <NavLink
+                        to={`/chat/${session.id}`}
+                        className={({ isActive }) =>
+                          `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 font-medium text-sm mb-1 relative ${
+                            isActive
+                              ? "bg-gray-100 text-gray-900"
+                              : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                          }`
+                        }
+                        title={session.title}
+                      >
+                        <MessageSquare className="h-4 w-4 flex-shrink-0" />
+                        <span className="truncate flex-1">{session.title}</span>
+                        {!session.isCompleted && (
+                          <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0" title="Incomplete" />
+                        )}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
