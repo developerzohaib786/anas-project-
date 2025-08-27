@@ -28,14 +28,14 @@ const Auth = () => {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         {/* Title */}
-        <div className="text-center mb-16">
-          <h1 className="text-2xl font-normal text-gray-900">
+        <div className="text-center mb-12">
+          <h1 className="text-2xl font-semibold text-gray-900">
             {isSignUp ? "Create your Nino Account" : "Sign in to Nino"}
           </h1>
         </div>
 
-        {/* Form Fields */}
-        <div className="space-y-4 mb-8">
+        {/* Connected Form Fields */}
+        <div className="mb-6">
           {/* Email Field */}
           <div>
             <Input
@@ -43,7 +43,7 @@ const Auth = () => {
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="h-14 bg-white border border-gray-200 rounded-lg px-4 text-base placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-transparent"
+              className="h-14 bg-white border border-gray-200 rounded-t-lg rounded-b-none border-b-0 px-4 text-base placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-transparent focus:z-10 relative"
             />
           </div>
           
@@ -54,7 +54,7 @@ const Auth = () => {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="h-14 bg-white border border-gray-200 rounded-lg px-4 pr-20 text-base placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-transparent"
+              className="h-14 bg-white border border-gray-200 rounded-b-lg rounded-t-none px-4 pr-20 text-base placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-transparent focus:z-10 relative"
             />
             <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
               <button
@@ -77,7 +77,7 @@ const Auth = () => {
 
         {/* Remember Me - Only show on sign in */}
         {!isSignUp && (
-          <div className="flex items-center space-x-3 mb-8">
+          <div className="flex items-center space-x-3 mb-6">
             <Checkbox
               id="remember"
               checked={rememberMe}
@@ -95,7 +95,7 @@ const Auth = () => {
 
         {/* Forgot Password - Only show on sign in */}
         {!isSignUp && (
-          <div className="text-center mb-12">
+          <div className="text-center mb-10">
             <button className="text-base text-gray-500 hover:text-gray-700 transition-colors">
               Forgot password?
             </button>
@@ -103,17 +103,16 @@ const Auth = () => {
         )}
 
         {/* Sign Up/Sign In Toggle */}
-        <div className="text-center mb-16">
-          <p className="text-base text-gray-500">
+        <div className="text-center mb-12">
+          <p className="text-base text-gray-500 mb-1">
             {isSignUp ? "Already have a Nino Account?" : "Don't have a Nino Account?"}
-            <br />
-            <button
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-gray-700 hover:text-gray-900 transition-colors font-normal"
-            >
-              {isSignUp ? "Sign in" : "Create Your Nino Account"}
-            </button>
           </p>
+          <button
+            onClick={() => setIsSignUp(!isSignUp)}
+            className="text-base text-gray-700 hover:text-gray-900 transition-colors font-medium"
+          >
+            {isSignUp ? "Sign in" : "Create Your Nino Account"}
+          </button>
         </div>
 
         {/* Terms and Privacy */}
