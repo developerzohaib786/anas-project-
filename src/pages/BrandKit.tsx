@@ -1,17 +1,21 @@
 import { useState, useRef } from "react";
-import { Upload, Plus, Trash2, Image, X, Download } from "lucide-react";
+import { Upload, Plus, Trash2, Image, X, Download, Edit3, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 
-const mockLogos = [
-  { id: "1", name: "Primary Logo", type: "PNG", size: "2.3 MB", uploaded: "2024-08-20" },
-  { id: "2", name: "Logo White", type: "SVG", size: "1.1 MB", uploaded: "2024-08-20" },
-  { id: "3", name: "Logo Mark", type: "PNG", size: "890 KB", uploaded: "2024-08-20" },
-];
+const mockNotes = {
+  restaurant: "Our signature restaurant 'Ocean's Edge' features Mediterranean cuisine with locally sourced ingredients. Open for dinner only (6pm-11pm). Dress code is smart casual. We specialize in fresh seafood and have an extensive wine cellar with over 200 selections.",
+  rooms: "All suites feature ocean or garden views with private balconies. Standard amenities include marble bathrooms, walk-in rain showers, Egyptian cotton linens, and complimentary WiFi. Turndown service includes local chocolates and aromatherapy.",
+  frontDesk: "24/7 concierge service available. Check-in: 3pm, Check-out: 12pm. We offer early check-in and late check-out based on availability. Multilingual staff fluent in English, Spanish, French, and Italian.",
+  spa: "Award-winning spa featuring indigenous treatments using local botanicals. Signature services include volcanic stone massages and sea salt body wraps. Adults-only facility with relaxation pools and meditation gardens.",
+  activities: "Complimentary water sports including kayaking, snorkeling, and paddleboarding. Guided nature walks, cooking classes, and wine tastings available. Private beach access with cabana service.",
+  policies: "Adults-only resort (18+). No smoking anywhere on property. Reservations required for all dining venues. 24-hour cancellation policy for spa services. Sustainability is our priority - we're plastic-free and solar-powered."
+};
 
 const mockPhotos = [
   { id: "1", url: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=600&fit=crop", tags: ["pool", "luxury", "villa"] },
@@ -39,6 +43,8 @@ const mockPhotos = [
 export default function BrandKit() {
   const [activeTab, setActiveTab] = useState("photos");
   const [photos, setPhotos] = useState(mockPhotos);
+  const [notes, setNotes] = useState(mockNotes);
+  const [editingNote, setEditingNote] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -80,6 +86,20 @@ export default function BrandKit() {
     ));
   };
 
+  const handleSaveNote = (category: string, content: string) => {
+    setNotes(prev => ({ ...prev, [category]: content }));
+    setEditingNote(null);
+  };
+
+  const noteCategories = [
+    { key: 'restaurant', label: 'Restaurant & Dining', icon: '🍽️' },
+    { key: 'rooms', label: 'Rooms & Suites', icon: '🛏️' },
+    { key: 'frontDesk', label: 'Front Desk & Service', icon: '🛎️' },
+    { key: 'spa', label: 'Spa & Wellness', icon: '🧘' },
+    { key: 'activities', label: 'Activities & Amenities', icon: '🏊' },
+    { key: 'policies', label: 'Policies & Guidelines', icon: '📋' },
+  ];
+
   return (
     <div className="p-8 max-w-6xl">
       <div className="mb-8">
@@ -92,7 +112,7 @@ export default function BrandKit() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="photos">Photos</TabsTrigger>
-          <TabsTrigger value="logos">Logos</TabsTrigger>
+          <TabsTrigger value="notes">Notes</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -196,42 +216,75 @@ export default function BrandKit() {
           )}
         </TabsContent>
 
-        <TabsContent value="logos" className="mt-6">
+        <TabsContent value="notes" className="mt-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-xl font-medium text-gray-900">Logo Assets</h2>
-              <p className="text-gray-600">Upload and manage your brand logos</p>
+              <h2 className="text-xl font-medium text-gray-900">Property Notes</h2>
+              <p className="text-gray-600">Add detailed information about your property to help AI create accurate content</p>
             </div>
-            <Button>
-              <Upload className="mr-2 h-4 w-4" />
-              Upload Logo
-            </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {mockLogos.map((logo) => (
-              <Card key={logo.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="aspect-video bg-gray-100 rounded-lg mb-4 flex items-center justify-center">
-                    <div className="text-4xl">🏨</div>
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="font-medium text-gray-900">{logo.name}</h3>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary">{logo.type}</Badge>
-                      <span className="text-sm text-gray-600">{logo.size}</span>
+          <div className="space-y-4">
+            {noteCategories.map((category) => (
+              <Card key={category.key} className="hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{category.icon}</span>
+                      <div>
+                        <CardTitle className="text-base font-medium">
+                          {category.label}
+                        </CardTitle>
+                      </div>
                     </div>
-                    <p className="text-sm text-gray-600">Uploaded {logo.uploaded}</p>
-                    <div className="flex gap-2 mt-3">
-                      <Button variant="outline" size="sm" className="flex-1">
-                        <Download className="mr-2 h-3 w-3" />
-                        Download
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditingNote(editingNote === category.key ? null : category.key)}
+                    >
+                      {editingNote === category.key ? (
+                        <>
+                          <Save className="h-4 w-4 mr-2" />
+                          Save
+                        </>
+                      ) : (
+                        <>
+                          <Edit3 className="h-4 w-4 mr-2" />
+                          Edit
+                        </>
+                      )}
+                    </Button>
                   </div>
+                </CardHeader>
+                <CardContent>
+                  {editingNote === category.key ? (
+                    <div className="space-y-3">
+                      <Textarea
+                        defaultValue={notes[category.key as keyof typeof notes]}
+                        placeholder={`Add notes about ${category.label.toLowerCase()}...`}
+                        className="min-h-[120px] resize-none"
+                        onBlur={(e) => handleSaveNote(category.key, e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                            handleSaveNote(category.key, e.currentTarget.value);
+                          }
+                        }}
+                        autoFocus
+                      />
+                      <p className="text-xs text-gray-500">Press Cmd+Enter to save, or click Save button</p>
+                    </div>
+                  ) : (
+                    <div 
+                      className="text-sm text-gray-700 leading-relaxed cursor-pointer hover:bg-gray-50 p-3 rounded-lg transition-colors"
+                      onClick={() => setEditingNote(category.key)}
+                    >
+                      {notes[category.key as keyof typeof notes] || (
+                        <span className="text-gray-400 italic">
+                          Click to add notes about {category.label.toLowerCase()}...
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
