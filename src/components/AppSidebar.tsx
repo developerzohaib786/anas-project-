@@ -62,6 +62,13 @@ export function AppSidebar() {
   const avatarUrl = profile?.avatar_url;
   const initials = brandName.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
 
+  // Dynamic font size based on brand name length
+  const getFontSize = (name: string) => {
+    if (name.length <= 12) return "text-sm";
+    if (name.length <= 18) return "text-xs";
+    return "text-[11px]";
+  };
+
   return (
     <Sidebar className="w-60 bg-white border-r border-gray-200 md:w-60 w-16">
       <div className="flex flex-col h-full">
@@ -74,7 +81,7 @@ export function AppSidebar() {
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col min-w-0 flex-1">
-            <div className="font-semibold text-sm text-gray-900 truncate" style={{ fontFamily: 'Inter, sans-serif' }}>
+            <div className={`font-semibold ${getFontSize(brandName)} text-gray-900 truncate leading-tight`} style={{ fontFamily: 'Inter, sans-serif' }}>
               {brandName}
             </div>
             <div className="text-xs text-gray-500 font-normal">
@@ -121,35 +128,19 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Projects Section - Hidden on mobile */}
-        <SidebarGroup className="mt-8 md:block hidden">
-          <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-            Recent
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {projectItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      className={({ isActive }) =>
-                        `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 text-sm mb-1 ${
-                          isActive
-                            ? "bg-gray-100 text-gray-900"
-                            : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
-                        }`
-                      }
-                    >
-                      <ChevronRight className="h-3 w-3" />
-                      <span>{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* Projects Section - Hide dummy data for now */}
+        {false && (
+          <SidebarGroup className="mt-8 md:block hidden">
+            <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Recent
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {/* Will be populated with real project data */}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="p-4 border-t border-gray-100 mt-auto md:p-4 p-2">

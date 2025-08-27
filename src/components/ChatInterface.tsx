@@ -19,7 +19,7 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      content: "Hi! I'm Nino, your AI creative assistant for hotels and resorts. I'll help you create stunning marketing photos. What would you like me to create for you today?",
+      content: "What are we creating today?",
       role: "assistant",
       timestamp: new Date(),
     },

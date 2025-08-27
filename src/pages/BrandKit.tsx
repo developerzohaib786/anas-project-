@@ -484,39 +484,6 @@ export default function BrandKit() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Key Messages & Values</CardTitle>
-                <CardDescription>
-                  Core messages and values your brand should always communicate
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="brand-keywords">Key Messages</Label>
-                  <Input 
-                    id="brand-keywords" 
-                    value={guidelines.key_messages}
-                    onChange={(e) => setGuidelines(prev => ({ ...prev, key_messages: e.target.value }))}
-                    placeholder="e.g., Exceptional service, Unforgettable experiences, Sustainable luxury" 
-                    className="mt-2"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">Main themes and messages to emphasize</p>
-                </div>
-                <div>
-                  <Label htmlFor="brand-values">Core Values</Label>
-                  <Textarea 
-                    id="brand-values" 
-                    value={guidelines.core_values}
-                    onChange={(e) => setGuidelines(prev => ({ ...prev, core_values: e.target.value }))}
-                    placeholder="e.g., Sustainability, Guest satisfaction, Cultural authenticity, Innovation..."
-                    className="mt-2 min-h-[100px]"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">What does your brand stand for?</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
                 <CardTitle>Content Guidelines</CardTitle>
                 <CardDescription>
                   Specific guidelines for what should and shouldn't be included in your content
