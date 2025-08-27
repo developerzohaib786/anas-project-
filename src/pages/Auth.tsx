@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, ArrowRight } from "lucide-react";
+import { Loader2, ArrowRight, Eye, EyeOff } from "lucide-react";
 
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
@@ -11,6 +11,7 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { signIn, signUp, user } = useAuth();
 
   // Redirect if already authenticated
@@ -38,7 +39,7 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-white p-4">
       <div className="w-full max-w-sm animate-fade-in">
         <div className="text-center mb-16">
-          <h1 className="text-[32px] font-semibold text-[#1d1d1f] tracking-[-0.01em] leading-tight">
+          <h1 className="text-[28px] font-medium text-[#1d1d1f] tracking-[-0.02em] leading-tight">
             {isSignUp ? 'Create your Nino Account' : 'Sign in to Nino'}
           </h1>
         </div>
@@ -57,22 +58,33 @@ export default function Auth() {
             </div>
             <div className="relative">
               <Input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full border-0 rounded-none bg-transparent px-5 py-5 pr-16 text-[17px] font-normal placeholder:text-[#8e8e93] focus-visible:outline-none focus-visible:ring-0 transition-all duration-200"
+                className="w-full border-0 rounded-none bg-transparent px-5 py-5 pr-20 text-[17px] font-normal placeholder:text-[#8e8e93] focus-visible:outline-none focus-visible:ring-0 transition-all duration-200"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-12 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full hover:bg-[#f2f2f7] transition-colors duration-200 flex items-center justify-center"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4 text-[#8e8e93]" strokeWidth={2} />
+                ) : (
+                  <Eye className="h-4 w-4 text-[#8e8e93]" strokeWidth={2} />
+                )}
+              </button>
               <Button
                 type="submit"
                 disabled={isLoading || !email || !password}
-                className="absolute right-3 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-[#007aff] hover:bg-[#0051d5] disabled:bg-[#c7c7cc] disabled:opacity-60 p-0 transition-all duration-200 hover-scale"
+                className="absolute right-3 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-[#6c6c70] hover:bg-[#48484a] disabled:bg-[#c7c7cc] disabled:opacity-60 p-0 transition-all duration-200 hover-scale"
               >
                 {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin text-white" />
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
                 ) : (
-                  <ArrowRight className="h-4 w-4 text-white" strokeWidth={2.5} />
+                  <ArrowRight className="h-3.5 w-3.5 text-white" strokeWidth={2.5} />
                 )}
               </Button>
             </div>
@@ -86,7 +98,7 @@ export default function Auth() {
                 id="remember" 
                 checked={rememberMe}
                 onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                className="rounded-[4px] border-[#c7c7cc] data-[state=checked]:bg-[#007aff] data-[state=checked]:border-[#007aff]"
+                className="rounded-[4px] border-[#c7c7cc] data-[state=checked]:bg-[#6c6c70] data-[state=checked]:border-[#6c6c70]"
               />
               <label 
                 htmlFor="remember" 
@@ -102,7 +114,7 @@ export default function Auth() {
           {!isSignUp && (
             <button 
               type="button"
-              className="text-[15px] font-normal text-[#007aff] hover:text-[#0051d5] transition-colors duration-200 story-link"
+              className="text-[15px] font-normal text-[#6c6c70] hover:text-[#48484a] transition-colors duration-200"
             >
               Forgot password?
             </button>
@@ -117,7 +129,7 @@ export default function Auth() {
                 setEmail("");
                 setPassword("");
               }}
-              className="text-[#007aff] hover:text-[#0051d5] transition-colors duration-200 story-link font-normal"
+              className="text-[#6c6c70] hover:text-[#48484a] transition-colors duration-200 font-normal"
             >
               {isSignUp ? 'Sign in' : 'Create Your Nino Account'}
             </button>
@@ -127,9 +139,9 @@ export default function Auth() {
         <div className="text-center mt-16">
           <p className="text-[13px] text-[#8e8e93] leading-[1.4] font-normal max-w-xs mx-auto">
             By signing {isSignUp ? 'up' : 'in'}, you agree to Nino's{' '}
-            <span className="text-[#007aff] hover:text-[#0051d5] cursor-pointer transition-colors duration-200">Terms of Service</span>{' '}
+            <span className="text-[#6c6c70] hover:text-[#48484a] cursor-pointer transition-colors duration-200">Terms of Service</span>{' '}
             and{' '}
-            <span className="text-[#007aff] hover:text-[#0051d5] cursor-pointer transition-colors duration-200">Privacy Policy</span>
+            <span className="text-[#6c6c70] hover:text-[#48484a] cursor-pointer transition-colors duration-200">Privacy Policy</span>
           </p>
         </div>
       </div>
