@@ -1,5 +1,6 @@
-import { Home, FolderOpen, Palette, Settings, ChevronRight, User } from "lucide-react";
+import { Home, FolderOpen, Palette, Settings, ChevronRight, User, LogOut } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Sidebar,
@@ -29,6 +30,7 @@ const projectItems = [
 export function AppSidebar() {
   const location = useLocation();
   const currentPath = location.pathname;
+  const { signOut } = useAuth();
 
   const isActive = (path: string) => currentPath === path;
 
@@ -140,6 +142,18 @@ export function AppSidebar() {
                 <Settings className="h-4 w-4" />
                 <span className="md:block hidden">Settings</span>
               </NavLink>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <button
+                onClick={() => signOut()}
+                className="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 font-medium text-sm md:justify-start justify-center text-gray-600 hover:bg-gray-100 hover:text-gray-900 w-full"
+                title="Sign Out"
+              >
+                <LogOut className="h-4 w-4" />
+                <span className="md:block hidden">Sign Out</span>
+              </button>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
