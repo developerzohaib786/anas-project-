@@ -7,6 +7,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
 
@@ -107,30 +110,16 @@ export default function Projects() {
   };
 
   const handleDownload = (project: typeof mockProjects[0]) => {
-    // Show size selection options
-    const sizeOptions = [
-      { label: 'Original Size', value: 'original' },
-      { label: '1:1 (Square)', value: '1:1' },
-      { label: '4:5 (Portrait)', value: '4:5' },
-      { label: '9:16 (Vertical)', value: '9:16' },
-      { label: '16:9 (Landscape)', value: '16:9' }
-    ];
-    
-    const selectedSize = prompt(
-      'Select download size:\n' + 
-      sizeOptions.map((option, index) => `${index + 1}. ${option.label}`).join('\n') +
-      '\n\nEnter number (1-5):'
-    );
-    
-    const sizeIndex = parseInt(selectedSize || '1') - 1;
-    if (sizeIndex >= 0 && sizeIndex < sizeOptions.length) {
-      const size = sizeOptions[sizeIndex].value;
-      if (size === 'original') {
-        console.log('Downloading original:', project.name);
-      } else {
-        console.log('Downloading and resizing:', project.name, 'to', size);
-        handleResize(project, size);
-      }
+    // Download functionality
+    console.log('Downloading:', project.name);
+  };
+
+  const handleDownloadWithSize = (project: typeof mockProjects[0], size: string) => {
+    if (size === 'original') {
+      console.log('Downloading original:', project.name);
+    } else {
+      console.log('Downloading and resizing:', project.name, 'to', size);
+      handleResize(project, size);
     }
   };
 
@@ -196,10 +185,29 @@ export default function Projects() {
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="bg-white dark:bg-gray-800 border shadow-lg">
-                    <DropdownMenuItem onClick={() => handleDownload(project)}>
-                      <Download className="mr-2 h-4 w-4" />
-                      Download
-                    </DropdownMenuItem>
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>
+                        <Download className="mr-2 h-4 w-4" />
+                        Download
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="bg-white dark:bg-gray-800 border shadow-lg">
+                        <DropdownMenuItem onClick={() => handleDownloadWithSize(project, 'original')}>
+                          Original Size
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDownloadWithSize(project, '1:1')}>
+                          1:1 (Square)
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDownloadWithSize(project, '4:5')}>
+                          4:5 (Portrait)
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDownloadWithSize(project, '9:16')}>
+                          9:16 (Vertical)
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDownloadWithSize(project, '16:9')}>
+                          16:9 (Landscape)
+                        </DropdownMenuItem>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
