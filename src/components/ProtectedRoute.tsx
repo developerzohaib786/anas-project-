@@ -15,32 +15,52 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   useEffect(() => {
     const checkOnboardingStatus = async () => {
-      if (!user) return;
+      console.log('ProtectedRoute: Checking onboarding status for user:', user?.id);
+      
+      if (!user) {
+        console.log('ProtectedRoute: No user found, setting profileLoading to false');
+        setProfileLoading(false);
+        return;
+      }
       
       try {
+        console.log('ProtectedRoute: Fetching profile for user:', user.id);
         const { data: profile, error } = await supabase
           .from('profiles')
           .select('onboarding_completed')
           .eq('id', user.id)
-          .single();
+          .maybeSingle(); // Use maybeSingle() instead of single() to avoid errors when no profile exists
 
         if (error) {
-          console.error('Error fetching profile:', error);
+          console.error('ProtectedRoute: Error fetching profile:', error);
+          // If profile doesn't exist, show onboarding
+          setShowOnboarding(true);
           setProfileLoading(false);
           return;
         }
 
-        setShowOnboarding(!profile?.onboarding_completed);
+        console.log('ProtectedRoute: Profile data:', profile);
+
+        // If no profile exists, show onboarding
+        if (!profile) {
+          console.log('ProtectedRoute: No profile found, showing onboarding');
+          setShowOnboarding(true);
+        } else {
+          console.log('ProtectedRoute: Profile found, onboarding_completed:', profile.onboarding_completed);
+          setShowOnboarding(!profile.onboarding_completed);
+        }
       } catch (error) {
-        console.error('Error checking onboarding status:', error);
+        console.error('ProtectedRoute: Error checking onboarding status:', error);
+        // On any error, show onboarding to be safe
+        setShowOnboarding(true);
       } finally {
+        console.log('ProtectedRoute: Setting profileLoading to false');
         setProfileLoading(false);
       }
     };
 
-    if (user) {
-      checkOnboardingStatus();
-    }
+    // Always call the function to ensure profileLoading gets set to false
+    checkOnboardingStatus();
   }, [user]);
 
   if (loading || profileLoading) {
