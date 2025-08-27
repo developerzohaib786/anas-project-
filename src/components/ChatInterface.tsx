@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { ArrowUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -165,7 +165,7 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
                 boxShadow: !inputValue.trim() ? 'none' : 'var(--shadow-button)'
               }}
             >
-              <Plus className="h-5 w-5" />
+              <ArrowUp className="h-5 w-5" />
             </Button>
           </div>
         </div>
