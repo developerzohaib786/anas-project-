@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/EmptyState";
+import { InputModal } from "@/components/ui/input-modal";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/contexts/BrandContext";
 import { toast } from "sonner";
@@ -28,6 +30,8 @@ export default function BrandKit() {
   const [loading, setLoading] = useState(true);
   const [uploadingAssets, setUploadingAssets] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [tagModal, setTagModal] = useState<{ open: boolean; assetId?: string }>({ open: false });
+  const [deleteModal, setDeleteModal] = useState<{ open: boolean; asset?: BrandAsset }>({ open: false });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { brandProfile, updateBrandProfile } = useBrand();
 
@@ -358,7 +362,7 @@ export default function BrandKit() {
                     
                     {/* Delete button */}
                     <button
-                      onClick={() => handleDeleteAsset(asset)}
+                      onClick={() => setDeleteModal({ open: true, asset })}
                       className="absolute top-3 right-3 w-8 h-8 bg-background/95 hover:bg-background rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-sm shadow-lg hover:scale-110"
                     >
                       <Trash2 className="h-4 w-4 text-muted-foreground" />
@@ -366,10 +370,7 @@ export default function BrandKit() {
 
                     {/* Add tag button */}
                     <button
-                      onClick={() => {
-                        const tag = prompt("Add a tag:");
-                        if (tag) handleAddTag(asset.id, tag);
-                      }}
+                      onClick={() => setTagModal({ open: true, assetId: asset.id })}
                       className="absolute bottom-3 right-3 w-8 h-8 bg-primary hover:bg-primary/90 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg hover:scale-110"
                     >
                       <Plus className="h-4 w-4 text-primary-foreground" />
@@ -502,6 +503,36 @@ export default function BrandKit() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Tag Modal */}
+      <InputModal
+        open={tagModal.open}
+        onOpenChange={(open) => setTagModal({ open })}
+        title="Add Tag"
+        description="Add a descriptive tag to help organize your brand assets"
+        placeholder="Enter tag name..."
+        onConfirm={(tag) => {
+          if (tagModal.assetId) {
+            handleAddTag(tagModal.assetId, tag);
+          }
+        }}
+        confirmText="Add Tag"
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        open={deleteModal.open}
+        onOpenChange={(open) => setDeleteModal({ open })}
+        title="Delete Asset"
+        description="Are you sure you want to delete this asset? This action cannot be undone."
+        onConfirm={() => {
+          if (deleteModal.asset) {
+            handleDeleteAsset(deleteModal.asset);
+          }
+        }}
+        confirmText="Delete"
+        variant="destructive"
+      />
     </div>
   );
 }
