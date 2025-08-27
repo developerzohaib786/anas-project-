@@ -146,22 +146,24 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
       <div className="border-t border-[hsl(var(--border))] bg-[hsl(var(--background))]">
         <div className="max-w-4xl mx-auto px-6 py-6">
           {/* Example Prompts - Show when conversation is minimal and input is empty */}
-          {messages.length <= 1 && !inputValue.trim() && (
-            <div className="mb-6">
-              <p className="text-sm text-muted-foreground mb-4 font-medium">Try these examples:</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {examplePrompts.map((prompt, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handlePromptClick(prompt)}
-                    className="text-left p-4 rounded-xl bg-muted/30 hover:bg-muted/60 text-sm text-muted-foreground hover:text-foreground transition-all duration-200"
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          <div className="mb-6" style={{ minHeight: messages.length <= 1 && !inputValue.trim() ? 'auto' : '0' }}>
+            {messages.length <= 1 && !inputValue.trim() && (
+              <>
+                <p className="text-sm text-muted-foreground mb-4 font-medium">Try these examples:</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {examplePrompts.map((prompt, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handlePromptClick(prompt)}
+                      className="text-left p-4 rounded-xl bg-muted/30 hover:bg-muted/60 text-sm text-muted-foreground hover:text-foreground transition-all duration-200"
+                    >
+                      {prompt}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
 
           <div className="flex items-end gap-3">
             <div className="flex-1">
