@@ -35,11 +35,18 @@ export function AppSidebar() {
     <Sidebar className="w-60 bg-white border-r border-gray-200 md:w-60 w-16">
       <div className="flex flex-col h-full">
       <SidebarHeader className="p-6 border-b border-gray-100 md:p-6 p-3">
-        <div className="font-medium text-xl text-gray-900 md:block hidden" style={{ fontFamily: 'Inter, sans-serif' }}>
-          Nino
+        <div className="md:block hidden">
+          <div className="font-semibold text-base text-gray-900 mb-0.5" style={{ fontFamily: 'Inter, sans-serif' }}>
+            Four Seasons Oahu
+          </div>
+          <div className="text-xs text-gray-500 font-normal">
+            Workspace
+          </div>
         </div>
-        <div className="font-medium text-sm text-gray-900 md:hidden block" style={{ fontFamily: 'Inter, sans-serif' }}>
-          N
+        <div className="md:hidden block">
+          <div className="font-semibold text-sm text-gray-900" style={{ fontFamily: 'Inter, sans-serif' }}>
+            FS
+          </div>
         </div>
       </SidebarHeader>
 
