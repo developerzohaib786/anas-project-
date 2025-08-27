@@ -110,9 +110,10 @@ export default function BrandKit() {
         </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="photos">Photos</TabsTrigger>
           <TabsTrigger value="guidelines">Guidelines</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="photos" className="mt-6">
@@ -320,6 +321,56 @@ export default function BrandKit() {
           </div>
         </TabsContent>
 
+        <TabsContent value="settings" className="mt-6">
+          <div className="w-full">
+            <h2 className="text-xl font-medium text-gray-900 mb-2">Brand Settings</h2>
+            <p className="text-gray-600 mb-6">
+              Configure your brand's basic information and account preferences
+            </p>
+            
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Brand Information</CardTitle>
+                  <CardDescription>
+                    Basic information about your brand
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="brand-name">Brand Name</Label>
+                    <Input id="brand-name" placeholder="Your Hotel/Resort Name" className="mt-2" />
+                    <p className="text-xs text-gray-500 mt-1">The official name of your property</p>
+                  </div>
+                  <div>
+                    <Label htmlFor="brand-description">Description</Label>
+                    <Textarea 
+                      id="brand-description" 
+                      placeholder="Brief description of your brand and what makes it unique..."
+                      className="mt-2 min-h-[100px]"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">A short overview of your property and its unique features</p>
+                  </div>
+                  <div>
+                    <Label htmlFor="brand-location">Location</Label>
+                    <Input id="brand-location" placeholder="e.g., Waikiki Beach, Honolulu, Hawaii" className="mt-2" />
+                    <p className="text-xs text-gray-500 mt-1">Primary location of your property</p>
+                  </div>
+                  <div>
+                    <Label htmlFor="brand-industry">Industry</Label>
+                    <Input id="brand-industry" value="Hospitality & Travel" disabled className="mt-2" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="flex justify-end">
+                <Button style={{ boxShadow: 'var(--shadow-button)' }}>
+                  Save Changes
+                </Button>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
       </Tabs>
     </div>
   );
