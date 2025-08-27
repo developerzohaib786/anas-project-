@@ -15,6 +15,50 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email || !password) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      if (isSignUp) {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`
+          }
+        });
+
+        if (error) {
+          toast.error(error.message);
+        } else {
+          toast.success("Account created! Check your email to verify your account.");
+        }
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) {
+          toast.error(error.message);
+        } else {
+          toast.success("Welcome back!");
+          navigate("/");
+        }
+      }
+    } catch (error) {
+      toast.error("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleForgotPassword = async () => {
     if (!email) {
       toast.error("Please enter your email address first");
@@ -60,8 +104,8 @@ const Auth = () => {
           </h1>
         </div>
 
-        {/* Connected Form Fields */}
-        <div className="mb-6">
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="mb-6">
           {/* Email Field */}
           <div>
             <Input
@@ -69,7 +113,9 @@ const Auth = () => {
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="h-14 bg-white border border-gray-200 rounded-t-lg rounded-b-none border-b-0 px-4 text-base placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-300 focus:border-gray-300 focus:z-10 relative transition-all duration-200"
+              className="h-14 bg-white border border-gray-200 rounded-t-3xl rounded-b-none border-b-0 px-4 text-base placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-300 focus:border-gray-300 focus:z-10 relative transition-all duration-200"
+              disabled={loading}
+              required
             />
           </div>
           
@@ -80,13 +126,16 @@ const Auth = () => {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="h-14 bg-white border border-gray-200 rounded-b-lg rounded-t-none px-4 pr-20 text-base placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-300 focus:border-gray-300 focus:z-10 relative transition-all duration-200"
+              className="h-14 bg-white border border-gray-200 rounded-b-3xl rounded-t-none px-4 pr-20 text-base placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-300 focus:border-gray-300 focus:z-10 relative transition-all duration-200"
+              disabled={loading}
+              required
             />
             <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                disabled={loading}
               >
                 {showPassword ? (
                   <EyeOff className="h-5 w-5" />
@@ -94,12 +143,16 @@ const Auth = () => {
                   <Eye className="h-5 w-5" />
                 )}
               </button>
-              <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                <ArrowRight className="h-4 w-4 text-gray-500" />
-              </div>
+              <button
+                type="submit"
+                disabled={loading || !email || !password}
+                className="w-8 h-8 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-400 rounded-full flex items-center justify-center transition-colors"
+              >
+                <ArrowRight className="h-4 w-4 text-white" />
+              </button>
             </div>
           </div>
-        </div>
+        </form>
 
         {/* Remember Me - Only show on sign in */}
         {!isSignUp && (
