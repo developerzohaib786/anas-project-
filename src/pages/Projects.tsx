@@ -107,8 +107,31 @@ export default function Projects() {
   };
 
   const handleDownload = (project: typeof mockProjects[0]) => {
-    // Download functionality
-    console.log('Downloading:', project.name);
+    // Show size selection options
+    const sizeOptions = [
+      { label: 'Original Size', value: 'original' },
+      { label: '1:1 (Square)', value: '1:1' },
+      { label: '4:5 (Portrait)', value: '4:5' },
+      { label: '9:16 (Vertical)', value: '9:16' },
+      { label: '16:9 (Landscape)', value: '16:9' }
+    ];
+    
+    const selectedSize = prompt(
+      'Select download size:\n' + 
+      sizeOptions.map((option, index) => `${index + 1}. ${option.label}`).join('\n') +
+      '\n\nEnter number (1-5):'
+    );
+    
+    const sizeIndex = parseInt(selectedSize || '1') - 1;
+    if (sizeIndex >= 0 && sizeIndex < sizeOptions.length) {
+      const size = sizeOptions[sizeIndex].value;
+      if (size === 'original') {
+        console.log('Downloading original:', project.name);
+      } else {
+        console.log('Downloading and resizing:', project.name, 'to', size);
+        handleResize(project, size);
+      }
+    }
   };
 
   const handleResize = (project: typeof mockProjects[0], aspectRatio: string) => {
@@ -172,26 +195,10 @@ export default function Projects() {
                       <MoreHorizontal className="h-4 w-4 text-gray-600" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent>
+                  <DropdownMenuContent className="bg-white dark:bg-gray-800 border shadow-lg">
                     <DropdownMenuItem onClick={() => handleDownload(project)}>
                       <Download className="mr-2 h-4 w-4" />
                       Download
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleResize(project, '1:1')}>
-                      <Maximize2 className="mr-2 h-4 w-4" />
-                      Resize to 1:1
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleResize(project, '4:5')}>
-                      <Maximize2 className="mr-2 h-4 w-4" />
-                      Resize to 4:5
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleResize(project, '9:16')}>
-                      <Maximize2 className="mr-2 h-4 w-4" />
-                      Resize to 9:16
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleResize(project, '16:9')}>
-                      <Maximize2 className="mr-2 h-4 w-4" />
-                      Resize to 16:9
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
