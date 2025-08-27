@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Upload, Plus, Edit2, Trash2, Download, Image, X } from "lucide-react";
+import { Upload, Plus, Trash2, Image, X, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,26 +14,26 @@ const mockLogos = [
 ];
 
 const mockPhotos = [
-  { id: "1", url: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=600&fit=crop", name: "Luxury Pool Villa", uploaded: "2024-08-26", size: "2.4 MB" },
-  { id: "2", url: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&h=300&fit=crop", name: "Ocean Suite Bedroom", uploaded: "2024-08-25", size: "1.9 MB" },
-  { id: "3", url: "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=400&h=500&fit=crop", name: "Elegant Dining Room", uploaded: "2024-08-24", size: "2.1 MB" },
-  { id: "4", url: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&h=280&fit=crop", name: "Infinity Pool Sunset", uploaded: "2024-08-23", size: "2.8 MB" },
-  { id: "5", url: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=400&h=550&fit=crop", name: "Presidential Suite", uploaded: "2024-08-22", size: "2.2 MB" },
-  { id: "6", url: "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=400&h=350&fit=crop", name: "Spa Treatment Room", uploaded: "2024-08-21", size: "1.7 MB" },
-  { id: "7", url: "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=400&h=480&fit=crop", name: "Grand Lobby", uploaded: "2024-08-20", size: "2.3 MB" },
-  { id: "8", url: "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=400&h=320&fit=crop", name: "Beachfront Restaurant", uploaded: "2024-08-19", size: "2.0 MB" },
-  { id: "9", url: "https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?w=400&h=600&fit=crop", name: "Rooftop Bar View", uploaded: "2024-08-18", size: "2.5 MB" },
-  { id: "10", url: "https://images.unsplash.com/photo-1587985064135-0366536eab42?w=400&h=250&fit=crop", name: "Beach Cabana", uploaded: "2024-08-17", size: "1.8 MB" },
-  { id: "11", url: "https://images.unsplash.com/photo-1559599101-f09722fb4948?w=400&h=520&fit=crop", name: "Wine Cellar", uploaded: "2024-08-16", size: "2.1 MB" },
-  { id: "12", url: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop", name: "Garden Terrace", uploaded: "2024-08-15", size: "1.9 MB" },
-  { id: "13", url: "https://images.unsplash.com/photo-1573052905904-34ad8c27f0cc?w=400&h=450&fit=crop", name: "Conference Hall", uploaded: "2024-08-14", size: "2.0 MB" },
-  { id: "14", url: "https://images.unsplash.com/photo-1566195992011-5f6b21e539aa?w=400&h=350&fit=crop", name: "Fitness Center", uploaded: "2024-08-13", size: "1.6 MB" },
-  { id: "15", url: "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=400&h=600&fit=crop", name: "Penthouse Balcony", uploaded: "2024-08-12", size: "2.7 MB" },
-  { id: "16", url: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400&h=280&fit=crop", name: "Breakfast Buffet", uploaded: "2024-08-11", size: "1.8 MB" },
-  { id: "17", url: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=500&fit=crop", name: "Yacht Marina", uploaded: "2024-08-10", size: "2.3 MB" },
-  { id: "18", url: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=380&fit=crop", name: "Garden Pool", uploaded: "2024-08-09", size: "2.1 MB" },
-  { id: "19", url: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=400&h=550&fit=crop", name: "Executive Lounge", uploaded: "2024-08-08", size: "2.2 MB" },
-  { id: "20", url: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&h=320&fit=crop", name: "Sunset Deck", uploaded: "2024-08-07", size: "1.9 MB" },
+  { id: "1", url: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=600&fit=crop", tags: ["pool", "luxury", "villa"] },
+  { id: "2", url: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&h=300&fit=crop", tags: ["bedroom", "suite", "ocean view"] },
+  { id: "3", url: "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=400&h=500&fit=crop", tags: ["dining", "restaurant", "elegant"] },
+  { id: "4", url: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&h=280&fit=crop", tags: ["infinity pool", "sunset", "view"] },
+  { id: "5", url: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=400&h=550&fit=crop", tags: ["presidential", "suite", "luxury"] },
+  { id: "6", url: "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=400&h=350&fit=crop", tags: ["spa", "treatment", "wellness"] },
+  { id: "7", url: "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=400&h=480&fit=crop", tags: ["lobby", "grand", "entrance"] },
+  { id: "8", url: "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=400&h=320&fit=crop", tags: ["beachfront", "restaurant", "dining"] },
+  { id: "9", url: "https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?w=400&h=600&fit=crop", tags: ["rooftop", "bar", "city view"] },
+  { id: "10", url: "https://images.unsplash.com/photo-1587985064135-0366536eab42?w=400&h=250&fit=crop", tags: ["beach", "cabana", "relaxation"] },
+  { id: "11", url: "https://images.unsplash.com/photo-1559599101-f09722fb4948?w=400&h=520&fit=crop", tags: ["wine", "cellar", "fine dining"] },
+  { id: "12", url: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop", tags: ["garden", "terrace", "outdoor"] },
+  { id: "13", url: "https://images.unsplash.com/photo-1573052905904-34ad8c27f0cc?w=400&h=450&fit=crop", tags: ["conference", "business", "meeting"] },
+  { id: "14", url: "https://images.unsplash.com/photo-1566195992011-5f6b21e539aa?w=400&h=350&fit=crop", tags: ["fitness", "gym", "wellness"] },
+  { id: "15", url: "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=400&h=600&fit=crop", tags: ["penthouse", "balcony", "luxury"] },
+  { id: "16", url: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400&h=280&fit=crop", tags: ["breakfast", "buffet", "dining"] },
+  { id: "17", url: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=500&fit=crop", tags: ["yacht", "marina", "waterfront"] },
+  { id: "18", url: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=380&fit=crop", tags: ["garden pool", "private", "tranquil"] },
+  { id: "19", url: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=400&h=550&fit=crop", tags: ["executive", "lounge", "business"] },
+  { id: "20", url: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&h=320&fit=crop", tags: ["sunset", "deck", "romantic"] },
 ];
 
 export default function BrandKit() {
@@ -50,9 +50,7 @@ export default function BrandKit() {
           const newPhoto = {
             id: Date.now().toString() + Math.random(),
             url: e.target?.result as string,
-            name: file.name.split('.')[0],
-            uploaded: new Date().toISOString().split('T')[0],
-            size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+            tags: []
           };
           setPhotos(prev => [newPhoto, ...prev]);
         };
@@ -63,6 +61,23 @@ export default function BrandKit() {
 
   const handleDeletePhoto = (id: string) => {
     setPhotos(prev => prev.filter(photo => photo.id !== id));
+  };
+
+  const handleAddTag = (photoId: string, tag: string) => {
+    if (!tag.trim()) return;
+    setPhotos(prev => prev.map(photo => 
+      photo.id === photoId 
+        ? { ...photo, tags: [...photo.tags, tag.trim()] }
+        : photo
+    ));
+  };
+
+  const handleRemoveTag = (photoId: string, tagIndex: number) => {
+    setPhotos(prev => prev.map(photo => 
+      photo.id === photoId 
+        ? { ...photo, tags: photo.tags.filter((_, index) => index !== tagIndex) }
+        : photo
+    ));
   };
 
   return (
@@ -101,12 +116,12 @@ export default function BrandKit() {
             />
           </div>
 
-          {/* Masonry Grid Layout */}
+          {/* Modern Masonry Grid */}
           <div className="masonry-grid">
             {photos.map((photo) => (
               <div
                 key={photo.id}
-                className="masonry-item group relative bg-white rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
+                className="masonry-item group relative bg-white rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-2"
                 style={{
                   boxShadow: 'var(--shadow-soft)',
                   breakInside: 'avoid',
@@ -116,47 +131,45 @@ export default function BrandKit() {
                 <div className="relative overflow-hidden">
                   <img
                     src={photo.url}
-                    alt={photo.name}
-                    className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105"
+                    alt="Brand photo"
+                    className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-110"
                     loading="lazy"
                     onError={(e) => {
                       e.currentTarget.src = `https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=400&fit=crop`;
                     }}
                   />
                   
-                  {/* Gradient overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300" />
+                  {/* Delete button - top right */}
+                  <button
+                    onClick={() => handleDeletePhoto(photo.id)}
+                    className="absolute top-3 right-3 w-8 h-8 bg-white/95 hover:bg-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-sm shadow-lg hover:scale-110"
+                  >
+                    <Trash2 className="h-4 w-4 text-gray-600" />
+                  </button>
+
+                  {/* Add tag button - bottom right */}
+                  <button
+                    onClick={() => {
+                      const tag = prompt("Add a tag:");
+                      if (tag) handleAddTag(photo.id, tag);
+                    }}
+                    className="absolute bottom-3 right-3 w-8 h-8 bg-primary hover:bg-primary/90 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg hover:scale-110"
+                  >
+                    <Plus className="h-4 w-4 text-white" />
+                  </button>
                   
-                  {/* Hover actions */}
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
-                    <div className="flex gap-3">
-                      <Button
-                        size="sm"
-                        className="apple-button bg-white/95 hover:bg-white text-gray-900 h-10 px-4 rounded-full font-medium backdrop-blur-sm"
-                        style={{ boxShadow: 'var(--shadow-button)' }}
+                  {/* Tags overlay */}
+                  <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5 max-w-[calc(100%-4rem)]">
+                    {photo.tags.map((tag, index) => (
+                      <div
+                        key={index}
+                        className="group/tag bg-black/70 hover:bg-black/80 backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-full flex items-center gap-1.5 transition-all duration-200 cursor-pointer"
+                        onClick={() => handleRemoveTag(photo.id, index)}
                       >
-                        <Download className="h-4 w-4 mr-2" />
-                        Download
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => handleDeletePhoto(photo.id)}
-                        className="apple-button bg-white/95 hover:bg-white text-gray-900 h-10 px-4 rounded-full font-medium backdrop-blur-sm"
-                        style={{ boxShadow: 'var(--shadow-button)' }}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Photo metadata */}
-                <div className="p-4">
-                  <h3 className="font-medium text-gray-900 text-sm mb-1 leading-tight">{photo.name}</h3>
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span className="font-medium">{photo.size}</span>
-                    <span>{photo.uploaded}</span>
+                        <span>{tag}</span>
+                        <X className="h-3 w-3 opacity-0 group-hover/tag:opacity-100 transition-opacity duration-200" />
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
