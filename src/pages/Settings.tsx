@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TeamInvitations } from "@/components/TeamInvitations";
-import { useAuth } from "@/contexts/AuthContext";
+// Auth removed - Settings page disabled
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, LogOut } from "lucide-react";
@@ -27,7 +27,8 @@ export default function Settings() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
-  const { user, signOut } = useAuth();
+  const user = null; // Auth removed
+  const signOut = () => {}; // Auth removed
   const { toast } = useToast();
 
   useEffect(() => {

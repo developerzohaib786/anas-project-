@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+// Auth removed - TeamInvitations disabled
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, UserPlus, Mail, Users, Crown, Shield, User } from "lucide-react";
 
@@ -39,7 +39,7 @@ export function TeamInvitations({ teamId }: TeamInvitationsProps) {
   const [role, setRole] = useState("member");
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([]);
-  const { user } = useAuth();
+  const user = null; // Auth removed
   const { toast } = useToast();
 
   useEffect(() => {
