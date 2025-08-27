@@ -27,11 +27,9 @@ const App = () => (
               <AppSidebar />
               <main className="flex-1">
                 <Routes>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/create" element={<Create />} />
+                  <Route path="/" element={<Chat />} />
                   <Route path="/projects" element={<Projects />} />
                   <Route path="/brand-kit" element={<BrandKit />} />
-                  <Route path="/chat" element={<Chat />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>

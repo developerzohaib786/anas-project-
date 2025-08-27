@@ -1,4 +1,4 @@
-import { Home, Plus, FolderOpen, Palette, Settings, ChevronRight } from "lucide-react";
+import { Home, FolderOpen, Palette, Settings, ChevronRight } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   Sidebar,
@@ -14,8 +14,7 @@ import {
 } from "@/components/ui/sidebar";
 
 const mainNavItems = [
-  { title: "Dashboard", url: "/", icon: Home },
-  { title: "Create", url: "/create", icon: Plus },
+  { title: "Chat", url: "/", icon: Home },
   { title: "Projects", url: "/projects", icon: FolderOpen },
   { title: "Brand Kit", url: "/brand-kit", icon: Palette },
 ];

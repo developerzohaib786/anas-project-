@@ -19,7 +19,7 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      content: "Hello! Describe what you'd like me to create.",
+      content: "Hi! I'm Nino, your AI creative assistant for hotels and resorts. I'll help you create stunning marketing photos. What would you like me to create for you today?",
       role: "assistant",
       timestamp: new Date(),
     },
@@ -36,19 +36,37 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
       timestamp: new Date(),
     };
 
+    // Add user message
     setMessages((prev) => [...prev, userMessage]);
     
-    // Trigger image generation
-    onGenerateImage(inputValue);
+    // Simulate AI response with follow-up questions
+    setTimeout(() => {
+      let assistantResponse = "Great! Let me help you create that. ";
+      
+      // Simple logic to ask follow-up questions based on input
+      const input = inputValue.toLowerCase();
+      
+      if (!input.includes('hotel') && !input.includes('resort') && !input.includes('room') && !input.includes('pool')) {
+        assistantResponse += "What type of hotel or resort space would you like to showcase? (e.g., luxury suite, pool area, dining room, spa)";
+      } else if (!input.includes('style') && !input.includes('mood') && !input.includes('luxury') && !input.includes('modern')) {
+        assistantResponse += "What style or mood are you going for? (e.g., luxury, modern, cozy, romantic, family-friendly)";
+      } else if (!input.includes('guest') && !input.includes('people') && !input.includes('family') && !input.includes('couple')) {
+        assistantResponse += "Should I include people in the scene? If so, what type of guests? (e.g., couples, families, business travelers)";
+      } else {
+        assistantResponse = "Perfect! I have enough information to create your image. Generating your hotel marketing photo now...";
+        // Trigger image generation
+        onGenerateImage(inputValue);
+      }
 
-    const assistantMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      content: "Creating your image...",
-      role: "assistant",
-      timestamp: new Date(),
-    };
+      const assistantMessage: Message = {
+        id: Date.now().toString(),
+        content: assistantResponse,
+        role: "assistant",
+        timestamp: new Date(),
+      };
 
-    setMessages((prev) => [...prev, assistantMessage]);
+      setMessages((prev) => [...prev, assistantMessage]);
+    }, 1000);
     setInputValue("");
   };
 
@@ -95,7 +113,7 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Message"
+              placeholder="Describe the hotel marketing photo you want to create..."
               className="w-full bg-gray-50/50 border-0 rounded-3xl px-6 py-4 text-[16px] placeholder:text-gray-400 focus:bg-white focus:ring-1 focus:ring-black/10 transition-all duration-300"
             />
           </div>
