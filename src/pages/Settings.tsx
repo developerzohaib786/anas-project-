@@ -5,17 +5,20 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { TeamInvitations } from "@/components/TeamInvitations";
-// Auth removed - Settings page disabled
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";
-import { Loader2, LogOut } from "lucide-react";
+import { Loader2, LogOut, Upload, User } from "lucide-react";
 
 interface UserProfile {
   first_name: string;
   last_name: string;
   email: string;
+  brand_name: string;
+  avatar_url: string;
 }
 
 interface Team {
@@ -28,8 +31,16 @@ export default function Settings() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
-  const user = null; // Auth removed
-  const signOut = () => {}; // Auth removed
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile>({
+    first_name: '',
+    last_name: '',
+    email: '',
+    brand_name: '',
+    avatar_url: ''
+  });
+  const { user, signOut } = useAuth();
   const { toast } = useToast();
   const { profile, brandSettings, updateProfile, updateBrandSettings } = useSettings();
 
@@ -46,12 +57,17 @@ export default function Settings() {
       // Load user profile
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('first_name, last_name, email')
+        .select('first_name, last_name, email, brand_name, avatar_url')
         .eq('id', user.id)
         .single();
 
       if (profileData) {
-        updateProfile(profileData);
+        setUserProfile(profileData);
+        updateProfile({
+          first_name: profileData.first_name || '',
+          last_name: profileData.last_name || '',
+          email: profileData.email || ''
+        });
       }
 
       // Load user's teams
@@ -78,6 +94,37 @@ export default function Settings() {
     }
   };
 
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAvatarFile(file);
+      const preview = URL.createObjectURL(file);
+      setAvatarPreview(preview);
+    }
+  };
+
+  const uploadAvatar = async (): Promise<string | null> => {
+    if (!avatarFile || !user) return null;
+
+    const fileExt = avatarFile.name.split('.').pop();
+    const fileName = `${user.id}/avatar.${fileExt}`;
+
+    const { data, error } = await supabase.storage
+      .from('avatars')
+      .upload(fileName, avatarFile, { upsert: true });
+
+    if (error) {
+      console.error('Error uploading avatar:', error);
+      return null;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(fileName);
+
+    return publicUrl;
+  };
+
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -85,15 +132,30 @@ export default function Settings() {
     setIsLoading(true);
     
     try {
+      let avatarUrl = userProfile.avatar_url;
+      
+      if (avatarFile) {
+        const newAvatarUrl = await uploadAvatar();
+        if (newAvatarUrl) {
+          avatarUrl = newAvatarUrl;
+        }
+      }
+
       const { error } = await supabase
         .from('profiles')
         .update({
           first_name: profile.first_name,
           last_name: profile.last_name,
+          brand_name: userProfile.brand_name,
+          avatar_url: avatarUrl,
         })
         .eq('id', user.id);
 
       if (error) throw error;
+
+      setUserProfile(prev => ({ ...prev, avatar_url: avatarUrl }));
+      setAvatarFile(null);
+      setAvatarPreview(null);
 
       toast({
         title: "Profile updated",
@@ -148,7 +210,38 @@ export default function Settings() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSaveProfile} className="space-y-4">
+              <form onSubmit={handleSaveProfile} className="space-y-6">
+                {/* Avatar Upload */}
+                <div className="flex flex-col items-center space-y-4">
+                  <div className="relative">
+                    <Avatar className="w-20 h-20 border-2 border-border">
+                      {avatarPreview ? (
+                        <AvatarImage src={avatarPreview} alt="Profile" />
+                      ) : userProfile.avatar_url ? (
+                        <AvatarImage src={userProfile.avatar_url} alt="Profile" />
+                      ) : (
+                        <AvatarFallback>
+                          <User className="w-8 h-8" />
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
+                    <Label
+                      htmlFor="avatar-upload"
+                      className="absolute -bottom-1 -right-1 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center cursor-pointer hover:bg-primary/90 transition-colors"
+                    >
+                      <Upload className="w-4 h-4" />
+                    </Label>
+                    <input
+                      id="avatar-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarChange}
+                      className="sr-only"
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground">Upload a profile picture</p>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="first-name">First Name</Label>
@@ -169,6 +262,18 @@ export default function Settings() {
                     />
                   </div>
                 </div>
+                
+                <div>
+                  <Label htmlFor="brand-name-profile">Brand Name</Label>
+                  <Input 
+                    id="brand-name-profile" 
+                    value={userProfile.brand_name}
+                    onChange={(e) => setUserProfile(prev => ({ ...prev, brand_name: e.target.value }))}
+                    placeholder="Enter your brand name"
+                    className="mt-2 rounded-full" 
+                  />
+                </div>
+                
                 <div>
                   <Label htmlFor="email">Email Address</Label>
                   <Input 

@@ -2,6 +2,8 @@ import { Home, FolderOpen, Palette, Settings, ChevronRight, User, LogOut } from 
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Sidebar,
   SidebarContent,
@@ -30,9 +32,35 @@ const projectItems = [
 export function AppSidebar() {
   const location = useLocation();
   const currentPath = location.pathname;
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
+  const [profile, setProfile] = useState<{ brand_name?: string; avatar_url?: string } | null>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('brand_name, avatar_url')
+          .eq('id', user.id)
+          .single();
+
+        if (!error && data) {
+          setProfile(data);
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+      }
+    };
+
+    fetchProfile();
+  }, [user]);
 
   const isActive = (path: string) => currentPath === path;
+  const brandName = profile?.brand_name || "Your Brand";
+  const avatarUrl = profile?.avatar_url;
+  const initials = brandName.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
 
   return (
     <Sidebar className="w-60 bg-white border-r border-gray-200 md:w-60 w-16">
@@ -40,14 +68,14 @@ export function AppSidebar() {
       <SidebarHeader className="p-4 border-b border-gray-100 md:p-4 p-3">
         <div className="flex items-center gap-3 md:flex hidden">
           <Avatar className="h-8 w-8">
-            <AvatarImage src="" alt="Four Seasons Oahu" />
+            <AvatarImage src={avatarUrl || ""} alt={brandName} />
             <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
-              FS
+              {initials}
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col">
             <div className="font-semibold text-sm text-gray-900" style={{ fontFamily: 'Inter, sans-serif' }}>
-              Four Seasons Oahu
+              {brandName}
             </div>
             <div className="text-xs text-gray-500 font-normal">
               Workspace
@@ -56,9 +84,9 @@ export function AppSidebar() {
         </div>
         <div className="md:hidden flex items-center justify-center">
           <Avatar className="h-7 w-7">
-            <AvatarImage src="" alt="Four Seasons Oahu" />
+            <AvatarImage src={avatarUrl || ""} alt={brandName} />
             <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
-              FS
+              {initials}
             </AvatarFallback>
           </Avatar>
         </div>
