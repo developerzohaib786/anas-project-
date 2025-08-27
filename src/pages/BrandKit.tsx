@@ -158,16 +158,16 @@ export default function BrandKit() {
                     <Plus className="h-4 w-4 text-white" />
                   </button>
                   
-                  {/* Tags overlay */}
-                  <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5 max-w-[calc(100%-4rem)]">
+                  {/* Tags overlay - only show on hover */}
+                  <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5 max-w-[calc(100%-4rem)] opacity-0 group-hover:opacity-100 transition-all duration-300">
                     {photo.tags.map((tag, index) => (
                       <div
                         key={index}
-                        className="group/tag bg-black/70 hover:bg-black/80 backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-full flex items-center gap-1.5 transition-all duration-200 cursor-pointer"
+                        className="group/tag bg-white/90 hover:bg-white backdrop-blur-sm text-gray-700 text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-all duration-200 cursor-pointer border border-white/20 shadow-sm"
                         onClick={() => handleRemoveTag(photo.id, index)}
                       >
-                        <span>{tag}</span>
-                        <X className="h-3 w-3 opacity-0 group-hover/tag:opacity-100 transition-opacity duration-200" />
+                        <span className="font-medium">{tag}</span>
+                        <X className="h-3 w-3 opacity-0 group-hover/tag:opacity-100 transition-opacity duration-200 text-gray-500" />
                       </div>
                     ))}
                   </div>
