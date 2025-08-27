@@ -78,53 +78,53 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-white">
+    <div className="flex flex-col h-[80vh]">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-6 py-8">
-        <div className="max-w-3xl mx-auto space-y-6">
+      <ScrollArea className="flex-1 px-8 py-8">
+        <div className="space-y-8">
           {messages.map((message, index) => (
             <div
               key={message.id}
-              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"} animate-fade-in`}
+              style={{
+                animationDelay: `${index * 0.1}s`,
+                animationFillMode: 'both'
+              }}
             >
               <div
-                className={`max-w-[80%] px-4 py-3 rounded-2xl ${
+                className={`group max-w-[75%] px-6 py-4 transition-all duration-300 ${
                   message.role === "user"
-                    ? "bg-gray-900 text-white"
-                    : "bg-gray-50 text-gray-900"
+                    ? "bg-black text-white rounded-[26px] rounded-br-[12px]"
+                    : "bg-gray-50/80 text-black rounded-[26px] rounded-bl-[12px] border border-black/5"
                 }`}
               >
-                <p className="text-sm leading-relaxed">{message.content}</p>
+                <p className="text-[16px] leading-relaxed font-normal">{message.content}</p>
               </div>
             </div>
           ))}
         </div>
-      </div>
+      </ScrollArea>
 
       {/* Input */}
-      <div className="border-t border-gray-100 px-6 py-6">
-        <div className="max-w-3xl mx-auto">
-          <div className="flex gap-2 items-end">
-            <div className="flex-1 relative">
-              <div className="bg-gray-50 rounded-2xl p-1 border border-gray-200 focus-within:border-gray-300 focus-within:bg-white transition-all">
-                <Input
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Describe the hotel marketing photo you want to create..."
-                  className="w-full bg-transparent border-0 rounded-xl px-4 py-3 text-sm placeholder:text-gray-500 focus:ring-0 focus:outline-none resize-none min-h-[44px]"
-                />
-              </div>
-            </div>
-            <Button 
-              onClick={handleSendMessage}
-              disabled={!inputValue.trim()}
-              size="icon"
-              className="shrink-0 w-11 h-11 rounded-full bg-gray-900 hover:bg-gray-800 disabled:bg-gray-200 disabled:opacity-40 transition-all shadow-sm"
-            >
-              <Send className="h-4 w-4 text-white" />
-            </Button>
+      <div className="p-8">
+        <div className="flex gap-4 items-center">
+          <div className="flex-1 relative">
+            <Input
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Describe the hotel marketing photo you want to create..."
+              className="w-full bg-gray-50/50 border-0 rounded-3xl px-6 py-4 text-[16px] placeholder:text-gray-400 focus:bg-white focus:ring-1 focus:ring-black/10 transition-all duration-300"
+            />
           </div>
+          <Button 
+            onClick={handleSendMessage}
+            disabled={!inputValue.trim()}
+            size="icon"
+            className="shrink-0 w-12 h-12 rounded-full bg-black hover:bg-gray-800 disabled:bg-gray-200 transition-all duration-300 disabled:hover:scale-100 hover:scale-105"
+          >
+            <Send className="h-5 w-5" />
+          </Button>
         </div>
       </div>
     </div>

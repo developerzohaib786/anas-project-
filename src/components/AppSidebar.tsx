@@ -32,15 +32,15 @@ export function AppSidebar() {
   const isActive = (path: string) => currentPath === path;
 
   return (
-    <Sidebar className="w-64 bg-white border-r border-gray-100">
+    <Sidebar className="w-60 bg-white border-r border-gray-200">
       <div className="flex flex-col h-full">
-      <SidebarHeader className="px-6 py-8 border-b border-gray-50">
-        <div className="font-medium text-xl text-gray-900 tracking-tight" style={{ fontFamily: 'Inter, sans-serif', fontWeight: 500 }}>
+      <SidebarHeader className="p-6 border-b border-gray-100">
+        <div className="font-medium text-xl text-gray-900" style={{ fontFamily: 'Inter, sans-serif' }}>
           Nino
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="flex-1 px-3 py-6">
+      <SidebarContent className="px-4 py-6 flex-1">
         {/* Main Navigation */}
         <SidebarGroup>
           <SidebarGroupContent>
@@ -51,10 +51,10 @@ export function AppSidebar() {
                     <NavLink
                       to={item.url}
                       className={({ isActive }) =>
-                        `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 font-medium text-sm mb-1 ${
+                        `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 font-medium text-sm mb-1 ${
                           isActive
-                            ? "bg-gray-900 text-white shadow-sm"
-                            : "text-gray-900 hover:bg-gray-50"
+                            ? "bg-gray-900 text-white"
+                            : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                         }`
                       }
                     >
@@ -70,8 +70,8 @@ export function AppSidebar() {
 
         {/* Projects Section */}
         <SidebarGroup className="mt-8">
-          <SidebarGroupLabel className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
-            Recent Projects
+          <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            Recent
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -81,15 +81,15 @@ export function AppSidebar() {
                     <NavLink
                       to={item.url}
                       className={({ isActive }) =>
-                        `flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 text-sm mb-1 ${
+                        `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 text-sm mb-1 ${
                           isActive
-                            ? "bg-gray-50 text-gray-900"
-                            : "text-gray-800 hover:bg-gray-50"
+                            ? "bg-gray-100 text-gray-900"
+                            : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
                         }`
                       }
                     >
-                      <div className="w-2 h-2 bg-gray-300 rounded-full" />
-                      <span className="truncate">{item.title}</span>
+                      <ChevronRight className="h-3 w-3" />
+                      <span>{item.title}</span>
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -99,17 +99,17 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="px-3 py-4 border-t border-gray-50 mt-auto">
+      <SidebarFooter className="p-4 border-t border-gray-100 mt-auto">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
               <NavLink
                 to="/settings"
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 font-medium text-sm ${
+                  `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 font-medium text-sm ${
                     isActive
-                      ? "bg-gray-50 text-gray-900"
-                      : "text-gray-800 hover:bg-gray-50"
+                      ? "bg-gray-100 text-gray-900"
+                      : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                   }`
                 }
               >

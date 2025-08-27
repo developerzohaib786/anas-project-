@@ -21,7 +21,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <div className="min-h-screen bg-white">
+        <div className="min-h-screen bg-gray-50">
           <SidebarProvider>
             <div className="flex min-h-screen w-full">
               <AppSidebar />
