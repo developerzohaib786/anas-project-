@@ -91,10 +91,10 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
   };
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen relative">
       {/* Messages */}
       <ScrollArea className="flex-1 minimal-scroll">
-        <div className="max-w-4xl mx-auto px-6 py-12">
+        <div className="max-w-4xl mx-auto px-6 py-12 pb-32">
           <div className="space-y-8">
             {messages.map((message, index) => (
               <div
@@ -142,13 +142,13 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
         </div>
       </ScrollArea>
 
-      {/* Input Area - Fixed at bottom */}
-      <div className="border-t border-[hsl(var(--border))] bg-[hsl(var(--background))]">
+      {/* Fixed Input Area at bottom */}
+      <div className="absolute bottom-0 left-0 right-0 border-t border-[hsl(var(--border))] bg-[hsl(var(--background))]">
         <div className="max-w-4xl mx-auto px-6 py-6">
-          {/* Example Prompts - Show when conversation is minimal and input is empty */}
-          <div className="mb-6" style={{ minHeight: messages.length <= 1 && !inputValue.trim() ? 'auto' : '0' }}>
+          {/* Example Prompts - Fixed height container to prevent layout shift */}
+          <div className="mb-6 transition-all duration-300" style={{ height: messages.length <= 1 && !inputValue.trim() ? 'auto' : '0', overflow: 'hidden' }}>
             {messages.length <= 1 && !inputValue.trim() && (
-              <>
+              <div className="animate-fade-in">
                 <p className="text-sm text-muted-foreground mb-4 font-medium">Try these examples:</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {examplePrompts.map((prompt, index) => (
@@ -161,10 +161,11 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
                     </button>
                   ))}
                 </div>
-              </>
+              </div>
             )}
           </div>
 
+          {/* Input Row */}
           <div className="flex items-end gap-3">
             <div className="flex-1">
               <div className="relative">
