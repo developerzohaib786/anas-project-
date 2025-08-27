@@ -277,6 +277,18 @@ export type Database = {
         Args: { invite_token: string }
         Returns: boolean
       }
+      check_team_membership: {
+        Args: {
+          required_roles?: string[]
+          target_team_id: string
+          target_user_id?: string
+        }
+        Returns: boolean
+      }
+      is_team_admin: {
+        Args: { target_team_id: string; target_user_id?: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
