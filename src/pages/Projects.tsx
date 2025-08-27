@@ -117,7 +117,7 @@ export default function Projects() {
   };
 
   return (
-      <div className="p-8 md:p-8 p-4 max-w-7xl">
+      <div className="px-4 md:px-6 lg:px-8 xl:px-12 py-8 w-full max-w-none">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div>
             <h1 className="text-3xl font-semibold text-gray-900 mb-2">Projects</h1>
@@ -153,8 +153,7 @@ export default function Projects() {
             className="masonry-item group relative bg-white rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-2"
             style={{
               boxShadow: 'var(--shadow-soft)',
-              breakInside: 'avoid',
-              marginBottom: '1rem'
+              breakInside: 'avoid'
             }}
           >
             <div className="relative overflow-hidden">

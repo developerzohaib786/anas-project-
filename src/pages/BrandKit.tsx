@@ -101,7 +101,7 @@ export default function BrandKit() {
   ];
 
   return (
-      <div className="p-8 md:p-8 p-4 max-w-6xl">
+      <div className="px-4 md:px-6 lg:px-8 xl:px-12 py-8 w-full max-w-none">
         <div className="mb-8">
           <h1 className="text-3xl font-semibold text-gray-900 mb-2">Brand Kit</h1>
           <p className="text-gray-600">
@@ -147,8 +147,7 @@ export default function BrandKit() {
                 className="masonry-item group relative bg-white rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-2"
                 style={{
                   boxShadow: 'var(--shadow-soft)',
-                  breakInside: 'avoid',
-                  marginBottom: '1rem'
+                  breakInside: 'avoid'
                 }}
               >
                 <div className="relative overflow-hidden">
@@ -294,7 +293,7 @@ export default function BrandKit() {
         </TabsContent>
 
         <TabsContent value="settings" className="mt-6">
-          <div className="max-w-2xl">
+          <div className="max-w-4xl">
             <h2 className="text-xl font-medium text-gray-900 mb-6">Brand Settings</h2>
             
             <div className="space-y-6">
