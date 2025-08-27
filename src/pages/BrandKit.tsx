@@ -103,7 +103,7 @@ export default function BrandKit() {
   return (
       <div className="px-4 md:px-6 lg:px-8 xl:px-12 py-8 w-full max-w-none">
         <div className="mb-8">
-          <h1 className="text-3xl font-semibold text-gray-900 mb-2">Brand Kit</h1>
+          <h1 className="text-3xl font-semibold text-gray-900 mb-2" style={{ letterSpacing: '-0.02em' }}>Brand Kit</h1>
           <p className="text-gray-600">
             Manage your brand assets for consistent, high-end luxury photo creation
           </p>
@@ -323,7 +323,10 @@ export default function BrandKit() {
 
         <TabsContent value="settings" className="mt-6">
           <div className="w-full">
-            <h2 className="text-xl font-medium text-gray-900 mb-6">Brand Settings</h2>
+            <h2 className="text-xl font-medium text-gray-900 mb-2">Brand Settings</h2>
+            <p className="text-gray-600 mb-6">
+              Configure your brand's basic information and account preferences
+            </p>
             
             <div className="space-y-6">
               <Card>

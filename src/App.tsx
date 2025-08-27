@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import Create from "./pages/Create";
 import Projects from "./pages/Projects";
 import BrandKit from "./pages/BrandKit";
+import Settings from "./pages/Settings";
 import Chat from "./pages/Chat";
 import NotFound from "./pages/NotFound";
 
@@ -30,6 +31,7 @@ const App = () => (
                   <Route path="/" element={<Chat />} />
                   <Route path="/projects" element={<Projects />} />
                   <Route path="/brand-kit" element={<BrandKit />} />
+                  <Route path="/settings" element={<Settings />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>

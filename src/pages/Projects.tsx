@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Download, MoreHorizontal, Maximize2 } from "lucide-react";
+import { Search, Download, MoreHorizontal, Maximize2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -132,7 +132,7 @@ export default function Projects() {
       <div className="px-4 md:px-6 lg:px-8 xl:px-12 py-8 w-full max-w-none">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-semibold text-gray-900 mb-2">Projects</h1>
+            <h1 className="text-3xl font-semibold text-gray-900 mb-2" style={{ letterSpacing: '-0.02em' }}>Projects</h1>
             <p className="text-gray-600">Manage your created content and campaigns</p>
           </div>
         </div>
@@ -153,6 +153,7 @@ export default function Projects() {
             className="w-full md:w-auto"
             style={{ boxShadow: 'var(--shadow-button)' }}
           >
+            <Plus className="mr-2 h-4 w-4" />
             Create New Project
           </Button>
         </div>
@@ -231,6 +232,7 @@ export default function Projects() {
             onClick={handleCreateProject}
             style={{ boxShadow: 'var(--shadow-button)' }}
           >
+            <Plus className="mr-2 h-4 w-4" />
             Create New Project
           </Button>
         </div>
