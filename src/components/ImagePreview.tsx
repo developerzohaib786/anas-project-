@@ -22,20 +22,20 @@ export function ImagePreview({ currentPrompt, isGenerating = false }: ImagePrevi
   const aspectRatios: AspectRatio[] = ["1:1", "4:5", "9:16"];
 
   return (
-    <div className="flex flex-col h-[80vh]">
+    <div className="flex flex-col h-screen bg-white">
       {/* Aspect Ratio Controls */}
-      <div className="p-8 pb-4">
-        <div className="flex gap-2 justify-center">
+      <div className="border-b border-gray-100 px-6 py-4">
+        <div className="flex gap-1 justify-center">
           {aspectRatios.map((ratio) => (
             <Button
               key={ratio}
               variant={selectedRatio === ratio ? "default" : "ghost"}
               size="sm"
               onClick={() => setSelectedRatio(ratio)}
-              className={`text-sm h-10 px-5 rounded-2xl transition-all duration-300 font-medium border-0 ${
+              className={`text-xs font-medium px-3 py-2 rounded-lg transition-colors ${
                 selectedRatio === ratio 
-                  ? "bg-black text-white shadow-lg shadow-black/20" 
-                  : "hover:bg-gray-100 text-gray-600"
+                  ? "bg-gray-900 text-white" 
+                  : "hover:bg-gray-50 text-gray-600"
               }`}
             >
               {ratio}
@@ -45,47 +45,46 @@ export function ImagePreview({ currentPrompt, isGenerating = false }: ImagePrevi
       </div>
 
       {/* Preview Area */}
-      <div className="flex-1 px-8 pb-4">
-        <div className="flex items-center justify-center h-full">
-          <div
-            className={`${aspectRatioClasses[selectedRatio]} w-full max-w-xs bg-gray-50/50 border-2 border-dashed border-gray-200 rounded-3xl flex items-center justify-center relative overflow-hidden transition-all duration-500 hover:border-gray-300`}
-          >
-            {isGenerating ? (
-              <div className="text-center animate-fade-in">
-                <div className="animate-spin w-8 h-8 border-2 border-black border-t-transparent rounded-full mx-auto mb-6"></div>
-              </div>
-            ) : generatedImage ? (
-              <img
-                src={generatedImage}
-                alt="Generated"
-                className="w-full h-full object-cover rounded-3xl animate-scale-in"
-              />
-            ) : (
-              <div className="w-16 h-16 bg-gray-200 rounded-2xl animate-float opacity-40"></div>
-            )}
-          </div>
+      <div className="flex-1 p-6 flex items-center justify-center">
+        <div
+          className={`${aspectRatioClasses[selectedRatio]} w-full max-w-sm bg-gray-50 border border-gray-200 rounded-2xl flex items-center justify-center relative overflow-hidden transition-all duration-300`}
+        >
+          {isGenerating ? (
+            <div className="text-center">
+              <div className="animate-spin w-6 h-6 border-2 border-gray-900 border-t-transparent rounded-full mx-auto mb-4"></div>
+              <p className="text-xs text-gray-500">Creating...</p>
+            </div>
+          ) : generatedImage ? (
+            <img
+              src={generatedImage}
+              alt="Generated"
+              className="w-full h-full object-cover rounded-2xl"
+            />
+          ) : (
+            <div className="w-12 h-12 bg-gray-200 rounded-xl opacity-40"></div>
+          )}
         </div>
       </div>
 
       {/* Actions */}
-      <div className="px-8 pb-8">
-        <div className="flex gap-3">
+      <div className="border-t border-gray-100 px-6 py-4">
+        <div className="flex gap-2">
           <Button
             variant="secondary"
             size="sm"
             disabled={!generatedImage}
-            className="flex-1 h-12 rounded-2xl font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 border-0 transition-all duration-300 hover:scale-[1.02] disabled:hover:scale-100 disabled:opacity-30"
+            className="flex-1 h-10 rounded-lg font-medium bg-gray-50 hover:bg-gray-100 text-gray-700 border-0 transition-colors disabled:opacity-40"
           >
-            <RotateCcw className="w-4 h-4 mr-3" />
+            <RotateCcw className="w-4 h-4 mr-2" />
             Regenerate
           </Button>
           <Button
             variant="secondary"
             size="sm"
             disabled={!generatedImage}
-            className="flex-1 h-12 rounded-2xl font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 border-0 transition-all duration-300 hover:scale-[1.02] disabled:hover:scale-100 disabled:opacity-30"
+            className="flex-1 h-10 rounded-lg font-medium bg-gray-50 hover:bg-gray-100 text-gray-700 border-0 transition-colors disabled:opacity-40"
           >
-            <Download className="w-4 h-4 mr-3" />
+            <Download className="w-4 h-4 mr-2" />
             Download
           </Button>
         </div>
