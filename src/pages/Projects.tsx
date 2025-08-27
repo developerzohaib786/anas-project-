@@ -210,32 +210,6 @@ export default function Projects() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-
-                {/* Status badge - top left */}
-                <div className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                  <Badge variant="secondary" className="bg-white/90 text-gray-700 border-white/20 backdrop-blur-sm shadow-sm">
-                    {project.status}
-                  </Badge>
-                </div>
-
-                {/* Category badge - bottom right, always visible */}
-                <div className="absolute bottom-3 right-3">
-                  <Badge className="bg-primary/90 hover:bg-primary text-white backdrop-blur-sm shadow-sm">
-                    {project.category}
-                  </Badge>
-                </div>
-              </div>
-              
-              {/* Project info */}
-              <div className="p-4">
-                <h3 className="font-medium text-gray-900 text-sm mb-2 leading-tight">{project.name}</h3>
-                <div className="flex items-center justify-between text-xs text-gray-500">
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    {project.created}
-                  </span>
-                  <span className="font-medium">{project.type}</span>
-                </div>
               </div>
             </div>
           ))}
