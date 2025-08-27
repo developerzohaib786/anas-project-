@@ -41,7 +41,7 @@ export function AppSidebar() {
   const isActive = (path: string) => currentPath === path;
   const brandName = brandProfile?.brand_name || "Your Brand";
   
-  // Fix logo URL handling - check if it's a full URL or needs to be constructed
+  // Handle logo URL properly - check if brand profile exists and has a logo
   const logoUrl = brandProfile?.logo_url ? 
     (brandProfile.logo_url.startsWith('http') ? 
       brandProfile.logo_url : 
