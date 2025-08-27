@@ -14,14 +14,26 @@ const mockLogos = [
 ];
 
 const mockPhotos = [
-  { id: "1", url: "/api/placeholder/400/300", name: "Lobby Interior", uploaded: "2024-08-20", size: "2.1 MB" },
-  { id: "2", url: "/api/placeholder/300/400", name: "Pool Area", uploaded: "2024-08-19", size: "1.8 MB" },
-  { id: "3", url: "/api/placeholder/500/300", name: "Dining Room", uploaded: "2024-08-18", size: "2.5 MB" },
-  { id: "4", url: "/api/placeholder/350/500", name: "Suite Bedroom", uploaded: "2024-08-17", size: "1.9 MB" },
-  { id: "5", url: "/api/placeholder/400/250", name: "Ocean View", uploaded: "2024-08-16", size: "2.3 MB" },
-  { id: "6", url: "/api/placeholder/300/350", name: "Spa Treatment", uploaded: "2024-08-15", size: "1.7 MB" },
-  { id: "7", url: "/api/placeholder/450/400", name: "Restaurant", uploaded: "2024-08-14", size: "2.0 MB" },
-  { id: "8", url: "/api/placeholder/320/480", name: "Fitness Center", uploaded: "2024-08-13", size: "1.6 MB" },
+  { id: "1", url: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=600&fit=crop", name: "Luxury Pool Villa", uploaded: "2024-08-26", size: "2.4 MB" },
+  { id: "2", url: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&h=300&fit=crop", name: "Ocean Suite Bedroom", uploaded: "2024-08-25", size: "1.9 MB" },
+  { id: "3", url: "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=400&h=500&fit=crop", name: "Elegant Dining Room", uploaded: "2024-08-24", size: "2.1 MB" },
+  { id: "4", url: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&h=280&fit=crop", name: "Infinity Pool Sunset", uploaded: "2024-08-23", size: "2.8 MB" },
+  { id: "5", url: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=400&h=550&fit=crop", name: "Presidential Suite", uploaded: "2024-08-22", size: "2.2 MB" },
+  { id: "6", url: "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=400&h=350&fit=crop", name: "Spa Treatment Room", uploaded: "2024-08-21", size: "1.7 MB" },
+  { id: "7", url: "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=400&h=480&fit=crop", name: "Grand Lobby", uploaded: "2024-08-20", size: "2.3 MB" },
+  { id: "8", url: "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=400&h=320&fit=crop", name: "Beachfront Restaurant", uploaded: "2024-08-19", size: "2.0 MB" },
+  { id: "9", url: "https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?w=400&h=600&fit=crop", name: "Rooftop Bar View", uploaded: "2024-08-18", size: "2.5 MB" },
+  { id: "10", url: "https://images.unsplash.com/photo-1587985064135-0366536eab42?w=400&h=250&fit=crop", name: "Beach Cabana", uploaded: "2024-08-17", size: "1.8 MB" },
+  { id: "11", url: "https://images.unsplash.com/photo-1559599101-f09722fb4948?w=400&h=520&fit=crop", name: "Wine Cellar", uploaded: "2024-08-16", size: "2.1 MB" },
+  { id: "12", url: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop", name: "Garden Terrace", uploaded: "2024-08-15", size: "1.9 MB" },
+  { id: "13", url: "https://images.unsplash.com/photo-1573052905904-34ad8c27f0cc?w=400&h=450&fit=crop", name: "Conference Hall", uploaded: "2024-08-14", size: "2.0 MB" },
+  { id: "14", url: "https://images.unsplash.com/photo-1566195992011-5f6b21e539aa?w=400&h=350&fit=crop", name: "Fitness Center", uploaded: "2024-08-13", size: "1.6 MB" },
+  { id: "15", url: "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=400&h=600&fit=crop", name: "Penthouse Balcony", uploaded: "2024-08-12", size: "2.7 MB" },
+  { id: "16", url: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400&h=280&fit=crop", name: "Breakfast Buffet", uploaded: "2024-08-11", size: "1.8 MB" },
+  { id: "17", url: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=500&fit=crop", name: "Yacht Marina", uploaded: "2024-08-10", size: "2.3 MB" },
+  { id: "18", url: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=380&fit=crop", name: "Garden Pool", uploaded: "2024-08-09", size: "2.1 MB" },
+  { id: "19", url: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=400&h=550&fit=crop", name: "Executive Lounge", uploaded: "2024-08-08", size: "2.2 MB" },
+  { id: "20", url: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&h=320&fit=crop", name: "Sunset Deck", uploaded: "2024-08-07", size: "1.9 MB" },
 ];
 
 export default function BrandKit() {
@@ -89,51 +101,61 @@ export default function BrandKit() {
             />
           </div>
 
-          {/* Masonry Grid */}
-          <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
+          {/* Masonry Grid Layout */}
+          <div className="masonry-grid">
             {photos.map((photo) => (
               <div
                 key={photo.id}
-                className="break-inside-avoid bg-white rounded-2xl overflow-hidden group relative transition-all duration-200 hover:shadow-lg"
+                className="masonry-item group relative bg-white rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
                 style={{
-                  boxShadow: 'var(--shadow-minimal)'
+                  boxShadow: 'var(--shadow-soft)',
+                  breakInside: 'avoid',
+                  marginBottom: '1rem'
                 }}
               >
-                <div className="relative">
+                <div className="relative overflow-hidden">
                   <img
                     src={photo.url}
                     alt={photo.name}
-                    className="w-full h-auto object-cover"
+                    className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105"
                     loading="lazy"
+                    onError={(e) => {
+                      e.currentTarget.src = `https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=400&fit=crop`;
+                    }}
                   />
                   
-                  {/* Hover overlay */}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-                    <div className="flex gap-2">
+                  {/* Gradient overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300" />
+                  
+                  {/* Hover actions */}
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+                    <div className="flex gap-3">
                       <Button
                         size="sm"
-                        variant="secondary"
-                        className="bg-white/90 hover:bg-white text-gray-900"
+                        className="apple-button bg-white/95 hover:bg-white text-gray-900 h-10 px-4 rounded-full font-medium backdrop-blur-sm"
+                        style={{ boxShadow: 'var(--shadow-button)' }}
                       >
-                        <Download className="h-4 w-4" />
+                        <Download className="h-4 w-4 mr-2" />
+                        Download
                       </Button>
                       <Button
                         size="sm"
-                        variant="secondary"
                         onClick={() => handleDeletePhoto(photo.id)}
-                        className="bg-white/90 hover:bg-white text-gray-900"
+                        className="apple-button bg-white/95 hover:bg-white text-gray-900 h-10 px-4 rounded-full font-medium backdrop-blur-sm"
+                        style={{ boxShadow: 'var(--shadow-button)' }}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
                       </Button>
                     </div>
                   </div>
                 </div>
                 
-                {/* Photo info */}
+                {/* Photo metadata */}
                 <div className="p-4">
-                  <h3 className="font-medium text-gray-900 text-sm mb-1">{photo.name}</h3>
+                  <h3 className="font-medium text-gray-900 text-sm mb-1 leading-tight">{photo.name}</h3>
                   <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span>{photo.size}</span>
+                    <span className="font-medium">{photo.size}</span>
                     <span>{photo.uploaded}</span>
                   </div>
                 </div>
@@ -143,15 +165,19 @@ export default function BrandKit() {
 
           {/* Empty state */}
           {photos.length === 0 && (
-            <div className="text-center py-16">
-              <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Image className="w-8 h-8 text-gray-400" />
+            <div className="text-center py-20">
+              <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center mx-auto mb-6" style={{ boxShadow: 'var(--shadow-minimal)' }}>
+                <Image className="w-10 h-10 text-gray-400" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No photos yet</h3>
-              <p className="text-gray-600 mb-6">Upload your first brand photos to get started</p>
-              <Button onClick={() => fileInputRef.current?.click()}>
-                <Upload className="mr-2 h-4 w-4" />
-                Upload Photos
+              <h3 className="text-xl font-medium text-gray-900 mb-3">No brand photos yet</h3>
+              <p className="text-gray-600 mb-8 max-w-md mx-auto">Upload your luxury resort photos to help AI understand your brand's visual identity and create consistent, high-end marketing content.</p>
+              <Button 
+                onClick={() => fileInputRef.current?.click()}
+                className="apple-button bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-full font-medium"
+                style={{ boxShadow: 'var(--shadow-button)' }}
+              >
+                <Upload className="mr-2 h-5 w-5" />
+                Upload Your First Photos
               </Button>
             </div>
           )}
