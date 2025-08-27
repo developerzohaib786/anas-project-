@@ -18,30 +18,35 @@ const Chat = () => {
   };
 
   return (
-    <ResizablePanelGroup direction="horizontal" className="h-screen">
-      {/* Chat Interface - Resizable, full width on mobile */}
-      <ResizablePanel defaultSize={70} minSize={50} className="md:flex hidden">
-        <ChatInterface onGenerateImage={handleGenerateImage} />
-      </ResizablePanel>
-      
-      {/* Mobile-first single panel layout */}
-      <div className="md:hidden flex flex-col h-screen w-full">
-        <ChatInterface onGenerateImage={handleGenerateImage} />
+    <div className="h-screen">
+      {/* Desktop Layout */}
+      <div className="hidden md:block h-full">
+        <ResizablePanelGroup direction="horizontal" className="h-full">
+          {/* Chat Interface Panel */}
+          <ResizablePanel defaultSize={70} minSize={50}>
+            <ChatInterface onGenerateImage={handleGenerateImage} />
+          </ResizablePanel>
+          
+          {/* Resizable Handle */}
+          <ResizableHandle className="w-1 bg-border hover:bg-border/80 transition-colors duration-200" />
+          
+          {/* Image Preview Panel */}
+          <ResizablePanel defaultSize={30} minSize={25} maxSize={50}>
+            <div className="bg-card h-full">
+              <ImagePreview 
+                currentPrompt={currentPrompt}
+                isGenerating={isGenerating}
+              />
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
       
-      {/* Resizable Handle - Only on desktop */}
-      <ResizableHandle className="w-1 bg-border hover:bg-border/80 transition-colors duration-200 md:block hidden" />
-      
-      {/* Image Preview - Resizable on desktop, hidden on mobile */}
-      <ResizablePanel defaultSize={30} minSize={25} maxSize={50} className="md:block hidden">
-        <div className="bg-card h-full">
-          <ImagePreview 
-            currentPrompt={currentPrompt}
-            isGenerating={isGenerating}
-          />
-        </div>
-      </ResizablePanel>
-    </ResizablePanelGroup>
+      {/* Mobile Layout */}
+      <div className="md:hidden h-full">
+        <ChatInterface onGenerateImage={handleGenerateImage} />
+      </div>
+    </div>
   );
 };
 
