@@ -165,19 +165,19 @@ export function TeamInvitations({ teamId }: TeamInvitationsProps) {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
+          <CardTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
             Invite Team Members
           </CardTitle>
-          <CardDescription className="text-sm">
+          <CardDescription>
             Invite new members to collaborate on your creative projects
           </CardDescription>
         </CardHeader>
-        <CardContent className="px-4 sm:px-6">
+        <CardContent>
           <form onSubmit={handleInviteUser} className="space-y-4">
-            <div className="space-y-4 sm:space-y-0 sm:grid sm:grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="md:col-span-2 space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium">Email Address</Label>
+                <Label htmlFor="email">Email Address</Label>
                 <Input
                   id="email"
                   type="email"
@@ -185,14 +185,13 @@ export function TeamInvitations({ teamId }: TeamInvitationsProps) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="rounded-full h-12 text-base"
-                  style={{ fontSize: '16px' }} // Prevents zoom on iOS
+                  className="rounded-full"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="role" className="text-sm font-medium">Role</Label>
+                <Label htmlFor="role">Role</Label>
                 <Select value={role} onValueChange={setRole}>
-                  <SelectTrigger className="rounded-full h-12">
+                  <SelectTrigger className="rounded-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -202,11 +201,7 @@ export function TeamInvitations({ teamId }: TeamInvitationsProps) {
                 </Select>
               </div>
             </div>
-            <Button 
-              type="submit" 
-              disabled={isLoading} 
-              className="rounded-full w-full sm:w-auto h-12 touch-manipulation"
-            >
+            <Button type="submit" disabled={isLoading} className="rounded-full">
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Send Invitation
             </Button>
@@ -216,36 +211,36 @@ export function TeamInvitations({ teamId }: TeamInvitationsProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
+          <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
             Team Members ({members.length})
           </CardTitle>
-          <CardDescription className="text-sm">
+          <CardDescription>
             Manage your team members and their roles
           </CardDescription>
         </CardHeader>
-        <CardContent className="px-4 sm:px-6">
+        <CardContent>
           <div className="space-y-4">
             {members.map((member) => (
               <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                     <span className="text-sm font-medium text-primary">
                       {member.profiles?.first_name?.[0]}{member.profiles?.last_name?.[0]}
                     </span>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-sm sm:text-base truncate">
+                  <div>
+                    <p className="font-medium">
                       {member.profiles?.first_name} {member.profiles?.last_name}
                     </p>
-                    <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                    <p className="text-sm text-muted-foreground">
                       {member.profiles?.email}
                     </p>
                   </div>
                 </div>
-                <Badge variant={getRoleBadgeVariant(member.role)} className="gap-1 flex-shrink-0">
+                <Badge variant={getRoleBadgeVariant(member.role)} className="gap-1">
                   {getRoleIcon(member.role)}
-                  <span className="hidden sm:inline">{member.role}</span>
+                  {member.role}
                 </Badge>
               </div>
             ))}
@@ -256,32 +251,32 @@ export function TeamInvitations({ teamId }: TeamInvitationsProps) {
       {pendingInvitations.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
+            <CardTitle className="flex items-center gap-2">
               <Mail className="h-5 w-5" />
               Pending Invitations ({pendingInvitations.length})
             </CardTitle>
-            <CardDescription className="text-sm">
+            <CardDescription>
               Invitations waiting to be accepted
             </CardDescription>
           </CardHeader>
-          <CardContent className="px-4 sm:px-6">
+          <CardContent>
             <div className="space-y-4">
               {pendingInvitations.map((invitation) => (
                 <div key={invitation.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
                       <Mail className="h-4 w-4 text-muted-foreground" />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-sm sm:text-base truncate">{invitation.email}</p>
-                      <p className="text-xs sm:text-sm text-muted-foreground">
+                    <div>
+                      <p className="font-medium">{invitation.email}</p>
+                      <p className="text-sm text-muted-foreground">
                         Invited {new Date(invitation.created_at).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
-                  <Badge variant="outline" className="gap-1 flex-shrink-0">
+                  <Badge variant="outline" className="gap-1">
                     {getRoleIcon(invitation.role)}
-                    <span className="hidden sm:inline">{invitation.role}</span>
+                    {invitation.role}
                   </Badge>
                 </div>
               ))}
