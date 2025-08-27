@@ -62,13 +62,6 @@ export function AppSidebar() {
   const avatarUrl = profile?.avatar_url;
   const initials = brandName.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
 
-  // Dynamic font size based on brand name length
-  const getFontSize = (name: string) => {
-    if (name.length <= 12) return "text-sm";
-    if (name.length <= 18) return "text-xs";
-    return "text-[11px]";
-  };
-
   return (
     <Sidebar className="w-60 bg-white border-r border-gray-200 md:w-60 w-16">
       <div className="flex flex-col h-full">
@@ -81,8 +74,8 @@ export function AppSidebar() {
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col min-w-0 flex-1">
-            <div className={`font-semibold ${getFontSize(brandName)} text-gray-900 truncate leading-tight`} style={{ fontFamily: 'Inter, sans-serif' }}>
-              {brandName}
+            <div className="font-semibold text-sm text-gray-900" style={{ fontFamily: 'Inter, sans-serif' }}>
+              {brandName}'s
             </div>
             <div className="text-xs text-gray-500 font-normal">
               Workspace
