@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Send } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -25,6 +25,19 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
     },
   ]);
   const [inputValue, setInputValue] = useState("");
+
+  const examplePrompts = [
+    "Create a luxury poolside scene with cabanas at sunset",
+    "Generate an elegant hotel suite with ocean views and modern decor",
+    "Design a sophisticated restaurant dining area with ambient lighting",
+    "Create a spa treatment room with natural elements and soft lighting",
+    "Generate a rooftop bar scene with city skyline views at golden hour",
+    "Design a family-friendly pool area with fun activities and tropical vibes"
+  ];
+
+  const handlePromptClick = (prompt: string) => {
+    setInputValue(prompt);
+  };
 
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
@@ -113,6 +126,24 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
       {/* Input Area - Fixed at bottom */}
       <div className="border-t border-[hsl(var(--border))] bg-[hsl(var(--background))]">
         <div className="max-w-3xl mx-auto px-6 py-6">
+          {/* Example Prompts - Show when conversation is minimal and input is empty */}
+          {messages.length <= 1 && !inputValue.trim() && (
+            <div className="mb-6">
+              <p className="text-sm text-muted-foreground mb-3 font-medium">Try these examples:</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {examplePrompts.map((prompt, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handlePromptClick(prompt)}
+                    className="text-left p-3 rounded-2xl bg-muted/50 hover:bg-muted/80 text-sm text-muted-foreground hover:text-foreground transition-all duration-200 border border-transparent hover:border-border/50"
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex items-end gap-3">
             <div className="flex-1">
               <div className="relative">
@@ -134,7 +165,7 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
                 boxShadow: !inputValue.trim() ? 'none' : 'var(--shadow-button)'
               }}
             >
-              <Send className="h-5 w-5" />
+              <Plus className="h-5 w-5" />
             </Button>
           </div>
         </div>
