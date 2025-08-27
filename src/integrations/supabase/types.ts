@@ -167,7 +167,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      accept_team_invitation: {
+        Args: { invite_token: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
