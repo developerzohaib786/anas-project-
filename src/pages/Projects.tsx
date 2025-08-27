@@ -20,7 +20,9 @@ const mockProjects = [
     type: "Photo",
     created: "2024-08-26",
     status: "completed",
-    category: "Pool & Spa"
+    category: "Pool & Spa",
+    thumbnail: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=300&fit=crop",
+    aspectRatio: "landscape"
   },
   {
     id: "2",
@@ -28,7 +30,9 @@ const mockProjects = [
     type: "Photo", 
     created: "2024-08-25",
     status: "completed",
-    category: "Accommodations"
+    category: "Accommodations",
+    thumbnail: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&h=500&fit=crop",
+    aspectRatio: "portrait"
   },
   {
     id: "3",
@@ -36,7 +40,9 @@ const mockProjects = [
     type: "Photo",
     created: "2024-08-23", 
     status: "completed",
-    category: "Activities"
+    category: "Activities",
+    thumbnail: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&h=280&fit=crop",
+    aspectRatio: "wide"
   },
   {
     id: "4",
@@ -44,7 +50,9 @@ const mockProjects = [
     type: "Photo",
     created: "2024-08-22",
     status: "completed", 
-    category: "Dining"
+    category: "Dining",
+    thumbnail: "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=400&h=450&fit=crop",
+    aspectRatio: "portrait"
   },
   {
     id: "5",
@@ -52,7 +60,9 @@ const mockProjects = [
     type: "Photo",
     created: "2024-08-21",
     status: "completed",
-    category: "Pool & Spa"
+    category: "Pool & Spa",
+    thumbnail: "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=400&h=350&fit=crop",
+    aspectRatio: "landscape"
   },
   {
     id: "6",
@@ -60,7 +70,29 @@ const mockProjects = [
     type: "Photo", 
     created: "2024-08-20",
     status: "completed",
-    category: "Property"
+    category: "Property",
+    thumbnail: "https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?w=400&h=600&fit=crop",
+    aspectRatio: "tall"
+  },
+  {
+    id: "7",
+    name: "Rooftop Terrace Evening",
+    type: "Photo", 
+    created: "2024-08-19",
+    status: "completed",
+    category: "Property",
+    thumbnail: "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=400&h=320&fit=crop",
+    aspectRatio: "landscape"
+  },
+  {
+    id: "8",
+    name: "Beachfront Dining",
+    type: "Photo", 
+    created: "2024-08-18",
+    status: "completed",
+    category: "Dining",
+    thumbnail: "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=400&h=480&fit=crop",
+    aspectRatio: "portrait"
   }
 ];
 
@@ -138,26 +170,33 @@ export default function Projects() {
 
       {/* Projects Grid/List */}
       {viewMode === "grid" ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        /* Modern Masonry Grid */
+        <div className="masonry-grid">
           {filteredProjects.map((project) => (
-            <Card key={project.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-base font-medium mb-1">
-                      {project.name}
-                    </CardTitle>
-                    <CardDescription className="text-sm">
-                      <Badge variant="secondary" className="text-xs">
-                        {project.category}
-                      </Badge>
-                    </CardDescription>
-                  </div>
+            <div
+              key={project.id}
+              className="masonry-item group relative bg-white rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-2"
+              style={{
+                boxShadow: 'var(--shadow-soft)',
+                breakInside: 'avoid',
+                marginBottom: '1rem'
+              }}
+            >
+              <div className="relative overflow-hidden">
+                <img
+                  src={project.thumbnail}
+                  alt={project.name}
+                  className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-110"
+                  loading="lazy"
+                />
+                
+                {/* Project actions - top right */}
+                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
+                      <button className="w-8 h-8 bg-white/95 hover:bg-white rounded-full flex items-center justify-center backdrop-blur-sm shadow-lg hover:scale-110 transition-all duration-200">
+                        <MoreHorizontal className="h-4 w-4 text-gray-600" />
+                      </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                       <DropdownMenuItem>
@@ -171,22 +210,34 @@ export default function Projects() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="aspect-video bg-gray-100 rounded-lg mb-4 flex items-center justify-center">
-                  <div className="text-4xl">📸</div>
+
+                {/* Status badge - top left */}
+                <div className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                  <Badge variant="secondary" className="bg-white/90 text-gray-700 border-white/20 backdrop-blur-sm shadow-sm">
+                    {project.status}
+                  </Badge>
                 </div>
-                <div className="flex items-center justify-between text-sm text-gray-600">
+
+                {/* Category badge - bottom right, always visible */}
+                <div className="absolute bottom-3 right-3">
+                  <Badge className="bg-primary/90 hover:bg-primary text-white backdrop-blur-sm shadow-sm">
+                    {project.category}
+                  </Badge>
+                </div>
+              </div>
+              
+              {/* Project info */}
+              <div className="p-4">
+                <h3 className="font-medium text-gray-900 text-sm mb-2 leading-tight">{project.name}</h3>
+                <div className="flex items-center justify-between text-xs text-gray-500">
                   <span className="flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
                     {project.created}
                   </span>
-                  <Badge variant="outline" className="text-green-600 border-green-200">
-                    {project.status}
-                  </Badge>
+                  <span className="font-medium">{project.type}</span>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           ))}
         </div>
       ) : (
