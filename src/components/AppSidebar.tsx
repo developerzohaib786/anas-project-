@@ -51,9 +51,12 @@ export function AppSidebar() {
   const initials = brandName.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
 
   const handleDeleteSession = (sessionId: string, event: React.MouseEvent) => {
+    console.log('Delete button clicked for session:', sessionId);
+    console.log('Current sessions before delete:', sessions.map(s => s.id));
     event.preventDefault();
     event.stopPropagation();
     deleteSession(sessionId);
+    console.log('Delete function called');
   };
 
   return (
