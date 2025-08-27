@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ArrowUp, Copy, ThumbsUp, ThumbsDown, Volume2, Share, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,20 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
     },
   ]);
   const [inputValue, setInputValue] = useState("");
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when new messages are added
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const examplePrompts = [
     "Create a luxury poolside scene with cabanas at sunset",
@@ -93,7 +107,7 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
   return (
     <div className="flex flex-col h-screen relative">
       {/* Messages */}
-      <ScrollArea className="flex-1 minimal-scroll">
+      <ScrollArea className="flex-1 minimal-scroll" ref={scrollAreaRef}>
         <div className="max-w-4xl mx-auto px-6 py-12 pb-32">
           <div className="space-y-8">
             {messages.map((message, index) => (
@@ -138,6 +152,8 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
                 </div>
               </div>
             ))}
+            {/* Invisible element to scroll to */}
+            <div ref={messagesEndRef} />
           </div>
         </div>
       </ScrollArea>
