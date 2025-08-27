@@ -106,7 +106,7 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
                 }}
               >
                 <div className={`max-w-[85%] group ${message.role === "user" ? "text-right" : "text-left"}`}>
-                  <div className={`mb-2 ${message.role === "user" ? "inline-block bg-muted px-4 py-2.5 rounded-2xl" : ""}`}>
+                  <div className={`mb-2 ${message.role === "user" ? "inline-block bg-muted px-4 py-2.5 rounded-full" : ""}`}>
                     <p className="text-[15px] leading-relaxed text-foreground font-normal">
                       {message.content}
                     </p>
