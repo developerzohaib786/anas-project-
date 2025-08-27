@@ -133,12 +133,12 @@ export default function Projects() {
               placeholder="Search projects..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 rounded-full border-gray-200 focus:border-primary/20 focus:ring-primary/10"
+              className="pl-10 rounded-full border-[hsl(var(--border))] focus-visible:outline-none"
             />
           </div>
           <Button 
             onClick={handleCreateProject}
-            className="apple-button bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-full font-medium w-full md:w-auto"
+            className="w-full md:w-auto"
             style={{ boxShadow: 'var(--shadow-button)' }}
           >
             Create New Project
@@ -215,7 +215,6 @@ export default function Projects() {
           </p>
           <Button 
             onClick={handleCreateProject}
-            className="apple-button bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-full font-medium"
             style={{ boxShadow: 'var(--shadow-button)' }}
           >
             Create New Project

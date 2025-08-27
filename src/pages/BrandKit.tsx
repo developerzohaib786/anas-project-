@@ -122,7 +122,10 @@ export default function BrandKit() {
               <h2 className="text-xl font-medium text-gray-900">Brand Photos</h2>
               <p className="text-gray-600">Upload photos to help AI learn your brand's visual identity and spaces</p>
             </div>
-            <Button onClick={() => fileInputRef.current?.click()}>
+            <Button 
+              onClick={() => fileInputRef.current?.click()}
+              style={{ boxShadow: 'var(--shadow-button)' }}
+            >
               <Upload className="mr-2 h-4 w-4" />
               Upload Photos
             </Button>
@@ -206,7 +209,6 @@ export default function BrandKit() {
               <p className="text-gray-600 mb-8 max-w-md mx-auto">Upload your luxury resort photos to help AI understand your brand's visual identity and create consistent, high-end marketing content.</p>
               <Button 
                 onClick={() => fileInputRef.current?.click()}
-                className="apple-button bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-full font-medium"
                 style={{ boxShadow: 'var(--shadow-button)' }}
               >
                 <Upload className="mr-2 h-5 w-5" />

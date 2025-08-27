@@ -152,7 +152,7 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Describe your hotel marketing photo..."
-                  className="w-full h-12 bg-[hsl(var(--chat-input-bg))] border border-[hsl(var(--chat-input-border))] rounded-full px-5 text-[15px] placeholder:text-muted-foreground focus:bg-background focus:border-ring/20 focus:ring-2 focus:ring-ring/10 transition-all duration-200 resize-none"
+                  className="w-full h-12 bg-[hsl(var(--chat-input-bg))] border border-[hsl(var(--chat-input-border))] rounded-full px-5 text-[15px] placeholder:text-muted-foreground focus-visible:outline-none transition-all duration-200 resize-none"
                 />
               </div>
             </div>
