@@ -55,7 +55,7 @@ const Auth = () => {
       <div className="w-full max-w-md">
         {/* Title */}
         <div className="text-center mb-12">
-          <h1 className="text-3xl font-light text-gray-900 tracking-tight">
+          <h1 className="text-3xl font-medium text-gray-900 tracking-tight">
             {isSignUp ? "Create your Nino Account" : "Sign in to Nino"}
           </h1>
         </div>
