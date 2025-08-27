@@ -102,25 +102,27 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
       </div>
 
       {/* Input */}
-      <div className="border-t border-gray-100 px-6 py-4">
+      <div className="border-t border-gray-100 px-6 py-6">
         <div className="max-w-3xl mx-auto">
-          <div className="flex gap-3 items-end">
+          <div className="flex gap-2 items-end">
             <div className="flex-1 relative">
-              <Input
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Describe the hotel marketing photo you want to create..."
-                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm placeholder:text-gray-500 focus:border-gray-900 focus:ring-0 transition-colors resize-none min-h-[48px]"
-              />
+              <div className="bg-gray-50 rounded-2xl p-1 border border-gray-200 focus-within:border-gray-300 focus-within:bg-white transition-all">
+                <Input
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Describe the hotel marketing photo you want to create..."
+                  className="w-full bg-transparent border-0 rounded-xl px-4 py-3 text-sm placeholder:text-gray-500 focus:ring-0 focus:outline-none resize-none min-h-[44px]"
+                />
+              </div>
             </div>
             <Button 
               onClick={handleSendMessage}
               disabled={!inputValue.trim()}
               size="icon"
-              className="shrink-0 w-12 h-12 rounded-xl bg-gray-900 hover:bg-gray-800 disabled:bg-gray-200 transition-colors"
+              className="shrink-0 w-11 h-11 rounded-full bg-gray-900 hover:bg-gray-800 disabled:bg-gray-200 disabled:opacity-40 transition-all shadow-sm"
             >
-              <Send className="h-4 w-4" />
+              <Send className="h-4 w-4 text-white" />
             </Button>
           </div>
         </div>

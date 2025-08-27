@@ -24,18 +24,18 @@ export function ImagePreview({ currentPrompt, isGenerating = false }: ImagePrevi
   return (
     <div className="flex flex-col h-screen bg-white">
       {/* Aspect Ratio Controls */}
-      <div className="border-b border-gray-100 px-6 py-4">
-        <div className="flex gap-1 justify-center">
+      <div className="border-b border-gray-100 px-6 py-6">
+        <div className="bg-gray-100 rounded-2xl p-1 inline-flex">
           {aspectRatios.map((ratio) => (
             <Button
               key={ratio}
-              variant={selectedRatio === ratio ? "default" : "ghost"}
+              variant="ghost"
               size="sm"
               onClick={() => setSelectedRatio(ratio)}
-              className={`text-xs font-medium px-3 py-2 rounded-lg transition-colors ${
+              className={`text-xs font-medium px-4 py-2 rounded-xl transition-all ${
                 selectedRatio === ratio 
-                  ? "bg-gray-900 text-white" 
-                  : "hover:bg-gray-50 text-gray-600"
+                  ? "bg-white text-gray-900 shadow-sm" 
+                  : "hover:bg-gray-200/50 text-gray-600"
               }`}
             >
               {ratio}
@@ -67,13 +67,13 @@ export function ImagePreview({ currentPrompt, isGenerating = false }: ImagePrevi
       </div>
 
       {/* Actions */}
-      <div className="border-t border-gray-100 px-6 py-4">
-        <div className="flex gap-2">
+      <div className="border-t border-gray-100 px-6 py-6">
+        <div className="flex gap-3">
           <Button
             variant="secondary"
             size="sm"
             disabled={!generatedImage}
-            className="flex-1 h-10 rounded-lg font-medium bg-gray-50 hover:bg-gray-100 text-gray-700 border-0 transition-colors disabled:opacity-40"
+            className="flex-1 h-10 rounded-xl font-medium bg-gray-50 hover:bg-gray-100 text-gray-700 border-0 transition-colors disabled:opacity-40"
           >
             <RotateCcw className="w-4 h-4 mr-2" />
             Regenerate
@@ -82,7 +82,7 @@ export function ImagePreview({ currentPrompt, isGenerating = false }: ImagePrevi
             variant="secondary"
             size="sm"
             disabled={!generatedImage}
-            className="flex-1 h-10 rounded-lg font-medium bg-gray-50 hover:bg-gray-100 text-gray-700 border-0 transition-colors disabled:opacity-40"
+            className="flex-1 h-10 rounded-xl font-medium bg-gray-50 hover:bg-gray-100 text-gray-700 border-0 transition-colors disabled:opacity-40"
           >
             <Download className="w-4 h-4 mr-2" />
             Download
