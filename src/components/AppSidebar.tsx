@@ -62,33 +62,6 @@ export function AppSidebar() {
   const avatarUrl = profile?.avatar_url;
   const initials = brandName.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
 
-  // Smart text wrapping for brand names
-  const formatBrandName = (name: string) => {
-    const nameWithPossessive = `${name}'s`;
-    const words = nameWithPossessive.split(' ');
-    
-    // If short enough, keep on one line
-    if (nameWithPossessive.length <= 16) {
-      return { line1: nameWithPossessive, line2: null };
-    }
-    
-    // Find a good breaking point (after first 1-2 words)
-    if (words.length >= 3) {
-      // For names like "Four Seasons Napa Valley's" -> "Four Seasons" + "Napa Valley's"
-      const midPoint = Math.ceil(words.length / 2);
-      const line1 = words.slice(0, midPoint).join(' ');
-      const line2 = words.slice(midPoint).join(' ');
-      return { line1, line2 };
-    } else if (words.length === 2) {
-      // For names like "Brand Name's" -> "Brand" + "Name's"  
-      return { line1: words[0], line2: words[1] };
-    }
-    
-    return { line1: nameWithPossessive, line2: null };
-  };
-
-  const { line1, line2 } = formatBrandName(brandName);
-
   return (
     <Sidebar className="w-60 bg-white border-r border-gray-200 md:w-60 w-16">
       <div className="flex flex-col h-full">
@@ -101,9 +74,8 @@ export function AppSidebar() {
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col min-w-0 flex-1">
-            <div className="font-semibold text-sm text-gray-900 leading-tight" style={{ fontFamily: 'Inter, sans-serif' }}>
-              <div>{line1}</div>
-              {line2 && <div>{line2}</div>}
+            <div className="font-semibold text-sm text-gray-900 truncate" style={{ fontFamily: 'Inter, sans-serif' }}>
+              {brandName}'s
             </div>
             <div className="text-xs text-gray-500 font-normal">
               Workspace
