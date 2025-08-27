@@ -9,135 +9,86 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/EmptyState";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useBrand } from "@/contexts/BrandContext";
 import { toast } from "sonner";
 
-interface BrandPhoto {
+interface BrandAsset {
   id: string;
   storage_path: string;
   file_name: string;
   tags: string[];
+  asset_type: string;
   url?: string;
-}
-
-interface BrandGuidelines {
-  tone: string;
-  voice: string;
-  content_dos: string;
-  content_donts: string;
 }
 
 export default function BrandKit() {
   const [activeTab, setActiveTab] = useState("photos");
-  const [photos, setPhotos] = useState<BrandPhoto[]>([]);
-  const [guidelines, setGuidelines] = useState<BrandGuidelines>({
-    tone: "",
-    voice: "",
-    content_dos: "",
-    content_donts: ""
-  });
-  const [currentTeamId, setCurrentTeamId] = useState<string | null>(null);
+  const [assets, setAssets] = useState<BrandAsset[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploadingPhotos, setUploadingPhotos] = useState(false);
-  const [savingGuidelines, setSavingGuidelines] = useState(false);
+  const [uploadingAssets, setUploadingAssets] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { user } = useAuth();
+  const { brandProfile, updateBrandProfile } = useBrand();
 
-  // Load user's team and brand data
+  // Load brand assets
   useEffect(() => {
-    const loadBrandData = async () => {
-      if (!user) return;
+    const loadBrandAssets = async () => {
+      if (!brandProfile) {
+        setLoading(false);
+        return;
+      }
       
       try {
-        // Get user's team
-        const { data: teamMemberships, error: teamError } = await supabase
-          .from('team_memberships')
-          .select('team_id, teams(id, name)')
-          .eq('user_id', user.id)
-          .eq('invitation_accepted', true)
-          .limit(1);
-
-        if (teamError) {
-          console.error('Error fetching team:', teamError);
-          return;
-        }
-
-        if (!teamMemberships || teamMemberships.length === 0) {
-          toast.error("No team found. Please complete onboarding first.");
-          return;
-        }
-
-        const teamId = teamMemberships[0].team_id;
-        setCurrentTeamId(teamId);
-
-        // Load brand photos
-        const { data: brandPhotos, error: photosError } = await supabase
-          .from('brand_photos')
+        // Load brand assets
+        const { data: brandAssets, error: assetsError } = await supabase
+          .from('brand_assets')
           .select('*')
-          .eq('team_id', teamId)
+          .eq('brand_profile_id', brandProfile.id)
           .order('created_at', { ascending: false });
 
-        if (photosError) {
-          console.error('Error fetching photos:', photosError);
+        if (assetsError) {
+          console.error('Error fetching assets:', assetsError);
         } else {
-          // Get signed URLs for photos
-          const photosWithUrls = await Promise.all(
-            (brandPhotos || []).map(async (photo) => {
+          // Get signed URLs for assets
+          const assetsWithUrls = await Promise.all(
+            (brandAssets || []).map(async (asset) => {
               const { data } = supabase.storage
-                .from('brand-photos')
-                .getPublicUrl(photo.storage_path);
+                .from('brand-assets')
+                .getPublicUrl(asset.storage_path);
               
               return {
-                ...photo,
+                ...asset,
                 url: data.publicUrl
               };
             })
           );
-          setPhotos(photosWithUrls);
-        }
-
-        // Load brand guidelines
-        const { data: brandGuidelines, error: guidelinesError } = await supabase
-          .from('brand_guidelines')
-          .select('*')
-          .eq('team_id', teamId)
-          .maybeSingle();
-
-        if (guidelinesError) {
-          console.error('Error fetching guidelines:', guidelinesError);
-        } else if (brandGuidelines) {
-          setGuidelines({
-            tone: brandGuidelines.tone || "",
-            voice: brandGuidelines.voice || "",
-            content_dos: brandGuidelines.content_dos || "",
-            content_donts: brandGuidelines.content_donts || ""
-          });
+          setAssets(assetsWithUrls);
         }
       } catch (error) {
-        console.error('Error loading brand data:', error);
-        toast.error("Failed to load brand data");
+        console.error('Error loading brand assets:', error);
+        toast.error("Failed to load brand assets");
       } finally {
         setLoading(false);
       }
     };
 
-    loadBrandData();
-  }, [user]);
+    loadBrandAssets();
+  }, [brandProfile]);
 
-  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAssetUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files || !currentTeamId || !user) return;
+    if (!files || !brandProfile) return;
 
-    setUploadingPhotos(true);
+    setUploadingAssets(true);
     try {
       const uploadPromises = Array.from(files).map(async (file) => {
         // Upload to storage
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-        const storagePath = `${currentTeamId}/${fileName}`;
+        const storagePath = `${brandProfile.user_id}/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
-          .from('brand-photos')
+          .from('brand-assets')
           .upload(storagePath, file);
 
         if (uploadError) {
@@ -146,15 +97,16 @@ export default function BrandKit() {
         }
 
         // Save metadata to database
-        const { data: photoData, error: dbError } = await supabase
-          .from('brand_photos')
+        const { data: assetData, error: dbError } = await supabase
+          .from('brand_assets')
           .insert({
-            team_id: currentTeamId,
-            user_id: user.id,
+            brand_profile_id: brandProfile.id,
+            user_id: brandProfile.user_id,
             storage_path: storagePath,
             file_name: file.name,
             file_size: file.size,
             content_type: file.type,
+            asset_type: 'photo',
             tags: []
           })
           .select()
@@ -167,23 +119,23 @@ export default function BrandKit() {
 
         // Get public URL
         const { data } = supabase.storage
-          .from('brand-photos')
+          .from('brand-assets')
           .getPublicUrl(storagePath);
 
         return {
-          ...photoData,
+          ...assetData,
           url: data.publicUrl
         };
       });
 
-      const newPhotos = await Promise.all(uploadPromises);
-      setPhotos(prev => [...newPhotos, ...prev]);
-      toast.success(`${newPhotos.length} photo(s) uploaded successfully`);
+      const newAssets = await Promise.all(uploadPromises);
+      setAssets(prev => [...newAssets, ...prev]);
+      toast.success(`${newAssets.length} asset(s) uploaded successfully`);
     } catch (error) {
-      console.error('Error uploading photos:', error);
-      toast.error("Failed to upload photos");
+      console.error('Error uploading assets:', error);
+      toast.error("Failed to upload assets");
     } finally {
-      setUploadingPhotos(false);
+      setUploadingAssets(false);
     }
 
     // Reset file input
@@ -192,14 +144,14 @@ export default function BrandKit() {
     }
   };
 
-  const handleDeletePhoto = async (photo: BrandPhoto) => {
-    if (!currentTeamId) return;
+  const handleDeleteAsset = async (asset: BrandAsset) => {
+    if (!brandProfile) return;
 
     try {
       // Delete from storage
       const { error: storageError } = await supabase.storage
-        .from('brand-photos')
-        .remove([photo.storage_path]);
+        .from('brand-assets')
+        .remove([asset.storage_path]);
 
       if (storageError) {
         console.error('Storage delete error:', storageError);
@@ -207,44 +159,44 @@ export default function BrandKit() {
 
       // Delete from database
       const { error: dbError } = await supabase
-        .from('brand_photos')
+        .from('brand_assets')
         .delete()
-        .eq('id', photo.id);
+        .eq('id', asset.id);
 
       if (dbError) {
         console.error('Database delete error:', dbError);
         throw dbError;
       }
 
-      setPhotos(prev => prev.filter(p => p.id !== photo.id));
-      toast.success("Photo deleted successfully");
+      setAssets(prev => prev.filter(a => a.id !== asset.id));
+      toast.success("Asset deleted successfully");
     } catch (error) {
-      console.error('Error deleting photo:', error);
-      toast.error("Failed to delete photo");
+      console.error('Error deleting asset:', error);
+      toast.error("Failed to delete asset");
     }
   };
 
-  const handleAddTag = async (photoId: string, tag: string) => {
+  const handleAddTag = async (assetId: string, tag: string) => {
     if (!tag.trim()) return;
 
     try {
-      const photo = photos.find(p => p.id === photoId);
-      if (!photo) return;
+      const asset = assets.find(a => a.id === assetId);
+      if (!asset) return;
 
-      const newTags = [...photo.tags, tag.trim()];
+      const newTags = [...asset.tags, tag.trim()];
 
       const { error } = await supabase
-        .from('brand_photos')
+        .from('brand_assets')
         .update({ tags: newTags })
-        .eq('id', photoId);
+        .eq('id', assetId);
 
       if (error) {
         console.error('Error adding tag:', error);
         throw error;
       }
 
-      setPhotos(prev => prev.map(p => 
-        p.id === photoId ? { ...p, tags: newTags } : p
+      setAssets(prev => prev.map(a => 
+        a.id === assetId ? { ...a, tags: newTags } : a
       ));
       toast.success("Tag added successfully");
     } catch (error) {
@@ -253,25 +205,25 @@ export default function BrandKit() {
     }
   };
 
-  const handleRemoveTag = async (photoId: string, tagIndex: number) => {
+  const handleRemoveTag = async (assetId: string, tagIndex: number) => {
     try {
-      const photo = photos.find(p => p.id === photoId);
-      if (!photo) return;
+      const asset = assets.find(a => a.id === assetId);
+      if (!asset) return;
 
-      const newTags = photo.tags.filter((_, index) => index !== tagIndex);
+      const newTags = asset.tags.filter((_, index) => index !== tagIndex);
 
       const { error } = await supabase
-        .from('brand_photos')
+        .from('brand_assets')
         .update({ tags: newTags })
-        .eq('id', photoId);
+        .eq('id', assetId);
 
       if (error) {
         console.error('Error removing tag:', error);
         throw error;
       }
 
-      setPhotos(prev => prev.map(p => 
-        p.id === photoId ? { ...p, tags: newTags } : p
+      setAssets(prev => prev.map(a => 
+        a.id === assetId ? { ...a, tags: newTags } : a
       ));
       toast.success("Tag removed successfully");
     } catch (error) {
@@ -280,29 +232,18 @@ export default function BrandKit() {
     }
   };
 
-  const handleSaveGuidelines = async () => {
-    if (!currentTeamId) return;
+  const handleSaveProfile = async () => {
+    if (!brandProfile) return;
 
-    setSavingGuidelines(true);
+    setSavingProfile(true);
     try {
-      const { error } = await supabase
-        .from('brand_guidelines')
-        .upsert({
-          team_id: currentTeamId,
-          ...guidelines
-        });
-
-      if (error) {
-        console.error('Error saving guidelines:', error);
-        throw error;
-      }
-
-      toast.success("Guidelines saved successfully");
+      // Profile is already being updated through the form inputs via updateBrandProfile
+      toast.success("Brand profile saved successfully");
     } catch (error) {
-      console.error('Error saving guidelines:', error);
-      toast.error("Failed to save guidelines");
+      console.error('Error saving profile:', error);
+      toast.error("Failed to save brand profile");
     } finally {
-      setSavingGuidelines(false);
+      setSavingProfile(false);
     }
   };
 
@@ -312,6 +253,20 @@ export default function BrandKit() {
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
         </div>
+      </div>
+    );
+  }
+
+  if (!brandProfile) {
+    return (
+      <div className="px-4 md:px-6 lg:px-8 xl:px-12 py-8 w-full max-w-none">
+        <EmptyState
+          icon={Edit3}
+          title="Complete your brand profile"
+          description="Please complete the onboarding process to access your brand kit."
+          actionLabel="Go to Settings"
+          onAction={() => window.location.href = '/settings'}
+        />
       </div>
     );
   }
@@ -329,7 +284,7 @@ export default function BrandKit() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="photos">Photos</TabsTrigger>
+          <TabsTrigger value="photos">Assets</TabsTrigger>
           <TabsTrigger value="guidelines">Guidelines</TabsTrigger>
         </TabsList>
 
@@ -337,16 +292,16 @@ export default function BrandKit() {
           {/* Header - always show upload button */}
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-xl font-medium text-foreground">Brand Photos</h2>
+              <h2 className="text-xl font-medium text-foreground">Brand Assets</h2>
               <p className="text-muted-foreground">Upload photos to help AI learn your brand's visual identity</p>
             </div>
             <Button 
               onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingPhotos}
+              disabled={uploadingAssets}
               className="shadow-lg"
               size="lg"
             >
-              {uploadingPhotos ? (
+              {uploadingAssets ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Uploading...
@@ -354,7 +309,7 @@ export default function BrandKit() {
               ) : (
                 <>
                   <Upload className="mr-2 h-4 w-4" />
-                  Upload Photos
+                  Upload Assets
                 </>
               )}
             </Button>
@@ -365,29 +320,29 @@ export default function BrandKit() {
             type="file"
             multiple
             accept="image/*"
-            onChange={handlePhotoUpload}
+            onChange={handleAssetUpload}
             className="hidden"
           />
 
-          {/* Photos Grid */}
-          {photos.length > 0 && (
+          {/* Assets Grid */}
+          {assets.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {photos.map((photo) => (
+              {assets.map((asset) => (
                 <div
-                  key={photo.id}
+                  key={asset.id}
                   className="group relative bg-card rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 border"
                 >
                   <div className="relative overflow-hidden aspect-square">
                     <img
-                      src={photo.url}
-                      alt={photo.file_name}
+                      src={asset.url}
+                      alt={asset.file_name}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                       loading="lazy"
                     />
                     
                     {/* Delete button */}
                     <button
-                      onClick={() => handleDeletePhoto(photo)}
+                      onClick={() => handleDeleteAsset(asset)}
                       className="absolute top-3 right-3 w-8 h-8 bg-background/95 hover:bg-background rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-sm shadow-lg hover:scale-110"
                     >
                       <Trash2 className="h-4 w-4 text-muted-foreground" />
@@ -397,7 +352,7 @@ export default function BrandKit() {
                     <button
                       onClick={() => {
                         const tag = prompt("Add a tag:");
-                        if (tag) handleAddTag(photo.id, tag);
+                        if (tag) handleAddTag(asset.id, tag);
                       }}
                       className="absolute bottom-3 right-3 w-8 h-8 bg-primary hover:bg-primary/90 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg hover:scale-110"
                     >
@@ -405,14 +360,14 @@ export default function BrandKit() {
                     </button>
                     
                     {/* Tags overlay */}
-                    {photo.tags.length > 0 && (
+                    {asset.tags.length > 0 && (
                       <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5 max-w-[calc(100%-4rem)] opacity-0 group-hover:opacity-100 transition-all duration-300">
-                        {photo.tags.map((tag, index) => (
+                        {asset.tags.map((tag, index) => (
                           <Badge
                             key={index}
                             variant="secondary"
                             className="text-xs cursor-pointer hover:bg-destructive hover:text-destructive-foreground transition-colors"
-                            onClick={() => handleRemoveTag(photo.id, index)}
+                            onClick={() => handleRemoveTag(asset.id, index)}
                           >
                             {tag}
                             <X className="ml-1 h-3 w-3" />
@@ -426,13 +381,13 @@ export default function BrandKit() {
             </div>
           )}
 
-          {/* Empty state for photos */}
-          {photos.length === 0 && (
+          {/* Empty state for assets */}
+          {assets.length === 0 && (
             <EmptyState
               icon={Image}
-              title="No brand photos yet"
+              title="No brand assets yet"
               description="Upload your brand photos to help AI understand your visual identity and create consistent, high-quality content."
-              actionLabel="Upload Your First Photos"
+              actionLabel="Upload Your First Assets"
               onAction={() => fileInputRef.current?.click()}
             />
           )}
@@ -455,8 +410,8 @@ export default function BrandKit() {
                   <Label htmlFor="brand-tone">Brand Tone</Label>
                   <Input 
                     id="brand-tone" 
-                    value={guidelines.tone}
-                    onChange={(e) => setGuidelines(prev => ({ ...prev, tone: e.target.value }))}
+                    value={brandProfile?.brand_tone || ''}
+                    onChange={(e) => updateBrandProfile({ brand_tone: e.target.value })}
                     placeholder="e.g., Luxurious, Friendly, Professional, Sophisticated" 
                     className="mt-2"
                   />
@@ -466,8 +421,8 @@ export default function BrandKit() {
                   <Label htmlFor="brand-voice">Brand Voice</Label>
                   <Textarea 
                     id="brand-voice" 
-                    value={guidelines.voice}
-                    onChange={(e) => setGuidelines(prev => ({ ...prev, voice: e.target.value }))}
+                    value={brandProfile?.brand_voice || ''}
+                    onChange={(e) => updateBrandProfile({ brand_voice: e.target.value })}
                     placeholder="e.g., We speak with confidence and warmth, using inclusive language that makes every guest feel valued..."
                     className="mt-2 min-h-[100px]"
                   />
@@ -488,47 +443,46 @@ export default function BrandKit() {
                   <Label htmlFor="content-dos">Always Include</Label>
                   <Textarea 
                     id="content-dos" 
-                    value={guidelines.content_dos}
-                    onChange={(e) => setGuidelines(prev => ({ ...prev, content_dos: e.target.value }))}
+                    value={brandProfile?.content_dos || ''}
+                    onChange={(e) => updateBrandProfile({ content_dos: e.target.value })}
                     placeholder="e.g., Ocean views, Local culture, Premium amenities, Personalized service..."
                     className="mt-2 min-h-[80px]"
                   />
-                  <p className="text-xs text-muted-foreground mt-1">Elements that should always be highlighted</p>
+                  <p className="text-xs text-muted-foreground mt-1">Elements that should always be highlighted in your content</p>
                 </div>
                 <div>
                   <Label htmlFor="content-donts">Never Include</Label>
                   <Textarea 
                     id="content-donts" 
-                    value={guidelines.content_donts}
-                    onChange={(e) => setGuidelines(prev => ({ ...prev, content_donts: e.target.value }))}
+                    value={brandProfile?.content_donts || ''}
+                    onChange={(e) => updateBrandProfile({ content_donts: e.target.value })}
                     placeholder="e.g., Crowded spaces, Generic stock photo feel, Overly promotional language..."
                     className="mt-2 min-h-[80px]"
                   />
                   <p className="text-xs text-muted-foreground mt-1">Elements to avoid in your content</p>
                 </div>
+
+                <div className="pt-4">
+                  <Button 
+                    onClick={handleSaveProfile}
+                    disabled={savingProfile}
+                    className="w-full"
+                  >
+                    {savingProfile ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        Save Guidelines
+                      </>
+                    )}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
-
-            <div className="flex justify-end">
-              <Button 
-                onClick={handleSaveGuidelines}
-                disabled={savingGuidelines}
-                className="shadow-lg" 
-                size="lg"
-              >
-                {savingGuidelines ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save Guidelines
-                  </>
-                )}
-              </Button>
-            </div>
           </div>
         </TabsContent>
       </Tabs>

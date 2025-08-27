@@ -5,9 +5,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { SettingsProvider } from "@/contexts/SettingsContext";
+
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ChatProvider } from "@/contexts/ChatContext";
+import { BrandProvider } from "@/contexts/BrandContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import Create from "./pages/Create";
@@ -24,7 +25,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <ChatProvider>
-        <SettingsProvider>
+        <BrandProvider>
           <TooltipProvider>
           <Toaster />
           <Sonner />
@@ -55,7 +56,7 @@ const App = () => (
             </div>
           </BrowserRouter>
           </TooltipProvider>
-        </SettingsProvider>
+        </BrandProvider>
       </ChatProvider>
     </AuthProvider>
   </QueryClientProvider>

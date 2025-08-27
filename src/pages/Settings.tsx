@@ -10,14 +10,8 @@ import { TeamInvitations } from "@/components/TeamInvitations";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useBrand } from "@/contexts/BrandContext";
 import { Loader2, LogOut, Upload, User } from "lucide-react";
-
-interface UserProfile {
-  email: string;
-  brand_name: string;
-  avatar_url: string;
-}
 
 interface Team {
   id: string;
@@ -31,41 +25,20 @@ export default function Settings() {
   const [isLoading, setIsLoading] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile>({
-    email: '',
-    brand_name: '',
-    avatar_url: ''
-  });
   const { user, signOut } = useAuth();
+  const { profile, brandProfile, updateProfile, updateBrandProfile, uploadAvatar } = useBrand();
   const { toast } = useToast();
-  const { profile, brandSettings, updateProfile, updateBrandSettings } = useSettings();
 
   useEffect(() => {
     if (user) {
-      loadUserData();
+      loadTeams();
     }
   }, [user]);
 
-  const loadUserData = async () => {
+  const loadTeams = async () => {
     if (!user) return;
 
     try {
-      // Load user profile
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('email, brand_name, avatar_url')
-        .eq('id', user.id)
-        .single();
-
-      if (profileData) {
-        setUserProfile(profileData);
-        updateProfile({
-          first_name: '', // Not needed anymore
-          last_name: '',  // Not needed anymore
-          email: profileData.email || ''
-        });
-      }
-
       // Load user's teams
       const { data: teamsData } = await supabase
         .from('team_memberships')
@@ -86,7 +59,7 @@ export default function Settings() {
         setSelectedTeam(userTeams[0].id);
       }
     } catch (error) {
-      console.error('Error loading user data:', error);
+      console.error('Error loading teams:', error);
     }
   };
 
@@ -99,61 +72,53 @@ export default function Settings() {
     }
   };
 
-  const uploadAvatar = async (): Promise<string | null> => {
-    if (!avatarFile || !user) return null;
-
-    const fileExt = avatarFile.name.split('.').pop();
-    const fileName = `${user.id}/avatar.${fileExt}`;
-
-    const { data, error } = await supabase.storage
-      .from('avatars')
-      .upload(fileName, avatarFile, { upsert: true });
-
-    if (error) {
-      console.error('Error uploading avatar:', error);
-      return null;
-    }
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('avatars')
-      .getPublicUrl(fileName);
-
-    return publicUrl;
-  };
-
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !profile) return;
 
     setIsLoading(true);
     
     try {
-      let avatarUrl = userProfile.avatar_url;
+      let avatarUrl = profile.avatar_url;
       
       if (avatarFile) {
-        const newAvatarUrl = await uploadAvatar();
+        const newAvatarUrl = await uploadAvatar(avatarFile);
         if (newAvatarUrl) {
           avatarUrl = newAvatarUrl;
         }
       }
 
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          brand_name: userProfile.brand_name,
-          avatar_url: avatarUrl,
-        })
-        .eq('id', user.id);
+      await updateProfile({
+        avatar_url: avatarUrl,
+      });
 
-      if (error) throw error;
-
-      setUserProfile(prev => ({ ...prev, avatar_url: avatarUrl }));
       setAvatarFile(null);
       setAvatarPreview(null);
 
       toast({
         title: "Profile updated",
         description: "Your profile has been saved successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Update failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSaveBrandProfile = async () => {
+    if (!brandProfile) return;
+
+    setIsLoading(true);
+    try {
+      // Brand profile is already updated through the form inputs
+      toast({
+        title: "Brand settings saved",
+        description: "Your brand settings have been updated successfully.",
       });
     } catch (error: any) {
       toast({
@@ -174,7 +139,7 @@ export default function Settings() {
             Settings
           </h1>
           <p className="text-gray-600">
-            Manage your account settings and team preferences
+            Manage your account settings and brand preferences
           </p>
         </div>
         <Button 
@@ -211,8 +176,8 @@ export default function Settings() {
                     <Avatar className="w-20 h-20 border-2 border-border">
                       {avatarPreview ? (
                         <AvatarImage src={avatarPreview} alt="Profile" />
-                      ) : userProfile.avatar_url ? (
-                        <AvatarImage src={userProfile.avatar_url} alt="Profile" />
+                      ) : profile?.avatar_url ? (
+                        <AvatarImage src={profile.avatar_url} alt="Profile" />
                       ) : (
                         <AvatarFallback>
                           <User className="w-8 h-8" />
@@ -237,12 +202,23 @@ export default function Settings() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="brand-name-profile">Brand Name</Label>
+                  <Label htmlFor="first-name">First Name</Label>
                   <Input 
-                    id="brand-name-profile" 
-                    value={userProfile.brand_name}
-                    onChange={(e) => setUserProfile(prev => ({ ...prev, brand_name: e.target.value }))}
-                    placeholder="Enter your brand name"
+                    id="first-name" 
+                    value={profile?.first_name || ''}
+                    onChange={(e) => updateProfile({ first_name: e.target.value })}
+                    placeholder="Enter your first name"
+                    className="mt-2 rounded-full" 
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="last-name">Last Name</Label>
+                  <Input 
+                    id="last-name" 
+                    value={profile?.last_name || ''}
+                    onChange={(e) => updateProfile({ last_name: e.target.value })}
+                    placeholder="Enter your last name"
                     className="mt-2 rounded-full" 
                   />
                 </div>
@@ -252,7 +228,7 @@ export default function Settings() {
                   <Input 
                     id="email" 
                     type="email" 
-                    value={userProfile.email}
+                    value={profile?.email || ''}
                     disabled
                     className="mt-2 rounded-full bg-muted" 
                   />
@@ -280,8 +256,8 @@ export default function Settings() {
                 <Label htmlFor="brand-name">Brand Name</Label>
                 <Input 
                   id="brand-name" 
-                  value={brandSettings.name}
-                  onChange={(e) => updateBrandSettings({ name: e.target.value })}
+                  value={brandProfile?.brand_name || ''}
+                  onChange={(e) => updateBrandProfile({ brand_name: e.target.value })}
                   placeholder="Your Hotel/Resort Name" 
                   className="mt-2 rounded-full" 
                 />
@@ -291,8 +267,8 @@ export default function Settings() {
                 <Label htmlFor="brand-description">Description</Label>
                 <Textarea 
                   id="brand-description" 
-                  value={brandSettings.description}
-                  onChange={(e) => updateBrandSettings({ description: e.target.value })}
+                  value={brandProfile?.description || ''}
+                  onChange={(e) => updateBrandProfile({ description: e.target.value })}
                   placeholder="Brief description of your brand and what makes it unique..."
                   className="mt-2 min-h-[100px]"
                 />
@@ -302,8 +278,8 @@ export default function Settings() {
                 <Label htmlFor="brand-location">Location</Label>
                 <Input 
                   id="brand-location" 
-                  value={brandSettings.location}
-                  onChange={(e) => updateBrandSettings({ location: e.target.value })}
+                  value={brandProfile?.location || ''}
+                  onChange={(e) => updateBrandProfile({ location: e.target.value })}
                   placeholder="e.g., Waikiki Beach, Honolulu, Hawaii" 
                   className="mt-2 rounded-full" 
                 />
@@ -313,9 +289,9 @@ export default function Settings() {
                 <Label htmlFor="brand-industry">Industry</Label>
                 <Input 
                   id="brand-industry" 
-                  value={brandSettings.industry} 
-                  disabled 
-                  className="mt-2 rounded-full bg-muted" 
+                  value={brandProfile?.industry || 'Hospitality & Travel'} 
+                  onChange={(e) => updateBrandProfile({ industry: e.target.value })}
+                  className="mt-2 rounded-full" 
                 />
               </div>
             </CardContent>
@@ -333,8 +309,8 @@ export default function Settings() {
                 <Label htmlFor="brand-tone">Brand Tone</Label>
                 <Input 
                   id="brand-tone" 
-                  value={brandSettings.tone}
-                  onChange={(e) => updateBrandSettings({ tone: e.target.value })}
+                  value={brandProfile?.brand_tone || ''}
+                  onChange={(e) => updateBrandProfile({ brand_tone: e.target.value })}
                   placeholder="e.g., Luxurious, Friendly, Professional, Sophisticated" 
                   className="mt-2 rounded-full"
                 />
@@ -344,8 +320,8 @@ export default function Settings() {
                 <Label htmlFor="brand-voice">Brand Voice</Label>
                 <Textarea 
                   id="brand-voice" 
-                  value={brandSettings.voice}
-                  onChange={(e) => updateBrandSettings({ voice: e.target.value })}
+                  value={brandProfile?.brand_voice || ''}
+                  onChange={(e) => updateBrandProfile({ brand_voice: e.target.value })}
                   placeholder="e.g., We speak with confidence and warmth, using inclusive language that makes every guest feel valued..."
                   className="mt-2 min-h-[100px]"
                 />
@@ -354,8 +330,42 @@ export default function Settings() {
             </CardContent>
           </Card>
 
+          <Card>
+            <CardHeader>
+              <CardTitle>Content Guidelines</CardTitle>
+              <CardDescription>
+                Specific guidelines for what should and shouldn't be included in your content
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="content-dos">Always Include</Label>
+                <Textarea 
+                  id="content-dos" 
+                  value={brandProfile?.content_dos || ''}
+                  onChange={(e) => updateBrandProfile({ content_dos: e.target.value })}
+                  placeholder="e.g., Ocean views, Local culture, Premium amenities, Personalized service..."
+                  className="mt-2 min-h-[80px]"
+                />
+                <p className="text-xs text-gray-500 mt-1">Elements that should always be highlighted in your content</p>
+              </div>
+              <div>
+                <Label htmlFor="content-donts">Never Include</Label>
+                <Textarea 
+                  id="content-donts" 
+                  value={brandProfile?.content_donts || ''}
+                  onChange={(e) => updateBrandProfile({ content_donts: e.target.value })}
+                  placeholder="e.g., Crowded spaces, Generic stock photo feel, Overly promotional language..."
+                  className="mt-2 min-h-[80px]"
+                />
+                <p className="text-xs text-gray-500 mt-1">Elements to avoid in your content</p>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="flex justify-end">
-            <Button className="rounded-full">
+            <Button onClick={handleSaveBrandProfile} disabled={isLoading} className="rounded-full">
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Brand Settings
             </Button>
           </div>
@@ -421,14 +431,16 @@ export default function Settings() {
                 <Button 
                   variant="outline" 
                   onClick={() => {
-                    // Trigger password reset
-                    supabase.auth.resetPasswordForEmail(profile.email, {
-                      redirectTo: `${window.location.origin}/reset-password`,
-                    });
-                    toast({
-                      title: "Reset email sent",
-                      description: "Check your email for password reset instructions.",
-                    });
+                    if (profile?.email) {
+                      // Trigger password reset
+                      supabase.auth.resetPasswordForEmail(profile.email, {
+                        redirectTo: `${window.location.origin}/reset-password`,
+                      });
+                      toast({
+                        title: "Reset email sent",
+                        description: "Check your email for password reset instructions.",
+                      });
+                    }
                   }}
                   className="rounded-full"
                 >

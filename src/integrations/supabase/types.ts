@@ -14,142 +14,167 @@ export type Database = {
   }
   public: {
     Tables: {
-      brand_guidelines: {
+      brand_assets: {
         Row: {
-          content_donts: string | null
-          content_dos: string | null
-          created_at: string | null
-          id: string
-          team_id: string
-          tone: string | null
-          updated_at: string | null
-          voice: string | null
-        }
-        Insert: {
-          content_donts?: string | null
-          content_dos?: string | null
-          created_at?: string | null
-          id?: string
-          team_id: string
-          tone?: string | null
-          updated_at?: string | null
-          voice?: string | null
-        }
-        Update: {
-          content_donts?: string | null
-          content_dos?: string | null
-          created_at?: string | null
-          id?: string
-          team_id?: string
-          tone?: string | null
-          updated_at?: string | null
-          voice?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "brand_guidelines_team_id_fkey"
-            columns: ["team_id"]
-            isOneToOne: true
-            referencedRelation: "teams"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      brand_photos: {
-        Row: {
+          asset_type: string | null
+          brand_profile_id: string
           content_type: string | null
           created_at: string | null
+          description: string | null
           file_name: string
           file_size: number | null
           id: string
+          is_active: boolean | null
           storage_path: string
           tags: string[] | null
-          team_id: string
+          title: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          asset_type?: string | null
+          brand_profile_id: string
           content_type?: string | null
           created_at?: string | null
+          description?: string | null
           file_name: string
           file_size?: number | null
           id?: string
+          is_active?: boolean | null
           storage_path: string
           tags?: string[] | null
-          team_id: string
+          title?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          asset_type?: string | null
+          brand_profile_id?: string
           content_type?: string | null
           created_at?: string | null
+          description?: string | null
           file_name?: string
           file_size?: number | null
           id?: string
+          is_active?: boolean | null
           storage_path?: string
           tags?: string[] | null
-          team_id?: string
+          title?: string | null
           updated_at?: string | null
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "brand_photos_team_id_fkey"
-            columns: ["team_id"]
+            foreignKeyName: "brand_assets_brand_profile_id_fkey"
+            columns: ["brand_profile_id"]
             isOneToOne: false
-            referencedRelation: "teams"
+            referencedRelation: "brand_profiles"
             referencedColumns: ["id"]
           },
         ]
       }
+      brand_profiles: {
+        Row: {
+          additional_notes: string | null
+          brand_name: string
+          brand_tone: string | null
+          brand_voice: string | null
+          content_donts: string | null
+          content_dos: string | null
+          core_values: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          industry: string | null
+          is_active: boolean | null
+          key_messages: string | null
+          location: string | null
+          logo_url: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          updated_at: string | null
+          user_id: string
+          website_url: string | null
+        }
+        Insert: {
+          additional_notes?: string | null
+          brand_name: string
+          brand_tone?: string | null
+          brand_voice?: string | null
+          content_donts?: string | null
+          content_dos?: string | null
+          core_values?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          industry?: string | null
+          is_active?: boolean | null
+          key_messages?: string | null
+          location?: string | null
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          updated_at?: string | null
+          user_id: string
+          website_url?: string | null
+        }
+        Update: {
+          additional_notes?: string | null
+          brand_name?: string
+          brand_tone?: string | null
+          brand_voice?: string | null
+          content_donts?: string | null
+          content_dos?: string | null
+          core_values?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          industry?: string | null
+          is_active?: boolean | null
+          key_messages?: string | null
+          location?: string | null
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          updated_at?: string | null
+          user_id?: string
+          website_url?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
-          additional_brand_notes: string | null
           avatar_url: string | null
-          brand_name: string | null
-          brand_tone: string | null
-          created_at: string
-          description: string | null
+          created_at: string | null
           email: string | null
           first_name: string | null
           id: string
           last_name: string | null
-          location: string | null
           onboarding_completed: boolean | null
           onboarding_step: number | null
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
-          additional_brand_notes?: string | null
           avatar_url?: string | null
-          brand_name?: string | null
-          brand_tone?: string | null
-          created_at?: string
-          description?: string | null
+          created_at?: string | null
           email?: string | null
           first_name?: string | null
           id: string
           last_name?: string | null
-          location?: string | null
           onboarding_completed?: boolean | null
           onboarding_step?: number | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
-          additional_brand_notes?: string | null
           avatar_url?: string | null
-          brand_name?: string | null
-          brand_tone?: string | null
-          created_at?: string
-          description?: string | null
+          created_at?: string | null
           email?: string | null
           first_name?: string | null
           id?: string
           last_name?: string | null
-          location?: string | null
           onboarding_completed?: boolean | null
           onboarding_step?: number | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: []
       }

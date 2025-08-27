@@ -2,6 +2,7 @@ import { Paintbrush, FolderOpen, Palette, Settings, ChevronRight, User, LogOut, 
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChat } from "@/contexts/ChatContext";
+import { useBrand } from "@/contexts/BrandContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,33 +36,10 @@ export function AppSidebar() {
   const currentPath = location.pathname;
   const { user, signOut } = useAuth();
   const { sessions } = useChat();
-  const [profile, setProfile] = useState<{ brand_name?: string; avatar_url?: string } | null>(null);
-
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('brand_name, avatar_url')
-          .eq('id', user.id)
-          .single();
-
-        if (!error && data) {
-          setProfile(data);
-        }
-      } catch (error) {
-        console.error('Error fetching profile:', error);
-      }
-    };
-
-    fetchProfile();
-  }, [user]);
-
+  const { brandProfile } = useBrand();
   const isActive = (path: string) => currentPath === path;
-  const brandName = profile?.brand_name || "Your Brand";
-  const avatarUrl = profile?.avatar_url;
+  const brandName = brandProfile?.brand_name || "Your Brand";
+  const logoUrl = brandProfile?.logo_url;
   const initials = brandName.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
 
   return (
@@ -70,7 +48,7 @@ export function AppSidebar() {
       <SidebarHeader className="p-4 border-b border-gray-100 md:p-4 p-3">
         <div className="flex items-center gap-3 md:flex hidden min-w-0">
           <Avatar className="h-8 w-8 flex-shrink-0">
-            <AvatarImage src={avatarUrl || ""} alt={brandName} />
+            <AvatarImage src={logoUrl || ""} alt={brandName} />
             <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
               {initials}
             </AvatarFallback>
@@ -86,7 +64,7 @@ export function AppSidebar() {
         </div>
         <div className="md:hidden flex items-center justify-center">
           <Avatar className="h-7 w-7">
-            <AvatarImage src={avatarUrl || ""} alt={brandName} />
+            <AvatarImage src={logoUrl || ""} alt={brandName} />
             <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
               {initials}
             </AvatarFallback>

@@ -4,11 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { Upload, User, ArrowRight, ArrowLeft, Check } from "lucide-react";
+import { useBrand } from "@/contexts/BrandContext";
 
 interface ComprehensiveOnboardingProps {
   onComplete: () => void;
@@ -33,15 +33,8 @@ interface OnboardingData {
   contentDonts: string;
 }
 
-const steps = [
-  { id: 1, title: "Basic Info", description: "Profile & brand name" },
-  { id: 2, title: "Brand Details", description: "Location & description" },
-  { id: 3, title: "Brand Voice", description: "Tone & personality" },
-  { id: 4, title: "Content Guidelines", description: "Do's & don'ts" }
-];
-
 export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingProps) => {
-  const { user } = useAuth();
+  const { updateProfile, uploadAvatar, createBrandProfile } = useBrand();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<OnboardingData>({
@@ -63,28 +56,6 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
       const preview = URL.createObjectURL(file);
       setData(prev => ({ ...prev, avatarPreview: preview }));
     }
-  };
-
-  const uploadAvatar = async (): Promise<string | null> => {
-    if (!data.avatarFile || !user) return null;
-
-    const fileExt = data.avatarFile.name.split('.').pop();
-    const fileName = `${user.id}/avatar.${fileExt}`;
-
-    const { data: uploadData, error } = await supabase.storage
-      .from('avatars')
-      .upload(fileName, data.avatarFile, { upsert: true });
-
-    if (error) {
-      console.error('Error uploading avatar:', error);
-      return null;
-    }
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('avatars')
-      .getPublicUrl(fileName);
-
-    return publicUrl;
   };
 
   const canProceedToNext = () => {
@@ -115,14 +86,13 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
   };
 
   const handleComplete = async () => {
-    if (!user) return;
-
     setLoading(true);
     try {
       let avatarUrl = null;
       
+      // Upload avatar if provided
       if (data.avatarFile) {
-        avatarUrl = await uploadAvatar();
+        avatarUrl = await uploadAvatar(data.avatarFile);
         if (!avatarUrl) {
           toast.error("Failed to upload avatar");
           setLoading(false);
@@ -130,58 +100,30 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
         }
       }
 
-      // Update profile with all onboarding data
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          brand_name: data.brandName.trim(),
-          avatar_url: avatarUrl,
-          location: data.location.trim(),
-          description: data.description.trim(),
-          brand_tone: data.brandTone.trim(),
-          additional_brand_notes: data.additionalBrandNotes.trim(),
-          onboarding_completed: true,
-          onboarding_step: 4
-        })
-        .eq('id', user.id);
+      // Update user profile
+      await updateProfile({
+        avatar_url: avatarUrl,
+        onboarding_completed: true,
+        onboarding_step: 4
+      });
 
-      if (profileError) {
-        toast.error("Failed to save profile");
-        console.error(profileError);
-        return;
-      }
+      // Create brand profile
+      await createBrandProfile({
+        brand_name: data.brandName.trim(),
+        location: data.location.trim(),
+        description: data.description.trim(),
+        industry: 'Hospitality & Travel',
+        brand_tone: data.brandTone.trim(),
+        brand_voice: data.additionalBrandNotes.trim(),
+        content_dos: data.contentDos.trim(),
+        content_donts: data.contentDonts.trim()
+      });
 
-      // Create/update brand guidelines
-      const { data: teamMemberships } = await supabase
-        .from('team_memberships')
-        .select('team_id')
-        .eq('user_id', user.id)
-        .eq('invitation_accepted', true)
-        .limit(1);
-
-      if (teamMemberships && teamMemberships.length > 0) {
-        const teamId = teamMemberships[0].team_id;
-        
-        const { error: guidelinesError } = await supabase
-          .from('brand_guidelines')
-          .upsert({
-            team_id: teamId,
-            tone: data.brandTone.trim(),
-            voice: data.additionalBrandNotes.trim(),
-            content_dos: data.contentDos.trim(),
-            content_donts: data.contentDonts.trim()
-          });
-
-        if (guidelinesError) {
-          console.error('Error saving guidelines:', guidelinesError);
-        }
-      }
-
-      toast.success("Welcome to Nino! Your profile is complete.");
+      toast.success("Welcome! Your profile is complete.");
       onComplete();
     } catch (error) {
-      toast.error("An error occurred");
-      console.error(error);
+      console.error('Onboarding error:', error);
+      toast.error("An error occurred during setup");
     } finally {
       setLoading(false);
     }
@@ -194,12 +136,7 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
       <Card className="w-full max-w-lg">
         {/* Progress Bar */}
         <div className="px-6 py-6">
-          <div className="w-full bg-muted rounded-full h-2">
-            <div 
-              className="bg-primary h-2 rounded-full transition-all duration-300 ease-out"
-              style={{ width: `${progressPercentage}%` }}
-            />
-          </div>
+          <Progress value={progressPercentage} className="w-full" />
         </div>
 
         <CardContent className="space-y-6">
