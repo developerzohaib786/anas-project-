@@ -4,6 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -11,7 +12,32 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast.error("Please enter your email address first");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success("Password reset email sent! Check your inbox.");
+      }
+    } catch (error) {
+      toast.error("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Check if user is already logged in
   useEffect(() => {
@@ -29,7 +55,7 @@ const Auth = () => {
       <div className="w-full max-w-md">
         {/* Title */}
         <div className="text-center mb-12">
-          <h1 className="text-2xl font-semibold text-gray-900">
+          <h1 className="text-3xl font-light text-gray-900 tracking-tight">
             {isSignUp ? "Create your Nino Account" : "Sign in to Nino"}
           </h1>
         </div>
@@ -43,7 +69,7 @@ const Auth = () => {
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="h-14 bg-white border border-gray-200 rounded-t-lg rounded-b-none border-b-0 px-4 text-base placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-transparent focus:z-10 relative"
+              className="h-14 bg-white border border-gray-200 rounded-t-lg rounded-b-none border-b-0 px-4 text-base placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-300 focus:border-gray-300 focus:z-10 relative transition-all duration-200"
             />
           </div>
           
@@ -54,7 +80,7 @@ const Auth = () => {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="h-14 bg-white border border-gray-200 rounded-b-lg rounded-t-none px-4 pr-20 text-base placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-transparent focus:z-10 relative"
+              className="h-14 bg-white border border-gray-200 rounded-b-lg rounded-t-none px-4 pr-20 text-base placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-300 focus:border-gray-300 focus:z-10 relative transition-all duration-200"
             />
             <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
               <button
@@ -96,7 +122,11 @@ const Auth = () => {
         {/* Forgot Password - Only show on sign in */}
         {!isSignUp && (
           <div className="text-center mb-10">
-            <button className="text-base text-gray-500 hover:text-gray-700 transition-colors">
+            <button 
+              onClick={handleForgotPassword}
+              disabled={loading}
+              className="text-base text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+            >
               Forgot password?
             </button>
           </div>
