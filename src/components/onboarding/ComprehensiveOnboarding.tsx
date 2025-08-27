@@ -198,28 +198,17 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
         </CardHeader>
         
         {/* Progress Bar */}
-        <div className="px-6 pb-4">
+        <div className="px-6 pb-6">
           <div className="w-full bg-muted rounded-full h-2">
             <div 
               className="bg-primary h-2 rounded-full transition-all duration-300 ease-out"
               style={{ width: `${progressPercentage}%` }}
             />
           </div>
-          <div className="flex justify-between mt-2">
+          <div className="flex justify-between mt-3">
             {steps.map((step) => (
               <div key={step.id} className="text-center">
-                <div 
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium mb-1 transition-colors ${
-                    currentStep > step.id 
-                      ? 'bg-primary text-primary-foreground' 
-                      : currentStep === step.id 
-                      ? 'bg-primary text-primary-foreground' 
-                      : 'bg-muted text-muted-foreground'
-                  }`}
-                >
-                  {currentStep > step.id ? <Check className="w-4 h-4" /> : step.id}
-                </div>
-                <p className="text-xs text-muted-foreground">{step.title}</p>
+                <p className="text-xs text-muted-foreground font-medium">{step.title}</p>
               </div>
             ))}
           </div>
