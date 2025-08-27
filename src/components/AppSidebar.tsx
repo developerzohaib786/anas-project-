@@ -1,5 +1,6 @@
-import { Home, FolderOpen, Palette, Settings, ChevronRight } from "lucide-react";
+import { Home, FolderOpen, Palette, Settings, ChevronRight, User } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Sidebar,
   SidebarContent,
@@ -34,19 +35,30 @@ export function AppSidebar() {
   return (
     <Sidebar className="w-60 bg-white border-r border-gray-200 md:w-60 w-16">
       <div className="flex flex-col h-full">
-      <SidebarHeader className="p-6 border-b border-gray-100 md:p-6 p-3">
-        <div className="md:block hidden">
-          <div className="font-semibold text-base text-gray-900 mb-0.5" style={{ fontFamily: 'Inter, sans-serif' }}>
-            Four Seasons Oahu
-          </div>
-          <div className="text-xs text-gray-500 font-normal">
-            Workspace
+      <SidebarHeader className="p-4 border-b border-gray-100 md:p-4 p-3">
+        <div className="flex items-center gap-3 md:flex hidden">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src="" alt="Four Seasons Oahu" />
+            <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
+              FS
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col">
+            <div className="font-semibold text-sm text-gray-900" style={{ fontFamily: 'Inter, sans-serif' }}>
+              Four Seasons Oahu
+            </div>
+            <div className="text-xs text-gray-500 font-normal">
+              Workspace
+            </div>
           </div>
         </div>
-        <div className="md:hidden block">
-          <div className="font-semibold text-sm text-gray-900" style={{ fontFamily: 'Inter, sans-serif' }}>
-            FS
-          </div>
+        <div className="md:hidden flex items-center justify-center">
+          <Avatar className="h-7 w-7">
+            <AvatarImage src="" alt="Four Seasons Oahu" />
+            <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
+              FS
+            </AvatarFallback>
+          </Avatar>
         </div>
       </SidebarHeader>
 
