@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Download, RotateCcw } from "lucide-react";
+import { Download, RotateCcw, Check, ChevronDown } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 interface ImagePreviewProps {
   currentPrompt?: string;
@@ -19,6 +20,16 @@ const aspectRatioClasses = {
 export function ImagePreview({ currentPrompt, isGenerating = false }: ImagePreviewProps) {
   const [selectedRatio, setSelectedRatio] = useState<AspectRatio>("1:1");
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [showDone, setShowDone] = useState(false);
+
+  const handleDone = () => {
+    setShowDone(true);
+  };
+
+  const handleDownload = (format: string) => {
+    console.log(`Downloading in ${format} format`);
+    // Add download logic here
+  };
 
   const aspectRatios: AspectRatio[] = ["1:1", "4:5", "9:16", "16:9"];
 
@@ -78,32 +89,76 @@ export function ImagePreview({ currentPrompt, isGenerating = false }: ImagePrevi
 
       {/* Actions */}
       <div className="px-6 pb-6">
-        <div className="flex gap-2">
+        {!showDone ? (
           <Button
             variant="secondary"
             size="sm"
             disabled={!generatedImage}
-            className="apple-button flex-1 h-11 rounded-full font-medium bg-secondary hover:bg-secondary/80 text-secondary-foreground border-0 disabled:opacity-40 disabled:cursor-not-allowed"
+            onClick={handleDone}
+            className="apple-button w-full h-11 rounded-full font-medium bg-primary hover:bg-primary/90 text-primary-foreground border-0 disabled:opacity-40 disabled:cursor-not-allowed"
             style={{
               boxShadow: generatedImage ? 'var(--shadow-minimal)' : 'none'
             }}
           >
-            <RotateCcw className="w-4 h-4 mr-2" />
-            Regenerate
+            <Check className="w-4 h-4 mr-2" />
+            Done
           </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={!generatedImage}
-            className="apple-button flex-1 h-11 rounded-full font-medium bg-secondary hover:bg-secondary/80 text-secondary-foreground border-0 disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{
-              boxShadow: generatedImage ? 'var(--shadow-minimal)' : 'none'
-            }}
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Download
-          </Button>
-        </div>
+        ) : (
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDone(false)}
+              className="apple-button flex-1 h-11 rounded-full font-medium bg-transparent hover:bg-muted/50 border border-border/40 text-foreground"
+            >
+              <RotateCcw className="w-4 h-4 mr-2" />
+              Regenerate
+            </Button>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="apple-button flex-1 h-11 rounded-full font-medium bg-secondary hover:bg-secondary/80 text-secondary-foreground border-0"
+                  style={{
+                    boxShadow: 'var(--shadow-minimal)'
+                  }}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download
+                  <ChevronDown className="w-4 h-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent 
+                align="end" 
+                className="w-48 bg-background/95 backdrop-blur-xl border border-border/40 rounded-xl shadow-lg"
+                style={{
+                  boxShadow: 'var(--shadow-minimal)'
+                }}
+              >
+                <DropdownMenuItem 
+                  onClick={() => handleDownload('PNG')}
+                  className="rounded-lg font-medium text-foreground hover:bg-muted/60 cursor-pointer"
+                >
+                  PNG (High Quality)
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => handleDownload('JPG')}
+                  className="rounded-lg font-medium text-foreground hover:bg-muted/60 cursor-pointer"
+                >
+                  JPG (Smaller Size)
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => handleDownload('WebP')}
+                  className="rounded-lg font-medium text-foreground hover:bg-muted/60 cursor-pointer"
+                >
+                  WebP (Modern)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
       </div>
     </div>
   );
