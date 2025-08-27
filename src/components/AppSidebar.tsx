@@ -66,15 +66,15 @@ export function AppSidebar() {
     <Sidebar className="w-60 bg-white border-r border-gray-200 md:w-60 w-16">
       <div className="flex flex-col h-full">
       <SidebarHeader className="p-4 border-b border-gray-100 md:p-4 p-3">
-        <div className="flex items-center gap-3 md:flex hidden">
-          <Avatar className="h-8 w-8">
+        <div className="flex items-center gap-3 md:flex hidden min-w-0">
+          <Avatar className="h-8 w-8 flex-shrink-0">
             <AvatarImage src={avatarUrl || ""} alt={brandName} />
             <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
               {initials}
             </AvatarFallback>
           </Avatar>
-          <div className="flex flex-col">
-            <div className="font-semibold text-sm text-gray-900" style={{ fontFamily: 'Inter, sans-serif' }}>
+          <div className="flex flex-col min-w-0 flex-1">
+            <div className="font-semibold text-sm text-gray-900 truncate" style={{ fontFamily: 'Inter, sans-serif' }}>
               {brandName}
             </div>
             <div className="text-xs text-gray-500 font-normal">
