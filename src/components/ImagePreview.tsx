@@ -7,19 +7,20 @@ interface ImagePreviewProps {
   isGenerating?: boolean;
 }
 
-type AspectRatio = "1:1" | "4:5" | "9:16";
+type AspectRatio = "1:1" | "4:5" | "9:16" | "16:9";
 
 const aspectRatioClasses = {
   "1:1": "aspect-square",
   "4:5": "aspect-[4/5]", 
   "9:16": "aspect-[9/16]",
+  "16:9": "aspect-[16/9]",
 };
 
 export function ImagePreview({ currentPrompt, isGenerating = false }: ImagePreviewProps) {
   const [selectedRatio, setSelectedRatio] = useState<AspectRatio>("1:1");
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
 
-  const aspectRatios: AspectRatio[] = ["1:1", "4:5", "9:16"];
+  const aspectRatios: AspectRatio[] = ["1:1", "4:5", "9:16", "16:9"];
 
   return (
     <div className="flex flex-col h-screen">

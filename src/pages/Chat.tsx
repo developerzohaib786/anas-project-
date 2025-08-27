@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChatInterface } from "@/components/ChatInterface";
 import { ImagePreview } from "@/components/ImagePreview";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 
 const Chat = () => {
   const [currentPrompt, setCurrentPrompt] = useState<string>();
@@ -17,20 +18,25 @@ const Chat = () => {
   };
 
   return (
-    <div className="flex h-screen">
-      {/* Chat Interface - Full width on left */}
-      <div className="flex-1 border-r border-border">
+    <ResizablePanelGroup direction="horizontal" className="h-screen">
+      {/* Chat Interface - Resizable */}
+      <ResizablePanel defaultSize={70} minSize={50}>
         <ChatInterface onGenerateImage={handleGenerateImage} />
-      </div>
-
-      {/* Image Preview - Fixed sidebar */}
-      <div className="w-80 bg-card">
-        <ImagePreview 
-          currentPrompt={currentPrompt}
-          isGenerating={isGenerating}
-        />
-      </div>
-    </div>
+      </ResizablePanel>
+      
+      {/* Resizable Handle */}
+      <ResizableHandle className="w-1 bg-border hover:bg-border/80 transition-colors duration-200" />
+      
+      {/* Image Preview - Resizable */}
+      <ResizablePanel defaultSize={30} minSize={25} maxSize={50}>
+        <div className="bg-card h-full">
+          <ImagePreview 
+            currentPrompt={currentPrompt}
+            isGenerating={isGenerating}
+          />
+        </div>
+      </ResizablePanel>
+    </ResizablePanelGroup>
   );
 };
 
