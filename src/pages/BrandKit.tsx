@@ -110,7 +110,7 @@ export default function BrandKit() {
         </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-2 max-w-md">
           <TabsTrigger value="photos">Photos</TabsTrigger>
           <TabsTrigger value="guidelines">Guidelines</TabsTrigger>
         </TabsList>
