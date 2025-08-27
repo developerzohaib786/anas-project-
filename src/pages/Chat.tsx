@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ChatInterface } from "@/components/ChatInterface";
 import { ImagePreview } from "@/components/ImagePreview";
 
-const Index = () => {
+const Chat = () => {
   const [currentPrompt, setCurrentPrompt] = useState<string>();
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -36,4 +36,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default Chat;
