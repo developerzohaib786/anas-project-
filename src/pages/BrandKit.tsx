@@ -19,6 +19,7 @@ interface BrandAsset {
   tags: string[];
   asset_type: string;
   url?: string;
+  signedUrl?: string;
 }
 
 export default function BrandKit() {
@@ -52,14 +53,20 @@ export default function BrandKit() {
           // Get signed URLs for assets
           const assetsWithUrls = await Promise.all(
             (brandAssets || []).map(async (asset) => {
-              const { data } = supabase.storage
+              const { data: pub } = supabase.storage
                 .from('brand-assets')
                 .getPublicUrl(asset.storage_path);
               
+              // Also prepare a signed URL fallback (1 hour)
+              const { data: signed } = await supabase.storage
+                .from('brand-assets')
+                .createSignedUrl(asset.storage_path, 3600);
+              
               return {
                 ...asset,
-                url: data.publicUrl
-              };
+                url: pub.publicUrl,
+                signedUrl: signed?.signedUrl
+              } as BrandAsset;
             })
           );
           setAssets(assetsWithUrls);
@@ -117,15 +124,19 @@ export default function BrandKit() {
           throw dbError;
         }
 
-        // Get public URL
-        const { data } = supabase.storage
+        // Get public and signed URLs
+        const { data: pub } = supabase.storage
           .from('brand-assets')
           .getPublicUrl(storagePath);
+        const { data: signed } = await supabase.storage
+          .from('brand-assets')
+          .createSignedUrl(storagePath, 3600);
 
         return {
           ...assetData,
-          url: data.publicUrl
-        };
+          url: pub.publicUrl,
+          signedUrl: signed?.signedUrl
+        } as BrandAsset;
       });
 
       const newAssets = await Promise.all(uploadPromises);
@@ -338,6 +349,11 @@ export default function BrandKit() {
                       alt={asset.file_name}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                       loading="lazy"
+                      onError={(e) => {
+                        if (asset.signedUrl && (e.currentTarget as HTMLImageElement).src !== asset.signedUrl) {
+                          (e.currentTarget as HTMLImageElement).src = asset.signedUrl;
+                        }
+                      }}
                     />
                     
                     {/* Delete button */}
