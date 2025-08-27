@@ -14,6 +14,100 @@ export type Database = {
   }
   public: {
     Tables: {
+      brand_guidelines: {
+        Row: {
+          content_donts: string | null
+          content_dos: string | null
+          core_values: string | null
+          created_at: string | null
+          id: string
+          key_messages: string | null
+          team_id: string
+          tone: string | null
+          updated_at: string | null
+          voice: string | null
+        }
+        Insert: {
+          content_donts?: string | null
+          content_dos?: string | null
+          core_values?: string | null
+          created_at?: string | null
+          id?: string
+          key_messages?: string | null
+          team_id: string
+          tone?: string | null
+          updated_at?: string | null
+          voice?: string | null
+        }
+        Update: {
+          content_donts?: string | null
+          content_dos?: string | null
+          core_values?: string | null
+          created_at?: string | null
+          id?: string
+          key_messages?: string | null
+          team_id?: string
+          tone?: string | null
+          updated_at?: string | null
+          voice?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_guidelines_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: true
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_photos: {
+        Row: {
+          content_type: string | null
+          created_at: string | null
+          file_name: string
+          file_size: number | null
+          id: string
+          storage_path: string
+          tags: string[] | null
+          team_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string | null
+          file_name: string
+          file_size?: number | null
+          id?: string
+          storage_path: string
+          tags?: string[] | null
+          team_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string | null
+          file_name?: string
+          file_size?: number | null
+          id?: string
+          storage_path?: string
+          tags?: string[] | null
+          team_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_photos_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null

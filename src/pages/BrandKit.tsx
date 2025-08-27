@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { Upload, Plus, Trash2, Image, X, Edit3 } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Upload, Plus, Trash2, Image, X, Edit3, Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,58 +8,319 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/EmptyState";
-import { useSettings } from "@/contexts/SettingsContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
-interface Photo {
+interface BrandPhoto {
   id: string;
-  url: string;
+  storage_path: string;
+  file_name: string;
   tags: string[];
+  url?: string;
+}
+
+interface BrandGuidelines {
+  tone: string;
+  voice: string;
+  key_messages: string;
+  core_values: string;
+  content_dos: string;
+  content_donts: string;
 }
 
 export default function BrandKit() {
   const [activeTab, setActiveTab] = useState("photos");
-  const [photos, setPhotos] = useState<Photo[]>([]); // Empty photos array - users will upload their own
+  const [photos, setPhotos] = useState<BrandPhoto[]>([]);
+  const [guidelines, setGuidelines] = useState<BrandGuidelines>({
+    tone: "",
+    voice: "",
+    key_messages: "",
+    core_values: "",
+    content_dos: "",
+    content_donts: ""
+  });
+  const [currentTeamId, setCurrentTeamId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [savingGuidelines, setSavingGuidelines] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { brandSettings, updateBrandSettings } = useSettings();
+  const { user } = useAuth();
 
-  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Load user's team and brand data
+  useEffect(() => {
+    const loadBrandData = async () => {
+      if (!user) return;
+      
+      try {
+        // Get user's team
+        const { data: teamMemberships, error: teamError } = await supabase
+          .from('team_memberships')
+          .select('team_id, teams(id, name)')
+          .eq('user_id', user.id)
+          .eq('invitation_accepted', true)
+          .limit(1);
+
+        if (teamError) {
+          console.error('Error fetching team:', teamError);
+          return;
+        }
+
+        if (!teamMemberships || teamMemberships.length === 0) {
+          toast.error("No team found. Please complete onboarding first.");
+          return;
+        }
+
+        const teamId = teamMemberships[0].team_id;
+        setCurrentTeamId(teamId);
+
+        // Load brand photos
+        const { data: brandPhotos, error: photosError } = await supabase
+          .from('brand_photos')
+          .select('*')
+          .eq('team_id', teamId)
+          .order('created_at', { ascending: false });
+
+        if (photosError) {
+          console.error('Error fetching photos:', photosError);
+        } else {
+          // Get signed URLs for photos
+          const photosWithUrls = await Promise.all(
+            (brandPhotos || []).map(async (photo) => {
+              const { data } = supabase.storage
+                .from('brand-photos')
+                .getPublicUrl(photo.storage_path);
+              
+              return {
+                ...photo,
+                url: data.publicUrl
+              };
+            })
+          );
+          setPhotos(photosWithUrls);
+        }
+
+        // Load brand guidelines
+        const { data: brandGuidelines, error: guidelinesError } = await supabase
+          .from('brand_guidelines')
+          .select('*')
+          .eq('team_id', teamId)
+          .maybeSingle();
+
+        if (guidelinesError) {
+          console.error('Error fetching guidelines:', guidelinesError);
+        } else if (brandGuidelines) {
+          setGuidelines({
+            tone: brandGuidelines.tone || "",
+            voice: brandGuidelines.voice || "",
+            key_messages: brandGuidelines.key_messages || "",
+            core_values: brandGuidelines.core_values || "",
+            content_dos: brandGuidelines.content_dos || "",
+            content_donts: brandGuidelines.content_donts || ""
+          });
+        }
+      } catch (error) {
+        console.error('Error loading brand data:', error);
+        toast.error("Failed to load brand data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadBrandData();
+  }, [user]);
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (files) {
-      Array.from(files).forEach((file) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const newPhoto: Photo = {
-            id: Date.now().toString() + Math.random(),
-            url: e.target?.result as string,
+    if (!files || !currentTeamId || !user) return;
+
+    setUploadingPhotos(true);
+    try {
+      const uploadPromises = Array.from(files).map(async (file) => {
+        // Upload to storage
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const storagePath = `${currentTeamId}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('brand-photos')
+          .upload(storagePath, file);
+
+        if (uploadError) {
+          console.error('Storage upload error:', uploadError);
+          throw uploadError;
+        }
+
+        // Save metadata to database
+        const { data: photoData, error: dbError } = await supabase
+          .from('brand_photos')
+          .insert({
+            team_id: currentTeamId,
+            user_id: user.id,
+            storage_path: storagePath,
+            file_name: file.name,
+            file_size: file.size,
+            content_type: file.type,
             tags: []
-          };
-          setPhotos(prev => [newPhoto, ...prev]);
+          })
+          .select()
+          .single();
+
+        if (dbError) {
+          console.error('Database insert error:', dbError);
+          throw dbError;
+        }
+
+        // Get public URL
+        const { data } = supabase.storage
+          .from('brand-photos')
+          .getPublicUrl(storagePath);
+
+        return {
+          ...photoData,
+          url: data.publicUrl
         };
-        reader.readAsDataURL(file);
       });
+
+      const newPhotos = await Promise.all(uploadPromises);
+      setPhotos(prev => [...newPhotos, ...prev]);
+      toast.success(`${newPhotos.length} photo(s) uploaded successfully`);
+    } catch (error) {
+      console.error('Error uploading photos:', error);
+      toast.error("Failed to upload photos");
+    } finally {
+      setUploadingPhotos(false);
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
-  const handleDeletePhoto = (id: string) => {
-    setPhotos(prev => prev.filter(photo => photo.id !== id));
+  const handleDeletePhoto = async (photo: BrandPhoto) => {
+    if (!currentTeamId) return;
+
+    try {
+      // Delete from storage
+      const { error: storageError } = await supabase.storage
+        .from('brand-photos')
+        .remove([photo.storage_path]);
+
+      if (storageError) {
+        console.error('Storage delete error:', storageError);
+      }
+
+      // Delete from database
+      const { error: dbError } = await supabase
+        .from('brand_photos')
+        .delete()
+        .eq('id', photo.id);
+
+      if (dbError) {
+        console.error('Database delete error:', dbError);
+        throw dbError;
+      }
+
+      setPhotos(prev => prev.filter(p => p.id !== photo.id));
+      toast.success("Photo deleted successfully");
+    } catch (error) {
+      console.error('Error deleting photo:', error);
+      toast.error("Failed to delete photo");
+    }
   };
 
-  const handleAddTag = (photoId: string, tag: string) => {
+  const handleAddTag = async (photoId: string, tag: string) => {
     if (!tag.trim()) return;
-    setPhotos(prev => prev.map(photo => 
-      photo.id === photoId 
-        ? { ...photo, tags: [...photo.tags, tag.trim()] }
-        : photo
-    ));
+
+    try {
+      const photo = photos.find(p => p.id === photoId);
+      if (!photo) return;
+
+      const newTags = [...photo.tags, tag.trim()];
+
+      const { error } = await supabase
+        .from('brand_photos')
+        .update({ tags: newTags })
+        .eq('id', photoId);
+
+      if (error) {
+        console.error('Error adding tag:', error);
+        throw error;
+      }
+
+      setPhotos(prev => prev.map(p => 
+        p.id === photoId ? { ...p, tags: newTags } : p
+      ));
+      toast.success("Tag added successfully");
+    } catch (error) {
+      console.error('Error adding tag:', error);
+      toast.error("Failed to add tag");
+    }
   };
 
-  const handleRemoveTag = (photoId: string, tagIndex: number) => {
-    setPhotos(prev => prev.map(photo => 
-      photo.id === photoId 
-        ? { ...photo, tags: photo.tags.filter((_, index) => index !== tagIndex) }
-        : photo
-    ));
+  const handleRemoveTag = async (photoId: string, tagIndex: number) => {
+    try {
+      const photo = photos.find(p => p.id === photoId);
+      if (!photo) return;
+
+      const newTags = photo.tags.filter((_, index) => index !== tagIndex);
+
+      const { error } = await supabase
+        .from('brand_photos')
+        .update({ tags: newTags })
+        .eq('id', photoId);
+
+      if (error) {
+        console.error('Error removing tag:', error);
+        throw error;
+      }
+
+      setPhotos(prev => prev.map(p => 
+        p.id === photoId ? { ...p, tags: newTags } : p
+      ));
+      toast.success("Tag removed successfully");
+    } catch (error) {
+      console.error('Error removing tag:', error);
+      toast.error("Failed to remove tag");
+    }
   };
+
+  const handleSaveGuidelines = async () => {
+    if (!currentTeamId) return;
+
+    setSavingGuidelines(true);
+    try {
+      const { error } = await supabase
+        .from('brand_guidelines')
+        .upsert({
+          team_id: currentTeamId,
+          ...guidelines
+        });
+
+      if (error) {
+        console.error('Error saving guidelines:', error);
+        throw error;
+      }
+
+      toast.success("Guidelines saved successfully");
+    } catch (error) {
+      console.error('Error saving guidelines:', error);
+      toast.error("Failed to save guidelines");
+    } finally {
+      setSavingGuidelines(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="px-4 md:px-6 lg:px-8 xl:px-12 py-8 w-full max-w-none">
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 md:px-6 lg:px-8 xl:px-12 py-8 w-full max-w-none">
@@ -79,23 +340,31 @@ export default function BrandKit() {
         </TabsList>
 
         <TabsContent value="photos" className="mt-6">
-          {/* Header - only show upload button if there are photos */}
-          {photos.length > 0 && (
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-xl font-medium text-foreground">Brand Photos</h2>
-                <p className="text-muted-foreground">Upload photos to help AI learn your brand's visual identity</p>
-              </div>
-              <Button 
-                onClick={() => fileInputRef.current?.click()}
-                className="shadow-lg"
-                size="lg"
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                Upload Photos
-              </Button>
+          {/* Header - always show upload button */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-medium text-foreground">Brand Photos</h2>
+              <p className="text-muted-foreground">Upload photos to help AI learn your brand's visual identity</p>
             </div>
-          )}
+            <Button 
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingPhotos}
+              className="shadow-lg"
+              size="lg"
+            >
+              {uploadingPhotos ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload Photos
+                </>
+              )}
+            </Button>
+          </div>
 
           <input
             ref={fileInputRef}
@@ -117,14 +386,14 @@ export default function BrandKit() {
                   <div className="relative overflow-hidden aspect-square">
                     <img
                       src={photo.url}
-                      alt="Brand photo"
+                      alt={photo.file_name}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                       loading="lazy"
                     />
                     
                     {/* Delete button */}
                     <button
-                      onClick={() => handleDeletePhoto(photo.id)}
+                      onClick={() => handleDeletePhoto(photo)}
                       className="absolute top-3 right-3 w-8 h-8 bg-background/95 hover:bg-background rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-sm shadow-lg hover:scale-110"
                     >
                       <Trash2 className="h-4 w-4 text-muted-foreground" />
@@ -192,8 +461,8 @@ export default function BrandKit() {
                   <Label htmlFor="brand-tone">Brand Tone</Label>
                   <Input 
                     id="brand-tone" 
-                    value={brandSettings.tone || ""}
-                    onChange={(e) => updateBrandSettings({ tone: e.target.value })}
+                    value={guidelines.tone}
+                    onChange={(e) => setGuidelines(prev => ({ ...prev, tone: e.target.value }))}
                     placeholder="e.g., Luxurious, Friendly, Professional, Sophisticated" 
                     className="mt-2"
                   />
@@ -203,8 +472,8 @@ export default function BrandKit() {
                   <Label htmlFor="brand-voice">Brand Voice</Label>
                   <Textarea 
                     id="brand-voice" 
-                    value={brandSettings.voice || ""}
-                    onChange={(e) => updateBrandSettings({ voice: e.target.value })}
+                    value={guidelines.voice}
+                    onChange={(e) => setGuidelines(prev => ({ ...prev, voice: e.target.value }))}
                     placeholder="e.g., We speak with confidence and warmth, using inclusive language that makes every guest feel valued..."
                     className="mt-2 min-h-[100px]"
                   />
@@ -225,8 +494,8 @@ export default function BrandKit() {
                   <Label htmlFor="brand-keywords">Key Messages</Label>
                   <Input 
                     id="brand-keywords" 
-                    value={brandSettings.keyMessages || ""}
-                    onChange={(e) => updateBrandSettings({ keyMessages: e.target.value })}
+                    value={guidelines.key_messages}
+                    onChange={(e) => setGuidelines(prev => ({ ...prev, key_messages: e.target.value }))}
                     placeholder="e.g., Exceptional service, Unforgettable experiences, Sustainable luxury" 
                     className="mt-2"
                   />
@@ -236,8 +505,8 @@ export default function BrandKit() {
                   <Label htmlFor="brand-values">Core Values</Label>
                   <Textarea 
                     id="brand-values" 
-                    value={brandSettings.coreValues || ""}
-                    onChange={(e) => updateBrandSettings({ coreValues: e.target.value })}
+                    value={guidelines.core_values}
+                    onChange={(e) => setGuidelines(prev => ({ ...prev, core_values: e.target.value }))}
                     placeholder="e.g., Sustainability, Guest satisfaction, Cultural authenticity, Innovation..."
                     className="mt-2 min-h-[100px]"
                   />
@@ -258,8 +527,8 @@ export default function BrandKit() {
                   <Label htmlFor="content-dos">Always Include</Label>
                   <Textarea 
                     id="content-dos" 
-                    value={brandSettings.contentDos || ""}
-                    onChange={(e) => updateBrandSettings({ contentDos: e.target.value })}
+                    value={guidelines.content_dos}
+                    onChange={(e) => setGuidelines(prev => ({ ...prev, content_dos: e.target.value }))}
                     placeholder="e.g., Ocean views, Local culture, Premium amenities, Personalized service..."
                     className="mt-2 min-h-[80px]"
                   />
@@ -269,8 +538,8 @@ export default function BrandKit() {
                   <Label htmlFor="content-donts">Never Include</Label>
                   <Textarea 
                     id="content-donts" 
-                    value={brandSettings.contentDonts || ""}
-                    onChange={(e) => updateBrandSettings({ contentDonts: e.target.value })}
+                    value={guidelines.content_donts}
+                    onChange={(e) => setGuidelines(prev => ({ ...prev, content_donts: e.target.value }))}
                     placeholder="e.g., Crowded spaces, Generic stock photo feel, Overly promotional language..."
                     className="mt-2 min-h-[80px]"
                   />
@@ -280,8 +549,23 @@ export default function BrandKit() {
             </Card>
 
             <div className="flex justify-end">
-              <Button className="shadow-lg" size="lg">
-                Save Guidelines
+              <Button 
+                onClick={handleSaveGuidelines}
+                disabled={savingGuidelines}
+                className="shadow-lg" 
+                size="lg"
+              >
+                {savingGuidelines ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Guidelines
+                  </>
+                )}
               </Button>
             </div>
           </div>
