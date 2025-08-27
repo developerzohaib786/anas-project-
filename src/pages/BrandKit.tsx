@@ -112,7 +112,7 @@ export default function BrandKit() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="photos">Photos</TabsTrigger>
-          <TabsTrigger value="notes">Notes</TabsTrigger>
+          <TabsTrigger value="guidelines">Guidelines</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -217,83 +217,112 @@ export default function BrandKit() {
           )}
         </TabsContent>
 
-        <TabsContent value="notes" className="mt-6">
+        <TabsContent value="guidelines" className="mt-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-xl font-medium text-gray-900">Property Notes</h2>
-              <p className="text-gray-600">Add detailed information about your property to help AI create accurate content</p>
+              <h2 className="text-xl font-medium text-gray-900">Content Guidelines</h2>
+              <p className="text-gray-600">Define how your brand should be represented in all AI-generated content</p>
             </div>
           </div>
 
-          <div className="space-y-4">
-            {noteCategories.map((category) => (
-              <Card key={category.key} className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">{category.icon}</span>
-                      <div>
-                        <CardTitle className="text-base font-medium">
-                          {category.label}
-                        </CardTitle>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setEditingNote(editingNote === category.key ? null : category.key)}
-                    >
-                      {editingNote === category.key ? (
-                        <>
-                          <Save className="h-4 w-4 mr-2" />
-                          Save
-                        </>
-                      ) : (
-                        <>
-                          <Edit3 className="h-4 w-4 mr-2" />
-                          Edit
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {editingNote === category.key ? (
-                    <div className="space-y-3">
-                      <Textarea
-                        defaultValue={notes[category.key as keyof typeof notes]}
-                        placeholder={`Add notes about ${category.label.toLowerCase()}...`}
-                        className="min-h-[120px] resize-none"
-                        onBlur={(e) => handleSaveNote(category.key, e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                            handleSaveNote(category.key, e.currentTarget.value);
-                          }
-                        }}
-                        autoFocus
-                      />
-                      <p className="text-xs text-gray-500">Press Cmd+Enter to save, or click Save button</p>
-                    </div>
-                  ) : (
-                    <div 
-                      className="text-sm text-gray-700 leading-relaxed cursor-pointer hover:bg-gray-50 p-3 rounded-lg transition-colors"
-                      onClick={() => setEditingNote(category.key)}
-                    >
-                      {notes[category.key as keyof typeof notes] || (
-                        <span className="text-gray-400 italic">
-                          Click to add notes about {category.label.toLowerCase()}...
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Brand Voice & Tone</CardTitle>
+                <CardDescription>
+                  How should your brand communicate and what personality should it convey?
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="brand-tone">Brand Tone</Label>
+                  <Input 
+                    id="brand-tone" 
+                    placeholder="e.g., Luxurious, Friendly, Professional, Sophisticated" 
+                    className="mt-2"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Describe the personality and feeling your brand should convey</p>
+                </div>
+                <div>
+                  <Label htmlFor="brand-voice">Brand Voice</Label>
+                  <Textarea 
+                    id="brand-voice" 
+                    placeholder="e.g., We speak with confidence and warmth, using inclusive language that makes every guest feel valued..."
+                    className="mt-2 min-h-[100px]"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">How does your brand communicate? What words and phrases do you use?</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Key Messages & Values</CardTitle>
+                <CardDescription>
+                  What are the core messages and values your brand should always communicate?
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="brand-keywords">Key Messages</Label>
+                  <Input 
+                    id="brand-keywords" 
+                    placeholder="e.g., Exceptional service, Unforgettable experiences, Sustainable luxury" 
+                    className="mt-2"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Main themes and messages to emphasize</p>
+                </div>
+                <div>
+                  <Label htmlFor="brand-values">Core Values</Label>
+                  <Textarea 
+                    id="brand-values" 
+                    placeholder="e.g., Sustainability, Guest satisfaction, Cultural authenticity, Innovation in hospitality..."
+                    className="mt-2 min-h-[100px]"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">What does your brand stand for?</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Content Do's & Don'ts</CardTitle>
+                <CardDescription>
+                  Specific guidelines for what should and shouldn't be included in your content
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="content-dos">Always Include</Label>
+                  <Textarea 
+                    id="content-dos" 
+                    placeholder="e.g., Ocean views, Local culture, Premium amenities, Personalized service..."
+                    className="mt-2 min-h-[80px]"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Elements that should always be highlighted</p>
+                </div>
+                <div>
+                  <Label htmlFor="content-donts">Never Include</Label>
+                  <Textarea 
+                    id="content-donts" 
+                    placeholder="e.g., Crowded spaces, Generic stock photo feel, Overly promotional language..."
+                    className="mt-2 min-h-[80px]"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Elements to avoid in your content</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-end">
+              <Button style={{ boxShadow: 'var(--shadow-button)' }}>
+                Save Guidelines
+              </Button>
+            </div>
           </div>
         </TabsContent>
 
         <TabsContent value="settings" className="mt-6">
-          <div className="max-w-4xl">
+          <div className="w-full">
             <h2 className="text-xl font-medium text-gray-900 mb-6">Brand Settings</h2>
             
             <div className="space-y-6">
@@ -307,40 +336,34 @@ export default function BrandKit() {
                 <CardContent className="space-y-4">
                   <div>
                     <Label htmlFor="brand-name">Brand Name</Label>
-                    <Input id="brand-name" placeholder="Your Hotel/Resort Name" />
+                    <Input id="brand-name" placeholder="Your Hotel/Resort Name" className="mt-2" />
+                    <p className="text-xs text-gray-500 mt-1">The official name of your property</p>
                   </div>
                   <div>
                     <Label htmlFor="brand-description">Description</Label>
-                    <Input id="brand-description" placeholder="Brief description of your brand" />
+                    <Textarea 
+                      id="brand-description" 
+                      placeholder="Brief description of your brand and what makes it unique..."
+                      className="mt-2 min-h-[100px]"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">A short overview of your property and its unique features</p>
+                  </div>
+                  <div>
+                    <Label htmlFor="brand-location">Location</Label>
+                    <Input id="brand-location" placeholder="e.g., Waikiki Beach, Honolulu, Hawaii" className="mt-2" />
+                    <p className="text-xs text-gray-500 mt-1">Primary location of your property</p>
                   </div>
                   <div>
                     <Label htmlFor="brand-industry">Industry</Label>
-                    <Input id="brand-industry" value="Hospitality & Travel" disabled />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Content Guidelines</CardTitle>
-                  <CardDescription>
-                    Define how your brand should be represented
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="brand-tone">Brand Tone</Label>
-                    <Input id="brand-tone" placeholder="e.g., Luxurious, Friendly, Professional" />
-                  </div>
-                  <div>
-                    <Label htmlFor="brand-keywords">Key Messages</Label>
-                    <Input id="brand-keywords" placeholder="e.g., Exceptional service, Unforgettable experiences" />
+                    <Input id="brand-industry" value="Hospitality & Travel" disabled className="mt-2" />
                   </div>
                 </CardContent>
               </Card>
 
               <div className="flex justify-end">
-                <Button>Save Changes</Button>
+                <Button style={{ boxShadow: 'var(--shadow-button)' }}>
+                  Save Changes
+                </Button>
               </div>
             </div>
           </div>
