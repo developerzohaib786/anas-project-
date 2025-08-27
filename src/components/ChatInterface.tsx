@@ -171,7 +171,7 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Describe your hotel marketing photo..."
-                  className="w-full h-12 bg-transparent border border-[hsl(var(--border))] rounded-full px-6 text-[15px] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-[hsl(var(--border))] transition-all duration-200 resize-none"
+                  className="w-full h-12 bg-transparent border border-[hsl(var(--border))] rounded-full px-6 text-[15px] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[hsl(var(--border))] hover:border-[hsl(var(--border))] resize-none min-h-[48px] max-h-[48px]"
                 />
               </div>
             </div>
@@ -179,7 +179,7 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
               onClick={handleSendMessage}
               disabled={!inputValue.trim()}
               size="icon"
-              className="h-12 w-12 rounded-full bg-muted hover:bg-muted/80 disabled:bg-muted disabled:text-muted-foreground shrink-0"
+              className="h-12 w-12 rounded-full bg-muted hover:bg-muted/80 disabled:bg-muted disabled:text-muted-foreground shrink-0 min-h-[48px] min-w-[48px]"
             >
               <ArrowUp className="h-5 w-5 text-foreground" strokeWidth={3} />
             </Button>
