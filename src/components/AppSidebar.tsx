@@ -37,16 +37,12 @@ export function AppSidebar() {
   const currentPath = location.pathname;
   const { user, signOut } = useAuth();
   const { sessions, deleteSession } = useChat();
-  const { brandProfile } = useBrand();
+  const { brandProfile, profile } = useBrand();
   const isActive = (path: string) => currentPath === path;
   const brandName = brandProfile?.brand_name || "Your Brand";
   
-  // Handle logo URL properly - check if brand profile exists and has a logo
-  const logoUrl = brandProfile?.logo_url ? 
-    (brandProfile.logo_url.startsWith('http') ? 
-      brandProfile.logo_url : 
-      supabase.storage.from('brand-assets').getPublicUrl(brandProfile.logo_url).data.publicUrl
-    ) : null;
+  // Use the user's profile photo, not brand logo
+  const avatarUrl = profile?.avatar_url;
     
   const initials = brandName.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
 
@@ -65,7 +61,7 @@ export function AppSidebar() {
       <SidebarHeader className="p-4 border-b border-gray-100 md:p-4 p-3">
         <div className="flex items-center gap-3 md:flex hidden min-w-0">
           <Avatar className="h-8 w-8 flex-shrink-0">
-            <AvatarImage src={logoUrl || ""} alt={brandName} />
+            <AvatarImage src={avatarUrl || ""} alt={brandName} />
             <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
               {initials}
             </AvatarFallback>
@@ -81,7 +77,7 @@ export function AppSidebar() {
         </div>
         <div className="md:hidden flex items-center justify-center">
           <Avatar className="h-7 w-7">
-            <AvatarImage src={logoUrl || ""} alt={brandName} />
+            <AvatarImage src={avatarUrl || ""} alt={brandName} />
             <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
               {initials}
             </AvatarFallback>
