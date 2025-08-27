@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Upload, Plus, Trash2, Image, X, Download, Edit3, Save } from "lucide-react";
+import { Upload, Plus, Trash2, Image, X, Edit3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,45 +7,18 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { EmptyState } from "@/components/EmptyState";
 import { useSettings } from "@/contexts/SettingsContext";
 
-const mockNotes = {
-  restaurant: "Our signature restaurant 'Ocean's Edge' features Mediterranean cuisine with locally sourced ingredients. Open for dinner only (6pm-11pm). Dress code is smart casual. We specialize in fresh seafood and have an extensive wine cellar with over 200 selections.",
-  rooms: "All suites feature ocean or garden views with private balconies. Standard amenities include marble bathrooms, walk-in rain showers, Egyptian cotton linens, and complimentary WiFi. Turndown service includes local chocolates and aromatherapy.",
-  frontDesk: "24/7 concierge service available. Check-in: 3pm, Check-out: 12pm. We offer early check-in and late check-out based on availability. Multilingual staff fluent in English, Spanish, French, and Italian.",
-  spa: "Award-winning spa featuring indigenous treatments using local botanicals. Signature services include volcanic stone massages and sea salt body wraps. Adults-only facility with relaxation pools and meditation gardens.",
-  activities: "Complimentary water sports including kayaking, snorkeling, and paddleboarding. Guided nature walks, cooking classes, and wine tastings available. Private beach access with cabana service.",
-  policies: "Adults-only resort (18+). No smoking anywhere on property. Reservations required for all dining venues. 24-hour cancellation policy for spa services. Sustainability is our priority - we're plastic-free and solar-powered."
-};
-
-const mockPhotos = [
-  { id: "1", url: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=600&fit=crop", tags: ["pool", "luxury", "villa"] },
-  { id: "2", url: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&h=300&fit=crop", tags: ["bedroom", "suite", "ocean view"] },
-  { id: "3", url: "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=400&h=500&fit=crop", tags: ["dining", "restaurant", "elegant"] },
-  { id: "4", url: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&h=280&fit=crop", tags: ["infinity pool", "sunset", "view"] },
-  { id: "5", url: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=400&h=550&fit=crop", tags: ["presidential", "suite", "luxury"] },
-  { id: "6", url: "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=400&h=350&fit=crop", tags: ["spa", "treatment", "wellness"] },
-  { id: "7", url: "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=400&h=480&fit=crop", tags: ["lobby", "grand", "entrance"] },
-  { id: "8", url: "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=400&h=320&fit=crop", tags: ["beachfront", "restaurant", "dining"] },
-  { id: "9", url: "https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?w=400&h=600&fit=crop", tags: ["rooftop", "bar", "city view"] },
-  { id: "10", url: "https://images.unsplash.com/photo-1587985064135-0366536eab42?w=400&h=250&fit=crop", tags: ["beach", "cabana", "relaxation"] },
-  { id: "11", url: "https://images.unsplash.com/photo-1559599101-f09722fb4948?w=400&h=520&fit=crop", tags: ["wine", "cellar", "fine dining"] },
-  { id: "12", url: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop", tags: ["garden", "terrace", "outdoor"] },
-  { id: "13", url: "https://images.unsplash.com/photo-1573052905904-34ad8c27f0cc?w=400&h=450&fit=crop", tags: ["conference", "business", "meeting"] },
-  { id: "14", url: "https://images.unsplash.com/photo-1566195992011-5f6b21e539aa?w=400&h=350&fit=crop", tags: ["fitness", "gym", "wellness"] },
-  { id: "15", url: "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=400&h=600&fit=crop", tags: ["penthouse", "balcony", "luxury"] },
-  { id: "16", url: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400&h=280&fit=crop", tags: ["breakfast", "buffet", "dining"] },
-  { id: "17", url: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=500&fit=crop", tags: ["yacht", "marina", "waterfront"] },
-  { id: "18", url: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=380&fit=crop", tags: ["garden pool", "private", "tranquil"] },
-  { id: "19", url: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=400&h=550&fit=crop", tags: ["executive", "lounge", "business"] },
-  { id: "20", url: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&h=320&fit=crop", tags: ["sunset", "deck", "romantic"] },
-];
+interface Photo {
+  id: string;
+  url: string;
+  tags: string[];
+}
 
 export default function BrandKit() {
   const [activeTab, setActiveTab] = useState("photos");
-  const [photos, setPhotos] = useState(mockPhotos);
-  const [notes, setNotes] = useState(mockNotes);
-  const [editingNote, setEditingNote] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<Photo[]>([]); // Empty photos array - users will upload their own
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { brandSettings, updateBrandSettings } = useSettings();
 
@@ -55,7 +28,7 @@ export default function BrandKit() {
       Array.from(files).forEach((file) => {
         const reader = new FileReader();
         reader.onload = (e) => {
-          const newPhoto = {
+          const newPhoto: Photo = {
             id: Date.now().toString() + Math.random(),
             url: e.target?.result as string,
             tags: []
@@ -88,28 +61,16 @@ export default function BrandKit() {
     ));
   };
 
-  const handleSaveNote = (category: string, content: string) => {
-    setNotes(prev => ({ ...prev, [category]: content }));
-    setEditingNote(null);
-  };
-
-  const noteCategories = [
-    { key: 'restaurant', label: 'Restaurant & Dining', icon: '🍽️' },
-    { key: 'rooms', label: 'Rooms & Suites', icon: '🛏️' },
-    { key: 'frontDesk', label: 'Front Desk & Service', icon: '🛎️' },
-    { key: 'spa', label: 'Spa & Wellness', icon: '🧘' },
-    { key: 'activities', label: 'Activities & Amenities', icon: '🏊' },
-    { key: 'policies', label: 'Policies & Guidelines', icon: '📋' },
-  ];
-
   return (
-      <div className="px-4 md:px-6 lg:px-8 xl:px-12 py-8 w-full max-w-none">
-        <div className="mb-8">
-          <h1 className="text-3xl font-semibold text-gray-900 mb-2" style={{ letterSpacing: '-0.02em' }}>Brand Kit</h1>
-          <p className="text-gray-600">
-            Manage your brand assets for consistent, high-end luxury photo creation
-          </p>
-        </div>
+    <div className="px-4 md:px-6 lg:px-8 xl:px-12 py-8 w-full max-w-none">
+      <div className="mb-8">
+        <h1 className="text-3xl font-semibold text-foreground mb-2" style={{ letterSpacing: '-0.02em' }}>
+          Brand Kit
+        </h1>
+        <p className="text-muted-foreground">
+          Manage your brand assets for consistent, high-end content creation
+        </p>
+      </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-2">
@@ -118,120 +79,112 @@ export default function BrandKit() {
         </TabsList>
 
         <TabsContent value="photos" className="mt-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-xl font-medium text-gray-900">Brand Photos</h2>
-              <p className="text-gray-600">Upload photos to help AI learn your brand's visual identity and spaces</p>
-            </div>
-            <Button 
-              onClick={() => fileInputRef.current?.click()}
-              style={{ boxShadow: 'var(--shadow-button)' }}
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              Upload Photos
-            </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={handlePhotoUpload}
-              className="hidden"
-            />
-          </div>
-
-          {/* Modern Masonry Grid */}
-          <div className="masonry-grid">
-            {photos.map((photo) => (
-              <div
-                key={photo.id}
-                className="masonry-item group relative bg-white rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-2"
-                style={{
-                  boxShadow: 'var(--shadow-soft)',
-                  breakInside: 'avoid'
-                }}
-              >
-                <div className="relative overflow-hidden">
-                  <img
-                    src={photo.url}
-                    alt="Brand photo"
-                    className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-110"
-                    loading="lazy"
-                    onError={(e) => {
-                      e.currentTarget.src = `https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=400&fit=crop`;
-                    }}
-                  />
-                  
-                  {/* Delete button - top right */}
-                  <button
-                    onClick={() => handleDeletePhoto(photo.id)}
-                    className="absolute top-3 right-3 w-8 h-8 bg-white/95 hover:bg-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-sm shadow-lg hover:scale-110"
-                  >
-                    <Trash2 className="h-4 w-4 text-gray-600" />
-                  </button>
-
-                  {/* Add tag button - bottom right */}
-                  <button
-                    onClick={() => {
-                      const tag = prompt("Add a tag:");
-                      if (tag) handleAddTag(photo.id, tag);
-                    }}
-                    className="absolute bottom-3 right-3 w-8 h-8 bg-primary hover:bg-primary/90 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg hover:scale-110"
-                  >
-                    <Plus className="h-4 w-4 text-white" />
-                  </button>
-                  
-                  {/* Tags overlay - only show on hover */}
-                  <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5 max-w-[calc(100%-4rem)] opacity-0 group-hover:opacity-100 transition-all duration-300">
-                    {photo.tags.map((tag, index) => (
-                      <div
-                        key={index}
-                        className="group/tag bg-white/90 hover:bg-white backdrop-blur-sm text-gray-700 text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-all duration-200 cursor-pointer border border-white/20 shadow-sm"
-                        onClick={() => handleRemoveTag(photo.id, index)}
-                      >
-                        <span className="font-medium">{tag}</span>
-                        <X className="h-3 w-3 opacity-0 group-hover/tag:opacity-100 transition-opacity duration-200 text-gray-500" />
-                      </div>
-                    ))}
-                  </div>
-                </div>
+          {/* Header - only show upload button if there are photos */}
+          {photos.length > 0 && (
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-xl font-medium text-foreground">Brand Photos</h2>
+                <p className="text-muted-foreground">Upload photos to help AI learn your brand's visual identity</p>
               </div>
-            ))}
-          </div>
-
-          {/* Empty state */}
-          {photos.length === 0 && (
-            <div className="text-center py-20">
-              <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center mx-auto mb-6" style={{ boxShadow: 'var(--shadow-minimal)' }}>
-                <Image className="w-10 h-10 text-gray-400" />
-              </div>
-              <h3 className="text-xl font-medium text-gray-900 mb-3">No brand photos yet</h3>
-              <p className="text-gray-600 mb-8 max-w-md mx-auto">Upload your luxury resort photos to help AI understand your brand's visual identity and create consistent, high-end marketing content.</p>
               <Button 
                 onClick={() => fileInputRef.current?.click()}
-                style={{ boxShadow: 'var(--shadow-button)' }}
+                className="shadow-lg"
+                size="lg"
               >
-                <Upload className="mr-2 h-5 w-5" />
-                Upload Your First Photos
+                <Upload className="mr-2 h-4 w-4" />
+                Upload Photos
               </Button>
             </div>
+          )}
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="image/*"
+            onChange={handlePhotoUpload}
+            className="hidden"
+          />
+
+          {/* Photos Grid */}
+          {photos.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {photos.map((photo) => (
+                <div
+                  key={photo.id}
+                  className="group relative bg-card rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 border"
+                >
+                  <div className="relative overflow-hidden aspect-square">
+                    <img
+                      src={photo.url}
+                      alt="Brand photo"
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      loading="lazy"
+                    />
+                    
+                    {/* Delete button */}
+                    <button
+                      onClick={() => handleDeletePhoto(photo.id)}
+                      className="absolute top-3 right-3 w-8 h-8 bg-background/95 hover:bg-background rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-sm shadow-lg hover:scale-110"
+                    >
+                      <Trash2 className="h-4 w-4 text-muted-foreground" />
+                    </button>
+
+                    {/* Add tag button */}
+                    <button
+                      onClick={() => {
+                        const tag = prompt("Add a tag:");
+                        if (tag) handleAddTag(photo.id, tag);
+                      }}
+                      className="absolute bottom-3 right-3 w-8 h-8 bg-primary hover:bg-primary/90 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg hover:scale-110"
+                    >
+                      <Plus className="h-4 w-4 text-primary-foreground" />
+                    </button>
+                    
+                    {/* Tags overlay */}
+                    {photo.tags.length > 0 && (
+                      <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5 max-w-[calc(100%-4rem)] opacity-0 group-hover:opacity-100 transition-all duration-300">
+                        {photo.tags.map((tag, index) => (
+                          <Badge
+                            key={index}
+                            variant="secondary"
+                            className="text-xs cursor-pointer hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                            onClick={() => handleRemoveTag(photo.id, index)}
+                          >
+                            {tag}
+                            <X className="ml-1 h-3 w-3" />
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Empty state for photos */}
+          {photos.length === 0 && (
+            <EmptyState
+              icon={Image}
+              title="No brand photos yet"
+              description="Upload your brand photos to help AI understand your visual identity and create consistent, high-quality content."
+              actionLabel="Upload Your First Photos"
+              onAction={() => fileInputRef.current?.click()}
+            />
           )}
         </TabsContent>
 
         <TabsContent value="guidelines" className="mt-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-xl font-medium text-gray-900">Content Guidelines</h2>
-              <p className="text-gray-600">Define how your brand should be represented in all AI-generated content</p>
-            </div>
-          </div>
-
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Brand Voice & Tone</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Edit3 className="w-5 h-5" />
+                  Brand Voice & Tone
+                </CardTitle>
                 <CardDescription>
-                  How should your brand communicate and what personality should it convey?
+                  Define how your brand should communicate and what personality it should convey
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -239,23 +192,23 @@ export default function BrandKit() {
                   <Label htmlFor="brand-tone">Brand Tone</Label>
                   <Input 
                     id="brand-tone" 
-                    value={brandSettings.tone}
+                    value={brandSettings.tone || ""}
                     onChange={(e) => updateBrandSettings({ tone: e.target.value })}
                     placeholder="e.g., Luxurious, Friendly, Professional, Sophisticated" 
                     className="mt-2"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Describe the personality and feeling your brand should convey</p>
+                  <p className="text-xs text-muted-foreground mt-1">Describe the personality and feeling your brand should convey</p>
                 </div>
                 <div>
                   <Label htmlFor="brand-voice">Brand Voice</Label>
                   <Textarea 
                     id="brand-voice" 
-                    value={brandSettings.voice}
+                    value={brandSettings.voice || ""}
                     onChange={(e) => updateBrandSettings({ voice: e.target.value })}
                     placeholder="e.g., We speak with confidence and warmth, using inclusive language that makes every guest feel valued..."
                     className="mt-2 min-h-[100px]"
                   />
-                  <p className="text-xs text-gray-500 mt-1">How does your brand communicate? What words and phrases do you use?</p>
+                  <p className="text-xs text-muted-foreground mt-1">How does your brand communicate? What words and phrases do you use?</p>
                 </div>
               </CardContent>
             </Card>
@@ -264,7 +217,7 @@ export default function BrandKit() {
               <CardHeader>
                 <CardTitle>Key Messages & Values</CardTitle>
                 <CardDescription>
-                  What are the core messages and values your brand should always communicate?
+                  Core messages and values your brand should always communicate
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -272,30 +225,30 @@ export default function BrandKit() {
                   <Label htmlFor="brand-keywords">Key Messages</Label>
                   <Input 
                     id="brand-keywords" 
-                    value={brandSettings.keyMessages}
+                    value={brandSettings.keyMessages || ""}
                     onChange={(e) => updateBrandSettings({ keyMessages: e.target.value })}
                     placeholder="e.g., Exceptional service, Unforgettable experiences, Sustainable luxury" 
                     className="mt-2"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Main themes and messages to emphasize</p>
+                  <p className="text-xs text-muted-foreground mt-1">Main themes and messages to emphasize</p>
                 </div>
                 <div>
                   <Label htmlFor="brand-values">Core Values</Label>
                   <Textarea 
                     id="brand-values" 
-                    value={brandSettings.coreValues}
+                    value={brandSettings.coreValues || ""}
                     onChange={(e) => updateBrandSettings({ coreValues: e.target.value })}
-                    placeholder="e.g., Sustainability, Guest satisfaction, Cultural authenticity, Innovation in hospitality..."
+                    placeholder="e.g., Sustainability, Guest satisfaction, Cultural authenticity, Innovation..."
                     className="mt-2 min-h-[100px]"
                   />
-                  <p className="text-xs text-gray-500 mt-1">What does your brand stand for?</p>
+                  <p className="text-xs text-muted-foreground mt-1">What does your brand stand for?</p>
                 </div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Content Do's & Don'ts</CardTitle>
+                <CardTitle>Content Guidelines</CardTitle>
                 <CardDescription>
                   Specific guidelines for what should and shouldn't be included in your content
                 </CardDescription>
@@ -305,35 +258,34 @@ export default function BrandKit() {
                   <Label htmlFor="content-dos">Always Include</Label>
                   <Textarea 
                     id="content-dos" 
-                    value={brandSettings.contentDos}
+                    value={brandSettings.contentDos || ""}
                     onChange={(e) => updateBrandSettings({ contentDos: e.target.value })}
                     placeholder="e.g., Ocean views, Local culture, Premium amenities, Personalized service..."
                     className="mt-2 min-h-[80px]"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Elements that should always be highlighted</p>
+                  <p className="text-xs text-muted-foreground mt-1">Elements that should always be highlighted</p>
                 </div>
                 <div>
                   <Label htmlFor="content-donts">Never Include</Label>
                   <Textarea 
                     id="content-donts" 
-                    value={brandSettings.contentDonts}
+                    value={brandSettings.contentDonts || ""}
                     onChange={(e) => updateBrandSettings({ contentDonts: e.target.value })}
                     placeholder="e.g., Crowded spaces, Generic stock photo feel, Overly promotional language..."
                     className="mt-2 min-h-[80px]"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Elements to avoid in your content</p>
+                  <p className="text-xs text-muted-foreground mt-1">Elements to avoid in your content</p>
                 </div>
               </CardContent>
             </Card>
 
             <div className="flex justify-end">
-              <Button style={{ boxShadow: 'var(--shadow-button)' }}>
+              <Button className="shadow-lg" size="lg">
                 Save Guidelines
               </Button>
             </div>
           </div>
         </TabsContent>
-
       </Tabs>
     </div>
   );
