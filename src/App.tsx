@@ -14,6 +14,7 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+// Force fresh build to clear any cached references
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
