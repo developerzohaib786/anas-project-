@@ -101,13 +101,13 @@ export default function BrandKit() {
   ];
 
   return (
-    <div className="p-8 max-w-6xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-semibold text-gray-900 mb-2">Brand Kit</h1>
-        <p className="text-gray-600">
-          Manage your brand assets for consistent, high-end luxury photo creation
-        </p>
-      </div>
+      <div className="p-8 md:p-8 p-4 max-w-6xl">
+        <div className="mb-8">
+          <h1 className="text-3xl font-semibold text-gray-900 mb-2">Brand Kit</h1>
+          <p className="text-gray-600">
+            Manage your brand assets for consistent, high-end luxury photo creation
+          </p>
+        </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3">

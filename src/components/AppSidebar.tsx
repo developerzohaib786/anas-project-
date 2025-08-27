@@ -32,15 +32,18 @@ export function AppSidebar() {
   const isActive = (path: string) => currentPath === path;
 
   return (
-    <Sidebar className="w-60 bg-white border-r border-gray-200">
+    <Sidebar className="w-60 bg-white border-r border-gray-200 md:w-60 w-16">
       <div className="flex flex-col h-full">
-      <SidebarHeader className="p-6 border-b border-gray-100">
-        <div className="font-medium text-xl text-gray-900" style={{ fontFamily: 'Inter, sans-serif' }}>
+      <SidebarHeader className="p-6 border-b border-gray-100 md:p-6 p-3">
+        <div className="font-medium text-xl text-gray-900 md:block hidden" style={{ fontFamily: 'Inter, sans-serif' }}>
           Nino
+        </div>
+        <div className="font-medium text-sm text-gray-900 md:hidden block" style={{ fontFamily: 'Inter, sans-serif' }}>
+          N
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-4 py-6 flex-1">
+      <SidebarContent className="px-4 py-6 flex-1 md:px-4 px-2">
         {/* Main Navigation */}
         <SidebarGroup>
           <SidebarGroupContent>
@@ -51,15 +54,16 @@ export function AppSidebar() {
                     <NavLink
                       to={item.url}
                       className={({ isActive }) =>
-                        `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 font-medium text-sm mb-1 ${
+                        `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 font-medium text-sm mb-1 md:justify-start justify-center ${
                           isActive
                             ? "bg-gray-900 text-white"
                             : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                         }`
                       }
+                      title={item.title}
                     >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
+                      <item.icon className="h-4 w-4 md:mr-0 mr-0" />
+                      <span className="md:block hidden">{item.title}</span>
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -68,8 +72,8 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Projects Section */}
-        <SidebarGroup className="mt-8">
+        {/* Projects Section - Hidden on mobile */}
+        <SidebarGroup className="mt-8 md:block hidden">
           <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
             Recent
           </SidebarGroupLabel>
@@ -99,22 +103,23 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t border-gray-100 mt-auto">
+      <SidebarFooter className="p-4 border-t border-gray-100 mt-auto md:p-4 p-2">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
               <NavLink
                 to="/settings"
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 font-medium text-sm ${
+                  `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 font-medium text-sm md:justify-start justify-center ${
                     isActive
                       ? "bg-gray-100 text-gray-900"
                       : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                   }`
                 }
+                title="Settings"
               >
                 <Settings className="h-4 w-4" />
-                <span>Settings</span>
+                <span className="md:block hidden">Settings</span>
               </NavLink>
             </SidebarMenuButton>
           </SidebarMenuItem>

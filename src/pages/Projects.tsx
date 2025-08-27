@@ -117,31 +117,33 @@ export default function Projects() {
   };
 
   return (
-    <div className="p-8 max-w-7xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-semibold text-gray-900 mb-2">Projects</h1>
-        <p className="text-gray-600">Manage your created content and campaigns</p>
-      </div>
-
-      {/* Search and Create Button */}
-      <div className="flex items-center gap-4 mb-8">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder="Search projects..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 rounded-full border-gray-200 focus:border-primary/20 focus:ring-primary/10"
-          />
+      <div className="p-8 md:p-8 p-4 max-w-7xl">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+          <div>
+            <h1 className="text-3xl font-semibold text-gray-900 mb-2">Projects</h1>
+            <p className="text-gray-600">Manage your created content and campaigns</p>
+          </div>
         </div>
-        <Button 
-          onClick={handleCreateProject}
-          className="apple-button bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-full font-medium"
-          style={{ boxShadow: 'var(--shadow-button)' }}
-        >
-          Create New Project
-        </Button>
-      </div>
+
+        {/* Search and Create Button */}
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 mb-8">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search projects..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 rounded-full border-gray-200 focus:border-primary/20 focus:ring-primary/10"
+            />
+          </div>
+          <Button 
+            onClick={handleCreateProject}
+            className="apple-button bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-full font-medium w-full md:w-auto"
+            style={{ boxShadow: 'var(--shadow-button)' }}
+          >
+            Create New Project
+          </Button>
+        </div>
 
       {/* Projects Masonry Grid */}
       <div className="masonry-grid">

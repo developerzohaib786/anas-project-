@@ -174,32 +174,32 @@
     @apply bg-muted-foreground/30;
   }
 
-  /* Masonry Grid Layout */
+  /* Mobile-responsive masonry grid */
   .masonry-grid {
     column-count: 1;
     column-gap: 1rem;
     column-fill: balance;
   }
   
-  @media (min-width: 640px) {
+  @media (min-width: 480px) {
     .masonry-grid {
       column-count: 2;
     }
   }
   
-  @media (min-width: 1024px) {
+  @media (min-width: 768px) {
     .masonry-grid {
       column-count: 3;
     }
   }
   
-  @media (min-width: 1280px) {
+  @media (min-width: 1024px) {
     .masonry-grid {
       column-count: 4;
     }
   }
   
-  @media (min-width: 1536px) {
+  @media (min-width: 1280px) {
     .masonry-grid {
       column-count: 5;
     }
@@ -209,5 +209,22 @@
     display: inline-block;
     width: 100%;
     vertical-align: top;
+  }
+
+  /* Mobile touch improvements */
+  @media (max-width: 768px) {
+    .apple-button {
+      min-height: 44px; /* Apple's minimum touch target */
+    }
+    
+    .hover-scale:hover {
+      transform: none; /* Disable hover effects on mobile */
+    }
+    
+    /* Larger touch targets for mobile */
+    button, [role="button"] {
+      min-height: 44px;
+      min-width: 44px;
+    }
   }
 }

@@ -130,7 +130,7 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
           {messages.length <= 1 && !inputValue.trim() && (
             <div className="mb-6">
               <p className="text-sm text-muted-foreground mb-3 font-medium">Try these examples:</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {examplePrompts.map((prompt, index) => (
                   <button
                     key={index}

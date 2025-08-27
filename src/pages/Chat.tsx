@@ -19,16 +19,21 @@ const Chat = () => {
 
   return (
     <ResizablePanelGroup direction="horizontal" className="h-screen">
-      {/* Chat Interface - Resizable */}
-      <ResizablePanel defaultSize={70} minSize={50}>
+      {/* Chat Interface - Resizable, full width on mobile */}
+      <ResizablePanel defaultSize={70} minSize={50} className="md:flex hidden">
         <ChatInterface onGenerateImage={handleGenerateImage} />
       </ResizablePanel>
       
-      {/* Resizable Handle */}
-      <ResizableHandle className="w-1 bg-border hover:bg-border/80 transition-colors duration-200" />
+      {/* Mobile-first single panel layout */}
+      <div className="md:hidden flex flex-col h-screen w-full">
+        <ChatInterface onGenerateImage={handleGenerateImage} />
+      </div>
       
-      {/* Image Preview - Resizable */}
-      <ResizablePanel defaultSize={30} minSize={25} maxSize={50}>
+      {/* Resizable Handle - Only on desktop */}
+      <ResizableHandle className="w-1 bg-border hover:bg-border/80 transition-colors duration-200 md:block hidden" />
+      
+      {/* Image Preview - Resizable on desktop, hidden on mobile */}
+      <ResizablePanel defaultSize={30} minSize={25} maxSize={50} className="md:block hidden">
         <div className="bg-card h-full">
           <ImagePreview 
             currentPrompt={currentPrompt}
