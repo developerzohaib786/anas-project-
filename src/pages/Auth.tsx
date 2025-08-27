@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, ArrowRight } from "lucide-react";
+import { Loader2, ArrowRight, Eye, EyeOff } from "lucide-react";
 
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
@@ -11,6 +11,7 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { signIn, signUp, user } = useAuth();
 
   // Redirect if already authenticated
@@ -57,13 +58,24 @@ export default function Auth() {
             </div>
             <div className="relative">
               <Input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full border-0 rounded-none bg-transparent px-5 py-5 pr-14 text-[17px] font-normal placeholder:text-[#8e8e93] focus-visible:outline-none focus-visible:ring-0 transition-all duration-200"
+                className="w-full border-0 rounded-none bg-transparent px-5 py-5 pr-20 text-[17px] font-normal placeholder:text-[#8e8e93] focus-visible:outline-none focus-visible:ring-0 transition-all duration-200"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-12 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full hover:bg-[#f2f2f7] transition-colors duration-200 flex items-center justify-center"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4 text-[#8e8e93]" strokeWidth={2} />
+                ) : (
+                  <Eye className="h-4 w-4 text-[#8e8e93]" strokeWidth={2} />
+                )}
+              </button>
               <Button
                 type="submit"
                 disabled={isLoading || !email || !password}
