@@ -18,10 +18,8 @@ export type Database = {
         Row: {
           content_donts: string | null
           content_dos: string | null
-          core_values: string | null
           created_at: string | null
           id: string
-          key_messages: string | null
           team_id: string
           tone: string | null
           updated_at: string | null
@@ -30,10 +28,8 @@ export type Database = {
         Insert: {
           content_donts?: string | null
           content_dos?: string | null
-          core_values?: string | null
           created_at?: string | null
           id?: string
-          key_messages?: string | null
           team_id: string
           tone?: string | null
           updated_at?: string | null
@@ -42,10 +38,8 @@ export type Database = {
         Update: {
           content_donts?: string | null
           content_dos?: string | null
-          core_values?: string | null
           created_at?: string | null
           id?: string
-          key_messages?: string | null
           team_id?: string
           tone?: string | null
           updated_at?: string | null
@@ -110,37 +104,49 @@ export type Database = {
       }
       profiles: {
         Row: {
+          additional_brand_notes: string | null
           avatar_url: string | null
           brand_name: string | null
+          brand_tone: string | null
           created_at: string
+          description: string | null
           email: string | null
           first_name: string | null
           id: string
           last_name: string | null
+          location: string | null
           onboarding_completed: boolean | null
           onboarding_step: number | null
           updated_at: string
         }
         Insert: {
+          additional_brand_notes?: string | null
           avatar_url?: string | null
           brand_name?: string | null
+          brand_tone?: string | null
           created_at?: string
+          description?: string | null
           email?: string | null
           first_name?: string | null
           id: string
           last_name?: string | null
+          location?: string | null
           onboarding_completed?: boolean | null
           onboarding_step?: number | null
           updated_at?: string
         }
         Update: {
+          additional_brand_notes?: string | null
           avatar_url?: string | null
           brand_name?: string | null
+          brand_tone?: string | null
           created_at?: string
+          description?: string | null
           email?: string | null
           first_name?: string | null
           id?: string
           last_name?: string | null
+          location?: string | null
           onboarding_completed?: boolean | null
           onboarding_step?: number | null
           updated_at?: string

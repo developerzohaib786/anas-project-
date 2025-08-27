@@ -14,8 +14,6 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { Loader2, LogOut, Upload, User } from "lucide-react";
 
 interface UserProfile {
-  first_name: string;
-  last_name: string;
   email: string;
   brand_name: string;
   avatar_url: string;
@@ -34,8 +32,6 @@ export default function Settings() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile>({
-    first_name: '',
-    last_name: '',
     email: '',
     brand_name: '',
     avatar_url: ''
@@ -57,15 +53,15 @@ export default function Settings() {
       // Load user profile
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('first_name, last_name, email, brand_name, avatar_url')
+        .select('email, brand_name, avatar_url')
         .eq('id', user.id)
         .single();
 
       if (profileData) {
         setUserProfile(profileData);
         updateProfile({
-          first_name: profileData.first_name || '',
-          last_name: profileData.last_name || '',
+          first_name: '', // Not needed anymore
+          last_name: '',  // Not needed anymore
           email: profileData.email || ''
         });
       }
@@ -144,8 +140,6 @@ export default function Settings() {
       const { error } = await supabase
         .from('profiles')
         .update({
-          first_name: profile.first_name,
-          last_name: profile.last_name,
           brand_name: userProfile.brand_name,
           avatar_url: avatarUrl,
         })
@@ -242,28 +236,7 @@ export default function Settings() {
                   <p className="text-sm text-muted-foreground">Upload a profile picture</p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="first-name">First Name</Label>
-                    <Input 
-                      id="first-name" 
-                      value={profile.first_name}
-                      onChange={(e) => updateProfile({ first_name: e.target.value })}
-                      className="mt-2 rounded-full" 
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="last-name">Last Name</Label>
-                    <Input 
-                      id="last-name" 
-                      value={profile.last_name}
-                      onChange={(e) => updateProfile({ last_name: e.target.value })}
-                      className="mt-2 rounded-full" 
-                    />
-                  </div>
-                </div>
-                
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="brand-name-profile">Brand Name</Label>
                   <Input 
                     id="brand-name-profile" 
@@ -279,7 +252,7 @@ export default function Settings() {
                   <Input 
                     id="email" 
                     type="email" 
-                    value={profile.email}
+                    value={userProfile.email}
                     disabled
                     className="mt-2 rounded-full bg-muted" 
                   />

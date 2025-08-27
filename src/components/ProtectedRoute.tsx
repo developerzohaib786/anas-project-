@@ -2,7 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { ReactNode, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { SimpleOnboarding } from "@/components/onboarding/SimpleOnboarding";
+import { ComprehensiveOnboarding } from "@/components/onboarding/ComprehensiveOnboarding";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -57,7 +57,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   if (showOnboarding) {
     return (
-      <SimpleOnboarding 
+      <ComprehensiveOnboarding 
         onComplete={() => setShowOnboarding(false)} 
       />
     );

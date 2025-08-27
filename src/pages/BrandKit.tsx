@@ -23,8 +23,6 @@ interface BrandPhoto {
 interface BrandGuidelines {
   tone: string;
   voice: string;
-  key_messages: string;
-  core_values: string;
   content_dos: string;
   content_donts: string;
 }
@@ -35,8 +33,6 @@ export default function BrandKit() {
   const [guidelines, setGuidelines] = useState<BrandGuidelines>({
     tone: "",
     voice: "",
-    key_messages: "",
-    core_values: "",
     content_dos: "",
     content_donts: ""
   });
@@ -113,8 +109,6 @@ export default function BrandKit() {
           setGuidelines({
             tone: brandGuidelines.tone || "",
             voice: brandGuidelines.voice || "",
-            key_messages: brandGuidelines.key_messages || "",
-            core_values: brandGuidelines.core_values || "",
             content_dos: brandGuidelines.content_dos || "",
             content_donts: brandGuidelines.content_donts || ""
           });
