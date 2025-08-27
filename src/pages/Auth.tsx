@@ -15,63 +15,6 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleAuth = async () => {
-    if (!email || !password) {
-      toast.error("Please fill in all fields");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      if (isSignUp) {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/onboarding`,
-          },
-        });
-
-        if (error) {
-          toast.error(error.message);
-        } else if (data.user && !data.session) {
-          // User created but needs email verification
-          toast.success("Account created! Check your email to verify and complete setup.");
-        } else if (data.session) {
-          // User created and logged in (email confirmation disabled)
-          toast.success("Account created! Welcome to Nino!");
-          navigate("/onboarding");
-        }
-      } else {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (error) {
-          toast.error(error.message);
-        } else if (data.session) {
-          // Check if user has completed onboarding
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('onboarding_completed')
-            .eq('id', data.session.user.id)
-            .single();
-
-          if (profile?.onboarding_completed) {
-            navigate("/dashboard");
-          } else {
-            navigate("/onboarding");
-          }
-        }
-      }
-    } catch (error) {
-      toast.error("An unexpected error occurred");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleForgotPassword = async () => {
     if (!email) {
       toast.error("Please enter your email address first");
@@ -101,25 +44,14 @@ const Auth = () => {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        // Check if user has completed onboarding
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('onboarding_completed')
-          .eq('id', session.user.id)
-          .single();
-
-        if (profile?.onboarding_completed) {
-          navigate("/dashboard");
-        } else {
-          navigate("/onboarding");
-        }
+        navigate("/");
       }
     };
     checkUser();
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         {/* Title */}
         <div className="text-center mb-12">
@@ -137,7 +69,7 @@ const Auth = () => {
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="h-14 bg-white border border-gray-200 rounded-t-3xl rounded-b-none border-b-0 px-4 text-base placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-300 focus:border-gray-300 focus:z-10 relative transition-all duration-200"
+              className="h-14 bg-white border border-gray-200 rounded-t-lg rounded-b-none border-b-0 px-4 text-base placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-300 focus:border-gray-300 focus:z-10 relative transition-all duration-200"
             />
           </div>
           
@@ -148,7 +80,7 @@ const Auth = () => {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="h-14 bg-white border border-gray-200 rounded-b-3xl rounded-t-none px-4 pr-20 text-base placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-300 focus:border-gray-300 focus:z-10 relative transition-all duration-200"
+              className="h-14 bg-white border border-gray-200 rounded-b-lg rounded-t-none px-4 pr-20 text-base placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-300 focus:border-gray-300 focus:z-10 relative transition-all duration-200"
             />
             <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
               <button
@@ -162,14 +94,9 @@ const Auth = () => {
                   <Eye className="h-5 w-5" />
                 )}
               </button>
-              <button
-                type="button"
-                onClick={handleAuth}
-                disabled={loading || !email || !password}
-                className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+              <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
                 <ArrowRight className="h-4 w-4 text-gray-500" />
-              </button>
+              </div>
             </div>
           </div>
         </div>
