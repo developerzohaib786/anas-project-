@@ -6,6 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 interface ImagePreviewProps {
   currentPrompt?: string;
   isGenerating?: boolean;
+  generatedImage?: string;
 }
 
 type AspectRatio = "1:1" | "4:5" | "9:16" | "16:9";
@@ -17,10 +18,11 @@ const aspectRatioClasses = {
   "16:9": "aspect-[16/9]",
 };
 
-export function ImagePreview({ currentPrompt, isGenerating = false }: ImagePreviewProps) {
+export function ImagePreview({ currentPrompt, isGenerating = false, generatedImage: generatedImageProp }: ImagePreviewProps) {
   const [selectedRatio, setSelectedRatio] = useState<AspectRatio>("1:1");
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [showDone, setShowDone] = useState(false);
+  const displayedImage = generatedImageProp ?? generatedImage;
 
   const handleDone = () => {
     setShowDone(true);
@@ -74,9 +76,9 @@ export function ImagePreview({ currentPrompt, isGenerating = false }: ImagePrevi
               <div className="text-center animate-fade-in">
                 <div className="animate-spin w-7 h-7 border-2 border-primary border-t-transparent rounded-full mx-auto"></div>
               </div>
-            ) : generatedImage ? (
+            ) : displayedImage ? (
               <img
-                src={generatedImage}
+                src={displayedImage}
                 alt="Generated"
                 className="w-full h-full object-cover rounded-3xl animate-scale-in"
               />
@@ -93,11 +95,11 @@ export function ImagePreview({ currentPrompt, isGenerating = false }: ImagePrevi
           <Button
             variant="secondary"
             size="sm"
-            disabled={!generatedImage}
+            disabled={!displayedImage}
             onClick={handleDone}
             className="apple-button w-full h-11 rounded-full font-medium bg-primary hover:bg-primary/90 text-primary-foreground border-0 disabled:opacity-40 disabled:cursor-not-allowed"
             style={{
-              boxShadow: generatedImage ? 'var(--shadow-minimal)' : 'none'
+              boxShadow: displayedImage ? 'var(--shadow-minimal)' : 'none'
             }}
           >
             <Check className="w-4 h-4 mr-2" />

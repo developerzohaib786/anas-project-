@@ -6,15 +6,25 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/componen
 const Chat = () => {
   const [currentPrompt, setCurrentPrompt] = useState<string>();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedImage, setGeneratedImage] = useState<string | undefined>();
 
   const handleGenerateImage = async (prompt: string) => {
     setCurrentPrompt(prompt);
     setIsGenerating(true);
-    
-    // Simulate image generation delay
-    setTimeout(() => {
+
+    try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data, error } = await supabase.functions.invoke("generate-image", {
+        body: { prompt },
+      });
+      if (error) throw error;
+      // Pass the image down via state
+      setGeneratedImage(data?.image);
+    } catch (err) {
+      console.error("Image generation failed:", err);
+    } finally {
       setIsGenerating(false);
-    }, 3000);
+    }
   };
 
   return (
@@ -36,6 +46,7 @@ const Chat = () => {
               <ImagePreview 
                 currentPrompt={currentPrompt}
                 isGenerating={isGenerating}
+                generatedImage={generatedImage}
               />
             </div>
           </ResizablePanel>
