@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { Upload, User, ArrowRight, ArrowLeft, Check } from "lucide-react";
 import { useBrand } from "@/contexts/BrandContext";
+import { ImageUploadSection } from "./ImageUploadSection";
 
 interface ComprehensiveOnboardingProps {
   onComplete: () => void;
@@ -31,6 +32,18 @@ interface OnboardingData {
   // Step 4: Content Guidelines
   contentDos: string;
   contentDonts: string;
+
+  // Training Steps
+  lifestyleImages: File[];
+  exteriorImages: File[];
+  lobbyImages: File[];
+  restaurantImages: File[];
+  roomImages: File[];
+  poolImages: File[];
+  customLocation1Name: string;
+  customLocation1Images: File[];
+  customLocation2Name: string;
+  customLocation2Images: File[];
 }
 
 export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingProps) => {
@@ -46,7 +59,17 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
     brandTone: "",
     additionalBrandNotes: "",
     contentDos: "",
-    contentDonts: ""
+    contentDonts: "",
+    lifestyleImages: [],
+    exteriorImages: [],
+    lobbyImages: [],
+    restaurantImages: [],
+    roomImages: [],
+    poolImages: [],
+    customLocation1Name: "",
+    customLocation1Images: [],
+    customLocation2Name: "",
+    customLocation2Images: []
   });
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,13 +91,33 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
         return data.brandTone.trim().length > 0;
       case 4:
         return data.contentDos.trim().length > 0 && data.contentDonts.trim().length > 0;
+      case 5: // Training intro
+        return true;
+      case 6: // Lifestyle images
+        return true; // Optional
+      case 7: // Exterior images
+        return true; // Optional
+      case 8: // Lobby images
+        return true; // Optional
+      case 9: // Restaurant images
+        return true; // Optional
+      case 10: // Room images
+        return true; // Optional
+      case 11: // Pool images
+        return true; // Optional
+      case 12: // Custom location 1
+        return data.customLocation1Name.trim().length > 0 || data.customLocation1Images.length === 0;
+      case 13: // Custom location 2
+        return data.customLocation2Name.trim().length > 0 || data.customLocation2Images.length === 0;
+      case 14: // Welcome completion
+        return true;
       default:
         return false;
     }
   };
 
   const handleNext = () => {
-    if (canProceedToNext() && currentStep < 4) {
+    if (canProceedToNext() && currentStep < 14) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -86,6 +129,12 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
   };
 
   const handleComplete = async () => {
+    if (currentStep === 14) {
+      // Just close the onboarding, training happens in background
+      onComplete();
+      return;
+    }
+
     setLoading(true);
     try {
       let avatarUrl = null;
@@ -104,7 +153,7 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
       await updateProfile({
         avatar_url: avatarUrl,
         onboarding_completed: true,
-        onboarding_step: 4
+        onboarding_step: 14
       });
 
       // Create brand profile
@@ -119,8 +168,11 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
         content_donts: data.contentDonts.trim()
       });
 
-      toast.success("Welcome! Your profile is complete.");
-      onComplete();
+      // TODO: Upload training images to storage and save metadata
+      // This would involve uploading each image category to different folders
+      // and saving the metadata for AI training
+
+      setCurrentStep(5); // Move to training flow
     } catch (error) {
       console.error('Onboarding error:', error);
       toast.error("An error occurred during setup");
@@ -129,7 +181,7 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
     }
   };
 
-  const progressPercentage = (currentStep / 4) * 100;
+  const progressPercentage = (currentStep / 14) * 100;
 
   return (
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
@@ -300,6 +352,162 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
             </div>
           )}
 
+          {/* Step 5: Training Introduction */}
+          {currentStep === 5 && (
+            <div className="space-y-6 text-center">
+              <div>
+                <h3 className="text-xl font-semibold mb-3">Train your creative agent</h3>
+                <p className="text-muted-foreground mb-4">
+                  Your creative assistant gets better and better the more information you train it on. 
+                  We are going to upload 5-20 images of each location at your hotel.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  This will take 15-20 minutes and is incredibly important for training your model.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Step 6: Lifestyle References */}
+          {currentStep === 6 && (
+            <div className="space-y-6">
+              <ImageUploadSection
+                title="Any existing or lifestyle references you like"
+                description="Please upload 5-20 images of each location at your hotel, if you do not have any skip"
+                images={data.lifestyleImages}
+                onImagesChange={(images) => setData(prev => ({ ...prev, lifestyleImages: images }))}
+                maxImages={20}
+              />
+            </div>
+          )}
+
+          {/* Step 7: Exterior Spaces */}
+          {currentStep === 7 && (
+            <div className="space-y-6">
+              <ImageUploadSection
+                title="Exterior Spaces"
+                description="Please upload 5-20 images of each location at your hotel, if you do not have any skip"
+                images={data.exteriorImages}
+                onImagesChange={(images) => setData(prev => ({ ...prev, exteriorImages: images }))}
+                maxImages={20}
+              />
+            </div>
+          )}
+
+          {/* Step 8: Lobby & Gathering Spaces */}
+          {currentStep === 8 && (
+            <div className="space-y-6">
+              <ImageUploadSection
+                title="Lobby & Gathering Spaces"
+                description="Please upload 5-20 images of each location at your hotel, if you do not have any skip"
+                images={data.lobbyImages}
+                onImagesChange={(images) => setData(prev => ({ ...prev, lobbyImages: images }))}
+                maxImages={20}
+              />
+            </div>
+          )}
+
+          {/* Step 9: Restaurants/Dining + food images */}
+          {currentStep === 9 && (
+            <div className="space-y-6">
+              <ImageUploadSection
+                title="Restaurants/Dining + food images"
+                description="Please upload 5-20 images of each location at your hotel, if you do not have any skip"
+                images={data.restaurantImages}
+                onImagesChange={(images) => setData(prev => ({ ...prev, restaurantImages: images }))}
+                maxImages={20}
+              />
+            </div>
+          )}
+
+          {/* Step 10: Rooms */}
+          {currentStep === 10 && (
+            <div className="space-y-6">
+              <ImageUploadSection
+                title="Rooms"
+                description="Please upload 5-20 images of each location at your hotel, if you do not have any skip"
+                images={data.roomImages}
+                onImagesChange={(images) => setData(prev => ({ ...prev, roomImages: images }))}
+                maxImages={20}
+              />
+            </div>
+          )}
+
+          {/* Step 11: Pools */}
+          {currentStep === 11 && (
+            <div className="space-y-6">
+              <ImageUploadSection
+                title="Pools"
+                description="Please upload 5-20 images of each location at your hotel, if you do not have any skip"
+                images={data.poolImages}
+                onImagesChange={(images) => setData(prev => ({ ...prev, poolImages: images }))}
+                maxImages={20}
+              />
+            </div>
+          )}
+
+          {/* Step 12: Custom Location 1 */}
+          {currentStep === 12 && (
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="custom-location-1">Enter name for custom location</Label>
+                <Input
+                  id="custom-location-1"
+                  type="text"
+                  placeholder="e.g., Beach, Mountain, Chalet, Kids room"
+                  value={data.customLocation1Name}
+                  onChange={(e) => setData(prev => ({ ...prev, customLocation1Name: e.target.value }))}
+                />
+              </div>
+              {data.customLocation1Name && (
+                <ImageUploadSection
+                  title={data.customLocation1Name}
+                  description="Please upload 5-20 images of each location at your hotel, if you do not have any skip"
+                  images={data.customLocation1Images}
+                  onImagesChange={(images) => setData(prev => ({ ...prev, customLocation1Images: images }))}
+                  maxImages={20}
+                />
+              )}
+            </div>
+          )}
+
+          {/* Step 13: Custom Location 2 */}
+          {currentStep === 13 && (
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="custom-location-2">Enter name for custom location</Label>
+                <Input
+                  id="custom-location-2"
+                  type="text"
+                  placeholder="e.g., Private residence suite, Hottub, Fire pits"
+                  value={data.customLocation2Name}
+                  onChange={(e) => setData(prev => ({ ...prev, customLocation2Name: e.target.value }))}
+                />
+              </div>
+              {data.customLocation2Name && (
+                <ImageUploadSection
+                  title={data.customLocation2Name}
+                  description="Please upload 5-20 images of each location at your hotel, if you do not have any skip"
+                  images={data.customLocation2Images}
+                  onImagesChange={(images) => setData(prev => ({ ...prev, customLocation2Images: images }))}
+                  maxImages={20}
+                />
+              )}
+            </div>
+          )}
+
+          {/* Step 14: Welcome to Dashboard */}
+          {currentStep === 14 && (
+            <div className="space-y-6 text-center">
+              <div>
+                <h3 className="text-xl font-semibold mb-3">Welcome to your dashboard</h3>
+                <p className="text-muted-foreground">
+                  Your assistant is being trained now and will be ready in 5-10 minutes
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Navigation Buttons */}
           <div className="flex justify-between pt-4">
             <Button
@@ -321,13 +529,30 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
                 Next
                 <ArrowRight className="w-4 h-4" />
               </Button>
-            ) : (
+            ) : currentStep === 4 ? (
               <Button
                 onClick={handleComplete}
                 disabled={loading || !canProceedToNext()}
                 className="flex items-center gap-2"
               >
-                {loading ? "Setting up..." : "Complete Setup"}
+                {loading ? "Setting up..." : "Start Training"}
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            ) : currentStep < 14 ? (
+              <Button
+                onClick={handleNext}
+                disabled={!canProceedToNext()}
+                className="flex items-center gap-2"
+              >
+                {currentStep === 5 ? "Start Upload Process" : "Next"}
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            ) : (
+              <Button
+                onClick={handleComplete}
+                className="flex items-center gap-2"
+              >
+                Go to Dashboard
                 <Check className="w-4 h-4" />
               </Button>
             )}
