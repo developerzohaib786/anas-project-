@@ -263,13 +263,13 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
 
   return (
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <Card className="w-full max-w-lg">
+      <Card className="w-full max-w-lg max-h-[90vh] flex flex-col">
         {/* Progress Bar */}
-        <div className="px-6 py-6">
+        <div className="px-6 py-6 flex-shrink-0">
           <Progress value={progressPercentage} className="w-full" />
         </div>
 
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 overflow-y-auto flex-1 px-6">
           {/* Step 1: Basic Info */}
           {currentStep === 1 && (
             <div className="space-y-6">
