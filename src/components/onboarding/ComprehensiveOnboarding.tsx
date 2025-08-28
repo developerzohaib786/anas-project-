@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { Upload, User, ArrowRight, ArrowLeft, Check } from "lucide-react";
 import { useBrand } from "@/contexts/BrandContext";
 import { ImageUploadSection } from "./ImageUploadSection";
-
+import { supabase } from "@/integrations/supabase/client";
 interface ComprehensiveOnboardingProps {
   onComplete: () => void;
 }
@@ -47,7 +47,7 @@ interface OnboardingData {
 }
 
 export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingProps) => {
-  const { updateProfile, uploadAvatar, createBrandProfile } = useBrand();
+  const { updateProfile, uploadAvatar, createBrandProfile, brandProfile } = useBrand();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<OnboardingData>({
@@ -116,6 +116,72 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
     }
   };
 
+  // Upload helpers for training assets
+  const uploadCategory = async (categoryKey: string, displayName: string, files: File[]) => {
+    if (!files?.length || !brandProfile) return;
+    const { data: userData, error: userErr } = await supabase.auth.getUser();
+    if (userErr) throw userErr;
+    const user = userData?.user;
+    if (!user) throw new Error("Not authenticated");
+
+    for (const [idx, file] of files.entries()) {
+      const ext = file.name.split('.').pop();
+      const safeCategory = categoryKey.toLowerCase().replace(/\s+/g, '-');
+      const path = `${user.id}/${brandProfile.id}/${safeCategory}/${Date.now()}-${idx}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('brand-assets')
+        .upload(path, file, { upsert: false });
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
+
+      const { error: insertError } = await supabase
+        .from('brand_assets')
+        .insert({
+          storage_path: path,
+          file_name: file.name,
+          content_type: file.type,
+          file_size: file.size,
+          asset_type: 'photo',
+          tags: [safeCategory, displayName, 'training'],
+          user_id: user.id,
+          brand_profile_id: brandProfile.id
+        });
+      if (insertError) {
+        console.error('Insert asset error:', insertError);
+        throw insertError;
+      }
+    }
+  };
+
+  const uploadAllTrainingImages = async () => {
+    await uploadCategory('lifestyle', 'Lifestyle References', data.lifestyleImages);
+    await uploadCategory('exterior', 'Exterior Spaces', data.exteriorImages);
+    await uploadCategory('lobby', 'Lobby & Gathering Spaces', data.lobbyImages);
+    await uploadCategory('restaurant', 'Restaurants/Dining', data.restaurantImages);
+    await uploadCategory('rooms', 'Rooms', data.roomImages);
+    await uploadCategory('pools', 'Pools', data.poolImages);
+    if (data.customLocation1Name) {
+      await uploadCategory(data.customLocation1Name, data.customLocation1Name, data.customLocation1Images);
+    }
+    if (data.customLocation2Name) {
+      await uploadCategory(data.customLocation2Name, data.customLocation2Name, data.customLocation2Images);
+    }
+  };
+
+  const startTraining = async () => {
+    if (!brandProfile?.id) return;
+    const { error } = await supabase.functions.invoke('start-training', {
+      body: { brand_profile_id: brandProfile.id }
+    });
+    if (error) {
+      console.error('Start training error:', error);
+      throw error;
+    }
+  };
+
   const handleNext = () => {
     if (canProceedToNext() && currentStep < 14) {
       setCurrentStep(currentStep + 1);
@@ -130,8 +196,18 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
 
   const handleComplete = async () => {
     if (currentStep === 14) {
-      // Just close the onboarding, training happens in background
-      onComplete();
+      setLoading(true);
+      try {
+        await uploadAllTrainingImages();
+        await startTraining();
+        toast.success("Training started. Your assistant will be ready soon.");
+        onComplete();
+      } catch (error) {
+        console.error('Finalize onboarding error:', error);
+        toast.error("Failed to start training. Please try again.");
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 
@@ -551,8 +627,9 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
               <Button
                 onClick={handleComplete}
                 className="flex items-center gap-2"
+                disabled={loading}
               >
-                Go to Dashboard
+                {loading ? "Finalizing..." : "Go to Dashboard"}
                 <Check className="w-4 h-4" />
               </Button>
             )}
