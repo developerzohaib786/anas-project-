@@ -173,13 +173,15 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
 
   const startTraining = async () => {
     if (!brandProfile?.id) return;
-    const { error } = await supabase.functions.invoke('start-training', {
+    const { data, error } = await supabase.functions.invoke('training-orchestrator', {
       body: { brand_profile_id: brandProfile.id }
     });
     if (error) {
       console.error('Start training error:', error);
       throw error;
     }
+    
+    toast.success(`Training started! Processing ${data.total_assets} images across ${data.categories.length} categories.`);
   };
 
   const handleNext = () => {

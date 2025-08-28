@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      asset_analysis: {
+        Row: {
+          analysis_result: Json | null
+          brand_asset_id: string
+          created_at: string
+          flagged_reasons: string[] | null
+          id: string
+          is_flagged: boolean
+          processed_at: string
+          quality_score: number | null
+          training_job_id: string
+        }
+        Insert: {
+          analysis_result?: Json | null
+          brand_asset_id: string
+          created_at?: string
+          flagged_reasons?: string[] | null
+          id?: string
+          is_flagged?: boolean
+          processed_at?: string
+          quality_score?: number | null
+          training_job_id: string
+        }
+        Update: {
+          analysis_result?: Json | null
+          brand_asset_id?: string
+          created_at?: string
+          flagged_reasons?: string[] | null
+          id?: string
+          is_flagged?: boolean
+          processed_at?: string
+          quality_score?: number | null
+          training_job_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_asset_analysis_brand_asset"
+            columns: ["brand_asset_id"]
+            isOneToOne: false
+            referencedRelation: "brand_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_asset_analysis_training_job"
+            columns: ["training_job_id"]
+            isOneToOne: false
+            referencedRelation: "training_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_assets: {
         Row: {
           asset_type: string | null
@@ -141,6 +192,62 @@ export type Database = {
           website_url?: string | null
         }
         Relationships: []
+      }
+      brand_training_profiles: {
+        Row: {
+          brand_profile_id: string
+          categories_analyzed: string[] | null
+          created_at: string
+          id: string
+          is_active: boolean
+          negative_modifiers: string | null
+          prompt_modifiers: string | null
+          quality_metrics: Json | null
+          style_summary: string | null
+          total_images_used: number
+          training_job_id: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          brand_profile_id: string
+          categories_analyzed?: string[] | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          negative_modifiers?: string | null
+          prompt_modifiers?: string | null
+          quality_metrics?: Json | null
+          style_summary?: string | null
+          total_images_used?: number
+          training_job_id: string
+          user_id: string
+          version?: number
+        }
+        Update: {
+          brand_profile_id?: string
+          categories_analyzed?: string[] | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          negative_modifiers?: string | null
+          prompt_modifiers?: string | null
+          quality_metrics?: Json | null
+          style_summary?: string | null
+          total_images_used?: number
+          training_job_id?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_brand_training_profiles_training_job"
+            columns: ["training_job_id"]
+            isOneToOne: false
+            referencedRelation: "training_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -290,6 +397,54 @@ export type Database = {
           id?: string
           name?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      training_jobs: {
+        Row: {
+          brand_profile_id: string
+          categories: string[]
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          flagged_assets: number
+          id: string
+          processed_assets: number
+          started_at: string | null
+          status: string
+          total_assets: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          brand_profile_id: string
+          categories?: string[]
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          flagged_assets?: number
+          id?: string
+          processed_assets?: number
+          started_at?: string | null
+          status?: string
+          total_assets?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          brand_profile_id?: string
+          categories?: string[]
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          flagged_assets?: number
+          id?: string
+          processed_assets?: number
+          started_at?: string | null
+          status?: string
+          total_assets?: number
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
