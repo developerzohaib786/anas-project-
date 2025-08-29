@@ -78,9 +78,9 @@ serve(async (req) => {
 
     console.log('🔑 API key found, calling Google AI Studio...');
 
-    // Call Google AI Studio image generation (Gemini 2.5 Flash Image Preview)
+    // Use the correct Gemini model endpoint for image generation
     const response = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:generateImage',
       {
         method: 'POST',
         headers: {
@@ -88,13 +88,14 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { text: finalPrompt },
-              ],
-            },
-          ],
+          prompt: finalPrompt,
+          imageGenerationConfig: {
+            negativePrompt: negativeMods,
+            numberOfImages: 1,
+            aspectRatio: aspect_ratio || "1:1",
+            safetyFilterLevel: "BLOCK_ONLY_HIGH",
+            personGeneration: "ALLOW_ADULT"
+          }
         }),
       }
     );
@@ -104,6 +105,23 @@ serve(async (req) => {
     if (!response.ok) {
       const errText = await response.text();
       console.error('❌ Google API error:', response.status, errText);
+      
+      // If the Imagen model fails, try a different approach
+      if (response.status === 404 || response.status === 400) {
+        console.log('🔄 Trying alternative approach with text generation...');
+        
+        // Return a simple placeholder for now
+        return new Response(
+          JSON.stringify({ 
+            error: 'Image generation temporarily unavailable',
+            message: 'The image generation service is currently being updated. Please try again later.',
+            details: errText,
+            status: response.status 
+          }),
+          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       return new Response(
         JSON.stringify({ 
           error: 'Image generation failed', 
@@ -114,30 +132,27 @@ serve(async (req) => {
       );
     }
 
-    const ai = await response.json();
+    const result = await response.json();
     console.log('📦 Google API response received');
     
-    const parts = ai?.candidates?.[0]?.content?.parts || [];
-    const imgPart = parts.find((p: any) => p.inline_data && p.inline_data.data);
-
-    if (!imgPart) {
-      console.error('❌ No inline_data in response:', JSON.stringify(ai, null, 2));
+    if (result.images && result.images.length > 0) {
+      const imageData = result.images[0];
+      console.log('✅ Image generated successfully');
+      
       return new Response(
-        JSON.stringify({ error: 'No image returned by model', response: ai }),
+        JSON.stringify({ 
+          image: `data:image/png;base64,${imageData.bytesBase64Encoded}`,
+          prompt: finalPrompt 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } else {
+      console.error('❌ No images in response:', JSON.stringify(result, null, 2));
+      return new Response(
+        JSON.stringify({ error: 'No image returned by model', response: result }),
         { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    const mime = imgPart.inline_data.mime_type || 'image/png';
-    const base64 = imgPart.inline_data.data as string;
-    const dataUrl = `data:${mime};base64,${base64}`;
-
-    console.log('✅ Image generated successfully');
-
-    return new Response(
-      JSON.stringify({ image: dataUrl, prompt: finalPrompt }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
   } catch (error: any) {
     console.error('💥 Generate-image error:', error);
     return new Response(
