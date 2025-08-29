@@ -106,9 +106,9 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
       case 11: // Pool images
         return true; // Optional
       case 12: // Custom location 1
-        return data.customLocation1Name.trim().length > 0 || data.customLocation1Images.length === 0;
+        return true; // Optional - user can skip entirely
       case 13: // Custom location 2
-        return data.customLocation2Name.trim().length > 0 || data.customLocation2Images.length === 0;
+        return true; // Optional - user can skip entirely
       case 14: // Welcome completion
         return true;
       default:
@@ -542,14 +542,15 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
           {currentStep === 12 && (
             <div className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="custom-location-1">Enter name for custom location</Label>
+                <Label htmlFor="custom-location-1">Custom location (optional)</Label>
                 <Input
                   id="custom-location-1"
                   type="text"
-                  placeholder="e.g., Beach, Mountain, Chalet, Kids room"
+                  placeholder="e.g., Beach, Mountain, Chalet, Kids room - or leave blank to skip"
                   value={data.customLocation1Name}
                   onChange={(e) => setData(prev => ({ ...prev, customLocation1Name: e.target.value }))}
                 />
+                <p className="text-xs text-muted-foreground">Leave blank if you don't have additional categories</p>
               </div>
               {data.customLocation1Name && (
                 <ImageUploadSection
@@ -567,14 +568,15 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
           {currentStep === 13 && (
             <div className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="custom-location-2">Enter name for custom location</Label>
+                <Label htmlFor="custom-location-2">Custom location (optional)</Label>
                 <Input
                   id="custom-location-2"
                   type="text"
-                  placeholder="e.g., Private residence suite, Hottub, Fire pits"
+                  placeholder="e.g., Private residence suite, Hottub, Fire pits - or leave blank to skip"
                   value={data.customLocation2Name}
                   onChange={(e) => setData(prev => ({ ...prev, customLocation2Name: e.target.value }))}
                 />
+                <p className="text-xs text-muted-foreground">Leave blank if you don't have additional categories</p>
               </div>
               {data.customLocation2Name && (
                 <ImageUploadSection
