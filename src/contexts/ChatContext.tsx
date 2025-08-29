@@ -83,6 +83,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     setSessions(prev => {
       const filtered = prev.filter(session => session.id !== sessionId);
       console.log('Sessions after filter:', filtered.map(s => s.id));
+      // Always allow deletion, even if it results in empty array
       return filtered;
     });
     if (currentSessionId === sessionId) {

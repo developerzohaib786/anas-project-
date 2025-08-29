@@ -1,5 +1,5 @@
 import { Paintbrush, FolderOpen, Palette, Settings, ChevronRight, User, LogOut, MessageSquare, X } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChat } from "@/contexts/ChatContext";
 import { useBrand } from "@/contexts/BrandContext";
@@ -34,9 +34,10 @@ const projectItems = [
 
 export function AppSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const currentPath = location.pathname;
   const { user, signOut } = useAuth();
-  const { sessions, deleteSession } = useChat();
+  const { sessions, deleteSession, createSession } = useChat();
   const { brandProfile, profile } = useBrand();
   const isActive = (path: string) => currentPath === path;
   const brandName = brandProfile?.brand_name || "Your Brand";
@@ -53,6 +54,17 @@ export function AppSidebar() {
     event.stopPropagation();
     deleteSession(sessionId);
     console.log('Delete function called');
+  };
+
+  const handleNewProject = () => {
+    // If we're already on a chat page, create a new session
+    if (currentPath.startsWith('/chat/')) {
+      const newSessionId = createSession();
+      navigate(`/chat/${newSessionId}`);
+    } else {
+      // Otherwise navigate to the home page
+      navigate('/');
+    }
   };
 
   return (
@@ -93,20 +105,31 @@ export function AppSidebar() {
               {mainNavItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      className={({ isActive }) =>
-                        `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 font-medium text-sm mb-1 md:justify-start justify-center ${
-                          isActive
-                            ? "bg-gray-900 text-white"
-                            : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                        }`
-                      }
-                      title={item.title}
-                    >
-                      <item.icon className="h-4 w-4 md:mr-0 mr-0" />
-                      <span className="md:block hidden">{item.title}</span>
-                    </NavLink>
+                    {item.title === "New Project" ? (
+                      <button
+                        onClick={handleNewProject}
+                        className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 font-medium text-sm mb-1 md:justify-start justify-center text-gray-600 hover:bg-gray-100 hover:text-gray-900 w-full text-left`}
+                        title={item.title}
+                      >
+                        <item.icon className="h-4 w-4 md:mr-0 mr-0" />
+                        <span className="md:block hidden">{item.title}</span>
+                      </button>
+                    ) : (
+                      <NavLink
+                        to={item.url}
+                        className={({ isActive }) =>
+                          `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 font-medium text-sm mb-1 md:justify-start justify-center ${
+                            isActive
+                              ? "bg-gray-900 text-white"
+                              : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                          }`
+                        }
+                        title={item.title}
+                      >
+                        <item.icon className="h-4 w-4 md:mr-0 mr-0" />
+                        <span className="md:block hidden">{item.title}</span>
+                      </NavLink>
+                    )}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -137,10 +160,10 @@ export function AppSidebar() {
                           }
                           title={session.title}
                         >
-                          <span className="truncate flex-1">{session.title}</span>
                           {!session.isCompleted && (
-                            <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0" title="Incomplete" />
+                            <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0 mr-2" title="Incomplete" />
                           )}
+                          <span className="truncate flex-1">{session.title}</span>
                         </NavLink>
                         <button
                           onClick={(e) => handleDeleteSession(session.id, e)}
