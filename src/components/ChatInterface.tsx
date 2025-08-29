@@ -46,6 +46,17 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
             timestamp: new Date(),
           },
         ]);
+      } else {
+        // If session doesn't exist yet, reset to initial state
+        setCurrentSession(sessionId);
+        setMessages([
+          {
+            id: "1",
+            content: "What are we creating today?",
+            role: "assistant",
+            timestamp: new Date(),
+          },
+        ]);
       }
     } else if (!currentSessionId) {
       // Create a new session if none exists
