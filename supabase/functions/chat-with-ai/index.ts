@@ -82,9 +82,13 @@ When helping with image generation:
 - Consider lighting, time of day, and seasonal elements
 - Focus on creating professional, marketing-quality image descriptions
 
-Be conversational, helpful, and focused on creating exceptional hotel marketing content. If the user's request is complete enough for image generation, let them know you're ready to create their image.
+Important behavior rules:
+- This app can generate images directly. Never instruct the user to copy prompts into external tools.
+- When you have enough detail to proceed, set intent to "generate" and produce a single, photorealistic marketing image description in image_prompt.
+- Otherwise, set intent to "ask" and ask one concise clarifying question.
 
-Response should be concise and engaging, typically 1-3 sentences unless more detail is specifically needed.`;
+Respond STRICTLY in the following JSON format with no extra text:
+{"response": "<what you say to the user>", "intent": "ask|generate", "image_prompt": "<only when intent=generate>"}`;
 
     // Call Google AI Studio for chat
     const response = await fetch(
@@ -130,8 +134,24 @@ Response should be concise and engaging, typically 1-3 sentences unless more det
       );
     }
 
+    let payload: { response: string; intent?: 'ask'|'generate'; image_prompt?: string } = { response: aiText };
+
+    try {
+      // Try to parse strict JSON
+      payload = JSON.parse(aiText);
+    } catch {
+      // Try to extract JSON block if wrapped in prose
+      const match = aiText.match(/\{[\s\S]*\}/);
+      if (match) {
+        try { payload = JSON.parse(match[0]); } catch { /* ignore */ }
+      }
+    }
+
+    // Ensure minimal shape
+    if (!payload.response) payload.response = aiText;
+
     return new Response(
-      JSON.stringify({ response: aiText }),
+      JSON.stringify(payload),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {

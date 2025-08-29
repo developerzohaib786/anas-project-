@@ -137,14 +137,20 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
 
       setMessages((prev) => [...prev, assistantMessage]);
 
-      // Check if the AI response indicates it's ready to generate an image
-      const responseText = data.response.toLowerCase();
-      if (responseText.includes('generating') || responseText.includes('create your image') || responseText.includes('ready to create')) {
-        // Mark session as completed when generating image
-        if (currentSessionId) {
-          updateSession(currentSessionId, { isCompleted: true });
-        }
-        // Trigger image generation
+      const responseText = String(data.response || '').toLowerCase();
+      const intent = data.intent as string | undefined;
+      const imagePrompt = data.image_prompt as string | undefined;
+
+      if (intent === 'generate') {
+        if (currentSessionId) updateSession(currentSessionId, { isCompleted: true });
+        onGenerateImage(imagePrompt || currentInput);
+      } else if (
+        responseText.includes('generating') ||
+        responseText.includes('generate the image') ||
+        responseText.includes('create your image') ||
+        responseText.includes('ready to create')
+      ) {
+        if (currentSessionId) updateSession(currentSessionId, { isCompleted: true });
         onGenerateImage(currentInput);
       }
 
