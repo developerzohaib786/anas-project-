@@ -212,8 +212,8 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
     <div className="flex flex-col h-screen relative">
       {/* Messages */}
       <ScrollArea className="flex-1 minimal-scroll" ref={scrollAreaRef}>
-        <div className="max-w-4xl mx-auto px-6 py-12 pb-32">
-          <div className="space-y-8">
+        <div className="w-full px-4 py-8 pb-32 md:px-6 md:py-12">
+          <div className="max-w-3xl mx-auto space-y-6">
             {messages.map((message, index) => (
               <div
                 key={message.id}
@@ -223,16 +223,20 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
                   animationFillMode: 'both'
                 }}
               >
-                <div className={`max-w-[85%] group ${message.role === "user" ? "text-right" : "text-left"}`}>
-                  <div className={`mb-2 ${message.role === "user" ? "inline-block bg-muted px-4 py-2.5 rounded-full" : ""}`}>
-                    <p className="text-[15px] leading-relaxed text-foreground font-normal">
+                <div className={`max-w-[80%] group ${message.role === "user" ? "text-right" : "text-left"}`}>
+                  <div className={`${message.role === "user" ? "inline-block bg-muted px-4 py-3 rounded-2xl" : "mb-2"}`}>
+                    <p className={`text-[15px] leading-relaxed font-normal ${
+                      message.role === "user" 
+                        ? "text-muted-foreground" 
+                        : "text-foreground"
+                    }`}>
                       {message.content}
                     </p>
                   </div>
                   
                   {/* Action buttons for AI messages */}
                   {message.role === "assistant" && (
-                    <div className="flex items-center gap-2 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-1 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
                         <Copy className="h-4 w-4 text-muted-foreground" />
                       </button>
@@ -264,7 +268,8 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
 
       {/* Fixed Input Area at bottom */}
       <div className="absolute bottom-0 left-0 right-0 border-t border-[hsl(var(--border))] bg-[hsl(var(--background))]">
-        <div className="max-w-4xl mx-auto px-6 py-6">
+        <div className="w-full px-4 py-6 md:px-6">
+          <div className="max-w-3xl mx-auto">
           {/* Example Prompts - Fixed height container to prevent layout shift */}
           <div className="mb-6 transition-all duration-300" style={{ height: messages.length <= 1 && !inputValue.trim() ? 'auto' : '0', overflow: 'hidden' }}>
             {messages.length <= 1 && !inputValue.trim() && (
@@ -306,6 +311,7 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
             >
               <ArrowUp className="h-5 w-5 text-foreground" strokeWidth={3} />
             </Button>
+          </div>
           </div>
         </div>
       </div>
