@@ -78,9 +78,9 @@ serve(async (req) => {
 
     console.log('🔑 API key found, calling Google AI Studio...');
 
-    // Use the correct Gemini model endpoint for image generation
+    // Use Gemini 2.5 Flash Image Preview via generateContent (AI Studio)
     const response = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:generateImage',
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent',
       {
         method: 'POST',
         headers: {
@@ -88,14 +88,13 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          prompt: finalPrompt,
-          imageGenerationConfig: {
-            negativePrompt: negativeMods,
-            numberOfImages: 1,
-            aspectRatio: aspect_ratio || "1:1",
-            safetyFilterLevel: "BLOCK_ONLY_HIGH",
-            personGeneration: "ALLOW_ADULT"
-          }
+          contents: [
+            {
+              parts: [
+                { text: finalPrompt }
+              ]
+            }
+          ]
         }),
       }
     );
@@ -132,27 +131,36 @@ serve(async (req) => {
       );
     }
 
-    const result = await response.json();
+    const ai = await response.json();
     console.log('📦 Google API response received');
     
-    if (result.images && result.images.length > 0) {
-      const imageData = result.images[0];
-      console.log('✅ Image generated successfully');
-      
+    const parts = ai?.candidates?.[0]?.content?.parts || [];
+    // Support both snake_case and camelCase variants just in case
+    const imgPart = parts.find((p: any) =>
+      (p.inline_data && p.inline_data.data) || (p.inlineData && p.inlineData.data)
+    );
+
+    if (!imgPart) {
+      console.error('❌ No inline image data in response:', JSON.stringify(ai, null, 2));
       return new Response(
-        JSON.stringify({ 
-          image: `data:image/png;base64,${imageData.bytesBase64Encoded}`,
-          prompt: finalPrompt 
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    } else {
-      console.error('❌ No images in response:', JSON.stringify(result, null, 2));
-      return new Response(
-        JSON.stringify({ error: 'No image returned by model', response: result }),
+        JSON.stringify({ error: 'No image returned by model', response: ai }),
         { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const mime =
+      imgPart.inline_data?.mime_type ||
+      imgPart.inlineData?.mimeType ||
+      'image/png';
+    const base64 =
+      imgPart.inline_data?.data ||
+      imgPart.inlineData?.data;
+
+    console.log('✅ Image generated successfully');
+    return new Response(
+      JSON.stringify({ image: `data:${mime};base64,${base64}`, prompt: finalPrompt }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   } catch (error: any) {
     console.error('💥 Generate-image error:', error);
     return new Response(
