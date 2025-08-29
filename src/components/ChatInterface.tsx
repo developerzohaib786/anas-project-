@@ -128,30 +128,62 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
         throw error;
       }
 
+      // Parse the AI response properly
+      let aiResponse = data.response;
+      let intent = data.intent;
+      let imagePrompt = data.image_prompt;
+
+      // If the response is still JSON string, parse it
+      if (typeof aiResponse === 'string' && aiResponse.includes('"intent"')) {
+        try {
+          const parsed = JSON.parse(aiResponse);
+          aiResponse = parsed.response;
+          intent = parsed.intent;
+          imagePrompt = parsed.image_prompt;
+        } catch (e) {
+          // If parsing fails, extract just the response part
+          const match = aiResponse.match(/"response":\s*"([^"]+)"/);
+          if (match) {
+            aiResponse = match[1];
+          }
+        }
+      }
+
       const assistantMessage: Message = {
         id: Date.now().toString(),
-        content: data.response,
+        content: aiResponse || "Let me create that image for you!",
         role: "assistant",
         timestamp: new Date(),
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
 
-      const responseText = String(data.response || '').toLowerCase();
-      const intent = data.intent as string | undefined;
-      const imagePrompt = data.image_prompt as string | undefined;
+      // Check if we should generate an image
+      if (intent === 'generate' || 
+          (typeof aiResponse === 'string' && (
+            aiResponse.toLowerCase().includes('generating') ||
+            aiResponse.toLowerCase().includes('create your image') ||
+            aiResponse.toLowerCase().includes("let's make") ||
+            aiResponse.toLowerCase().includes('ready to create')
+          ))) {
+        
+        // Add a generating message
+        const generatingMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: "🎨 Generating your image now...",
+          role: "assistant",
+          timestamp: new Date(),
+        };
 
-      if (intent === 'generate') {
-        if (currentSessionId) updateSession(currentSessionId, { isCompleted: true });
+        setMessages((prev) => [...prev, generatingMessage]);
+
+        // Mark session as completed when generating image
+        if (currentSessionId) {
+          updateSession(currentSessionId, { isCompleted: true });
+        }
+        
+        // Trigger image generation
         onGenerateImage(imagePrompt || currentInput);
-      } else if (
-        responseText.includes('generating') ||
-        responseText.includes('generate the image') ||
-        responseText.includes('create your image') ||
-        responseText.includes('ready to create')
-      ) {
-        if (currentSessionId) updateSession(currentSessionId, { isCompleted: true });
-        onGenerateImage(currentInput);
       }
 
     } catch (error) {
