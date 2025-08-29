@@ -107,42 +107,60 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
       timestamp: new Date(),
     };
 
-    // Add user message
-    setMessages((prev) => [...prev, userMessage]);
+    // Add user message immediately
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
     
-    // Simulate AI response with follow-up questions
-    setTimeout(() => {
-      let assistantResponse = "Great! Let me help you create that. ";
-      
-      // Simple logic to ask follow-up questions based on input
-      const input = inputValue.toLowerCase();
-      
-      if (!input.includes('hotel') && !input.includes('resort') && !input.includes('room') && !input.includes('pool')) {
-        assistantResponse += "What type of hotel or resort space would you like to showcase? (e.g., luxury suite, pool area, dining room, spa)";
-      } else if (!input.includes('style') && !input.includes('mood') && !input.includes('luxury') && !input.includes('modern')) {
-        assistantResponse += "What style or mood are you going for? (e.g., luxury, modern, cozy, romantic, family-friendly)";
-      } else if (!input.includes('guest') && !input.includes('people') && !input.includes('family') && !input.includes('couple')) {
-        assistantResponse += "Should I include people in the scene? If so, what type of guests? (e.g., couples, families, business travelers)";
-      } else {
-        assistantResponse = "Perfect! I have enough information to create your image. Generating your hotel marketing photo now...";
-        // Mark session as completed when generating image
-        if (currentSessionId) {
-          updateSession(currentSessionId, { isCompleted: true });
-        }
-        // Trigger image generation
-        onGenerateImage(inputValue);
+    const currentInput = inputValue;
+    setInputValue("");
+
+    try {
+      // Call the real AI chat API
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data, error } = await supabase.functions.invoke("chat-with-ai", {
+        body: { 
+          prompt: currentInput,
+          messages: newMessages.slice(1) // Exclude the initial welcome message
+        },
+      });
+
+      if (error) {
+        throw error;
       }
 
       const assistantMessage: Message = {
         id: Date.now().toString(),
-        content: assistantResponse,
+        content: data.response,
         role: "assistant",
         timestamp: new Date(),
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
-    }, 1000);
-    setInputValue("");
+
+      // Check if the AI response indicates it's ready to generate an image
+      const responseText = data.response.toLowerCase();
+      if (responseText.includes('generating') || responseText.includes('create your image') || responseText.includes('ready to create')) {
+        // Mark session as completed when generating image
+        if (currentSessionId) {
+          updateSession(currentSessionId, { isCompleted: true });
+        }
+        // Trigger image generation
+        onGenerateImage(currentInput);
+      }
+
+    } catch (error) {
+      console.error('AI chat error:', error);
+      
+      // Fallback error message
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        content: "I'm sorry, I'm having trouble connecting right now. Please try again in a moment.",
+        role: "assistant",
+        timestamp: new Date(),
+      };
+
+      setMessages((prev) => [...prev, errorMessage]);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
