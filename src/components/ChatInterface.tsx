@@ -67,7 +67,11 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
   const generateSessionTitle = (msgs: Message[]): string => {
     const userMessage = msgs.find(m => m.role === "user");
     if (userMessage) {
-      return userMessage.content.slice(0, 30) + (userMessage.content.length > 30 ? "..." : "");
+      const words = userMessage.content.trim().split(' ');
+      if (words.length <= 3) {
+        return userMessage.content;
+      }
+      return words.slice(0, 3).join(' ') + '...';
     }
     return `Chat ${new Date().toLocaleDateString()}`;
   };
@@ -224,10 +228,10 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
                 }}
               >
                 <div className={`max-w-[80%] group ${message.role === "user" ? "text-right" : "text-left"}`}>
-                  <div className={`${message.role === "user" ? "inline-block bg-muted px-4 py-3 rounded-2xl" : "mb-2"}`}>
+                  <div className={`${message.role === "user" ? "inline-block bg-muted px-4 py-2.5 rounded-full" : "mb-2"}`}>
                     <p className={`text-[15px] leading-relaxed font-normal ${
                       message.role === "user" 
-                        ? "text-muted-foreground" 
+                        ? "text-foreground" 
                         : "text-foreground"
                     }`}>
                       {message.content}
