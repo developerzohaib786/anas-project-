@@ -209,19 +209,20 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
 
   const handleComplete = async () => {
     if (currentStep === 15) {
-      setLoading(true);
-      try {
-        await uploadAllTrainingImages();
-        await startTraining();
-        toast.success("Training started. Your assistant will be ready soon.");
-      } catch (error) {
-        console.error('Finalize onboarding error:', error);
-        toast.warning("Training couldn't be started, but you can try again from the Brand Kit page.");
-      } finally {
-        setLoading(false);
-        // Always proceed to dashboard regardless of training success
-        onComplete();
-      }
+      // Move to dashboard immediately, let training run in background
+      onComplete();
+      
+      // Run training in background without blocking UI
+      setTimeout(async () => {
+        try {
+          await uploadAllTrainingImages();
+          await startTraining();
+          toast.success("Training completed! Your assistant is now ready.");
+        } catch (error) {
+          console.error('Background training error:', error);
+          toast.warning("Training couldn't be completed, but you can restart it from the Brand Kit page.");
+        }
+      }, 100);
       return;
     }
 

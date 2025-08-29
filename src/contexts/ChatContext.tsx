@@ -17,6 +17,7 @@ interface ChatContextType {
   deleteSession: (sessionId: string) => void;
   setCurrentSession: (sessionId: string | null) => void;
   getCurrentSession: () => ChatSession | null;
+  clearAllSessions: () => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -31,13 +32,18 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        setSessions(parsed.map((session: any) => ({
-          ...session,
-          createdAt: new Date(session.createdAt),
-          updatedAt: new Date(session.updatedAt)
-        })));
+        // Only load sessions if the array is valid and not empty
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setSessions(parsed.map((session: any) => ({
+            ...session,
+            createdAt: new Date(session.createdAt),
+            updatedAt: new Date(session.updatedAt)
+          })));
+        }
       } catch (error) {
         console.error('Error loading chat sessions:', error);
+        // Clear corrupted data
+        localStorage.removeItem('chat-sessions');
       }
     }
   }, []);
@@ -93,6 +99,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     return sessions.find(session => session.id === currentSessionId) || null;
   };
 
+  const clearAllSessions = () => {
+    setSessions([]);
+    setCurrentSessionId(null);
+    localStorage.removeItem('chat-sessions');
+  };
+
   return (
     <ChatContext.Provider value={{
       sessions,
@@ -101,7 +113,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       updateSession,
       deleteSession,
       setCurrentSession,
-      getCurrentSession
+      getCurrentSession,
+      clearAllSessions
     }}>
       {children}
     </ChatContext.Provider>

@@ -3,6 +3,7 @@ import { Navigate } from "react-router-dom";
 import { ReactNode, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ComprehensiveOnboarding } from "@/components/onboarding/ComprehensiveOnboarding";
+import { useChat } from "@/contexts/ChatContext";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -10,6 +11,7 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { user, loading } = useAuth();
+  const { clearAllSessions } = useChat();
   const [profileLoading, setProfileLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingCheckComplete, setOnboardingCheckComplete] = useState(false);
@@ -45,9 +47,15 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         // If no profile exists, show onboarding
         if (!profile) {
           console.log('ProtectedRoute: No profile found, showing onboarding');
+          // Clear any existing chat sessions for new user
+          clearAllSessions();
           setShowOnboarding(true);
         } else {
           console.log('ProtectedRoute: Profile found, onboarding_completed:', profile.onboarding_completed);
+          // If onboarding not completed, clear chat sessions
+          if (!profile.onboarding_completed) {
+            clearAllSessions();
+          }
           setShowOnboarding(!profile.onboarding_completed);
         }
       } catch (error) {
