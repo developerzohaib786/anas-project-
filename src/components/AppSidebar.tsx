@@ -126,23 +126,22 @@ export function AppSidebar() {
                   <SidebarMenuItem key={session.id}>
                     <SidebarMenuButton asChild>
                       <div className="group relative">
-                        <NavLink
-                          to={`/chat/${session.id}`}
-                          className={({ isActive }) =>
-                            `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 font-medium text-sm mb-1 relative ${
-                              isActive
-                                ? "bg-gray-100 text-gray-900"
-                                : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                            }`
-                          }
-                          title={session.title}
-                        >
-                          <MessageSquare className="h-4 w-4 flex-shrink-0" />
-                          <span className="truncate flex-1">{session.title}</span>
-                          {!session.isCompleted && (
-                            <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0" title="Incomplete" />
-                          )}
-                        </NavLink>
+                         <NavLink
+                           to={`/chat/${session.id}`}
+                           className={({ isActive }) =>
+                             `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 font-medium text-sm mb-1 relative pr-8 ${
+                               isActive
+                                 ? "bg-gray-100 text-gray-900"
+                                 : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                             }`
+                           }
+                           title={session.title}
+                         >
+                           <span className="truncate flex-1">{session.title}</span>
+                           {!session.isCompleted && (
+                             <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0" title="Incomplete" />
+                           )}
+                         </NavLink>
                         <button
                           onClick={(e) => handleDeleteSession(session.id, e)}
                           className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 rounded hover:bg-red-100 text-red-500 hover:text-red-700"
