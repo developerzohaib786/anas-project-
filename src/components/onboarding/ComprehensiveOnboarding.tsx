@@ -40,6 +40,9 @@ interface OnboardingData {
   restaurantImages: File[];
   roomImages: File[];
   poolImages: File[];
+  
+  // Custom location choice
+  wantsCustomLocations: boolean | null;
   customLocation1Name: string;
   customLocation1Images: File[];
   customLocation2Name: string;
@@ -66,6 +69,7 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
     restaurantImages: [],
     roomImages: [],
     poolImages: [],
+    wantsCustomLocations: null,
     customLocation1Name: "",
     customLocation1Images: [],
     customLocation2Name: "",
@@ -105,11 +109,13 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
         return true; // Optional
       case 11: // Pool images
         return true; // Optional
-      case 12: // Custom location 1
+      case 12: // Custom location choice
+        return data.wantsCustomLocations !== null;
+      case 13: // Custom location 1
         return true; // Optional - user can skip entirely
-      case 13: // Custom location 2
+      case 14: // Custom location 2
         return true; // Optional - user can skip entirely
-      case 14: // Welcome completion
+      case 15: // Welcome completion
         return true;
       default:
         return false;
@@ -185,8 +191,13 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
   };
 
   const handleNext = () => {
-    if (canProceedToNext() && currentStep < 14) {
-      setCurrentStep(currentStep + 1);
+    if (canProceedToNext()) {
+      // Skip custom location steps if user doesn't want them
+      if (currentStep === 12 && data.wantsCustomLocations === false) {
+        setCurrentStep(15); // Skip to completion
+      } else if (currentStep < 15) {
+        setCurrentStep(currentStep + 1);
+      }
     }
   };
 
@@ -197,7 +208,7 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
   };
 
   const handleComplete = async () => {
-    if (currentStep === 14) {
+    if (currentStep === 15) {
       setLoading(true);
       try {
         await uploadAllTrainingImages();
@@ -273,7 +284,7 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
     }
   };
 
-  const progressPercentage = (currentStep / 14) * 100;
+  const progressPercentage = (currentStep / 15) * 100;
 
   return (
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
@@ -538,8 +549,41 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
             </div>
           )}
 
-          {/* Step 12: Custom Location 1 */}
+          {/* Step 12: Custom Location Choice */}
           {currentStep === 12 && (
+            <div className="space-y-6 text-center">
+              <div>
+                <h3 className="text-lg font-medium mb-2">Custom Locations</h3>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Do you want to add any custom location categories beyond the standard hotel areas?
+                </p>
+                <div className="flex gap-4 justify-center">
+                  <Button
+                    variant={data.wantsCustomLocations === true ? "default" : "outline"}
+                    onClick={() => setData(prev => ({ ...prev, wantsCustomLocations: true }))}
+                    className="flex-1 max-w-32"
+                  >
+                    Yes
+                  </Button>
+                  <Button
+                    variant={data.wantsCustomLocations === false ? "default" : "outline"}
+                    onClick={() => setData(prev => ({ ...prev, wantsCustomLocations: false }))}
+                    className="flex-1 max-w-32"
+                  >
+                    No
+                  </Button>
+                </div>
+                {data.wantsCustomLocations === false && (
+                  <p className="text-xs text-muted-foreground mt-4">
+                    You can always add custom categories later from your Brand Kit page.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Step 13: Custom Location 1 */}
+          {currentStep === 13 && (
             <div className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="custom-location-1">Custom location (optional)</Label>
@@ -564,11 +608,11 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
             </div>
           )}
 
-          {/* Step 13: Custom Location 2 */}
-          {currentStep === 13 && (
+          {/* Step 14: Custom Location 2 */}
+          {currentStep === 14 && (
             <div className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="custom-location-2">Custom location (optional)</Label>
+                <Label htmlFor="custom-location-2">Second custom location (optional)</Label>
                 <Input
                   id="custom-location-2"
                   type="text"
@@ -590,8 +634,8 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
             </div>
           )}
 
-          {/* Step 14: Welcome to Dashboard */}
-          {currentStep === 14 && (
+          {/* Step 15: Welcome to Dashboard */}
+          {currentStep === 15 && (
             <div className="space-y-6 text-center">
               <div>
                 <h3 className="text-xl font-semibold mb-3">Welcome to your dashboard</h3>
@@ -632,7 +676,7 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
                 {loading ? "Setting up..." : "Start Training"}
                 <ArrowRight className="w-4 h-4" />
               </Button>
-            ) : currentStep < 14 ? (
+            ) : currentStep < 15 ? (
               <Button
                 onClick={handleNext}
                 disabled={!canProceedToNext()}
