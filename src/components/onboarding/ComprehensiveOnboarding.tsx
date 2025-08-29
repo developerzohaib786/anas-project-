@@ -151,7 +151,7 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
           content_type: file.type,
           file_size: file.size,
           asset_type: 'photo',
-          tags: [safeCategory, displayName, 'training'],
+          tags: [safeCategory, displayName],
           user_id: user.id,
           brand_profile_id: brandProfile.id
         });
