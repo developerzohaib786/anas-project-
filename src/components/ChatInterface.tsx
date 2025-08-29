@@ -11,6 +11,7 @@ interface Message {
   content: string;
   role: "user" | "assistant";
   timestamp: Date;
+  isGenerating?: boolean; // Add flag for shimmer effect
 }
 
 interface ChatInterfaceProps {
@@ -174,9 +175,10 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
         // Add a generating message with shimmer effect
         const generatingMessage: Message = {
           id: (Date.now() + 1).toString(),
-          content: `<span class="shimmer-text">🎨 Generating your image now...</span>`,
+          content: "🎨 Generating your image now...",
           role: "assistant",
           timestamp: new Date(),
+          isGenerating: true, // Add flag for shimmer effect
         };
 
         setMessages((prev) => [...prev, generatingMessage]);
@@ -229,10 +231,9 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
               >
                 <div className={`max-w-[80%] group`}>
                   <div className={`${message.role === "user" ? "inline-block bg-muted px-4 py-2.5 rounded-2xl" : "mb-2 text-left"}`}>
-                    <div 
-                      className="text-[15px] leading-relaxed font-normal text-foreground"
-                      dangerouslySetInnerHTML={{ __html: message.content }}
-                    />
+                    <div className={`text-[15px] leading-relaxed font-normal text-foreground ${message.isGenerating ? 'shimmer-text' : ''}`}>
+                      {message.content}
+                    </div>
                   </div>
                   
                   {/* Action buttons for AI messages */}

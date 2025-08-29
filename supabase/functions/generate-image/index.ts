@@ -12,10 +12,14 @@ serve(async (req) => {
   }
 
   try {
+    console.log('🎯 Generate image request received');
     const { prompt, aspect_ratio } = await req.json();
+    console.log('📝 Prompt:', prompt);
+    console.log('📐 Aspect ratio:', aspect_ratio);
 
     if (!prompt || typeof prompt !== 'string') {
-      return new Response(JSON.stringify({ error: 'Missing prompt' }), {
+      console.error('❌ Invalid prompt:', prompt);
+      return new Response(JSON.stringify({ error: 'Missing or invalid prompt' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -36,28 +40,43 @@ serve(async (req) => {
     let positiveMods = '';
     let negativeMods = '';
 
-    const { data: profile } = await supabase
-      .from('brand_training_profiles')
-      .select('style_summary, prompt_modifiers, negative_modifiers')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    try {
+      const { data: profile } = await supabase
+        .from('brand_training_profiles')
+        .select('style_summary, prompt_modifiers, negative_modifiers')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-    if (profile) {
-      styleSummary = profile.style_summary || '';
-      positiveMods = profile.prompt_modifiers || '';
-      negativeMods = profile.negative_modifiers || '';
+      if (profile) {
+        styleSummary = profile.style_summary || '';
+        positiveMods = profile.prompt_modifiers || '';
+        negativeMods = profile.negative_modifiers || '';
+        console.log('✅ Loaded brand profile');
+      } else {
+        console.log('ℹ️ No active brand profile found');
+      }
+    } catch (profileError) {
+      console.warn('⚠️ Could not load brand profile:', profileError);
     }
 
     const arHint = aspect_ratio ? `\nAspect ratio: ${aspect_ratio}.` : '';
 
     const finalPrompt = `Create a high-end hotel marketing photograph that fits Nino's premium aesthetic.\n\nUser request:\n${prompt}\n\nHotel style summary:\n${styleSummary}\n\nPositive style modifiers to include:\n${positiveMods}\n\nNegative style modifiers to avoid (do NOT include):\n${negativeMods}${arHint}\n\nPhotorealistic, professional lighting, correct perspective, cohesive color palette, detailed textures.`;
 
+    console.log('🎨 Final prompt prepared');
+    
     const apiKey = Deno.env.get('GOOGLE_STUDIO_API_KEY');
     if (!apiKey) {
-      throw new Error('Missing GOOGLE_STUDIO_API_KEY secret');
+      console.error('❌ Missing GOOGLE_STUDIO_API_KEY');
+      return new Response(JSON.stringify({ error: 'Missing GOOGLE_STUDIO_API_KEY secret' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
+
+    console.log('🔑 API key found, calling Google AI Studio...');
 
     // Call Google AI Studio image generation (Gemini 2.5 Flash Image Preview)
     const response = await fetch(
@@ -80,23 +99,31 @@ serve(async (req) => {
       }
     );
 
+    console.log('📡 Google API response status:', response.status);
+
     if (!response.ok) {
       const errText = await response.text();
-      console.error('Google API error:', response.status, errText);
+      console.error('❌ Google API error:', response.status, errText);
       return new Response(
-        JSON.stringify({ error: 'Image generation failed', details: errText }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          error: 'Image generation failed', 
+          details: errText,
+          status: response.status 
+        }),
+        { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     const ai = await response.json();
+    console.log('📦 Google API response received');
+    
     const parts = ai?.candidates?.[0]?.content?.parts || [];
     const imgPart = parts.find((p: any) => p.inline_data && p.inline_data.data);
 
     if (!imgPart) {
-      console.error('No inline_data in response:', JSON.stringify(ai));
+      console.error('❌ No inline_data in response:', JSON.stringify(ai, null, 2));
       return new Response(
-        JSON.stringify({ error: 'No image returned by model' }),
+        JSON.stringify({ error: 'No image returned by model', response: ai }),
         { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -105,14 +132,20 @@ serve(async (req) => {
     const base64 = imgPart.inline_data.data as string;
     const dataUrl = `data:${mime};base64,${base64}`;
 
+    console.log('✅ Image generated successfully');
+
     return new Response(
       JSON.stringify({ image: dataUrl, prompt: finalPrompt }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {
-    console.error('generate-image error:', error);
+    console.error('💥 Generate-image error:', error);
     return new Response(
-      JSON.stringify({ error: error?.message || 'Unexpected error' }),
+      JSON.stringify({ 
+        error: error?.message || 'Unexpected error',
+        stack: error?.stack,
+        name: error?.name 
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
