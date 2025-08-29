@@ -12,6 +12,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { user, loading } = useAuth();
   const [profileLoading, setProfileLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingCheckComplete, setOnboardingCheckComplete] = useState(false);
 
   useEffect(() => {
     const checkOnboardingStatus = async () => {
@@ -56,6 +57,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       } finally {
         console.log('ProtectedRoute: Setting profileLoading to false');
         setProfileLoading(false);
+        setOnboardingCheckComplete(true);
       }
     };
 
@@ -80,6 +82,15 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       <ComprehensiveOnboarding 
         onComplete={() => setShowOnboarding(false)} 
       />
+    );
+  }
+
+  // Don't show children until we've completed the onboarding check
+  if (!onboardingCheckComplete) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
     );
   }
 
