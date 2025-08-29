@@ -115,6 +115,9 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
 
+    console.log('Sending message:', inputValue);
+    console.log('Current session ID:', currentSessionId);
+
     const userMessage: Message = {
       id: Date.now().toString(),
       content: inputValue,
@@ -125,11 +128,13 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
     // Add user message immediately
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
+    console.log('Messages after adding user message:', newMessages);
     
     const currentInput = inputValue;
     setInputValue("");
 
     try {
+      console.log('Calling chat-with-ai function...');
       // Call the real AI chat API
       const { supabase } = await import("@/integrations/supabase/client");
       const { data, error } = await supabase.functions.invoke("chat-with-ai", {
@@ -139,7 +144,11 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
         },
       });
 
+      console.log('AI response:', data);
+      console.log('AI error:', error);
+
       if (error) {
+        console.error('Supabase function error:', error);
         throw error;
       }
 
@@ -202,7 +211,8 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
       }
 
     } catch (error) {
-      console.error('AI chat error:', error);
+      console.error('Full AI chat error:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
       
       // Fallback error message
       const errorMessage: Message = {
