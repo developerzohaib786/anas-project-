@@ -9,19 +9,34 @@ const Chat = () => {
   const [generatedImage, setGeneratedImage] = useState<string | undefined>();
 
   const handleGenerateImage = async (prompt: string) => {
+    console.log("🎨 Starting image generation for prompt:", prompt);
     setCurrentPrompt(prompt);
     setIsGenerating(true);
+    setGeneratedImage(undefined); // Clear previous image
 
     try {
       const { supabase } = await import("@/integrations/supabase/client");
+      console.log("📡 Calling generate-image function...");
+      
       const { data, error } = await supabase.functions.invoke("generate-image", {
         body: { prompt },
       });
-      if (error) throw error;
-      // Pass the image down via state
-      setGeneratedImage(data?.image);
+      
+      console.log("📡 Generate-image response:", { data, error });
+      
+      if (error) {
+        console.error("❌ Generate-image error:", error);
+        throw error;
+      }
+      
+      if (data?.image) {
+        console.log("✅ Image generated successfully");
+        setGeneratedImage(data.image);
+      } else {
+        console.warn("⚠️ No image in response data:", data);
+      }
     } catch (err) {
-      console.error("Image generation failed:", err);
+      console.error("💥 Image generation failed:", err);
     } finally {
       setIsGenerating(false);
     }

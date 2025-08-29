@@ -171,10 +171,10 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
             aiResponse.toLowerCase().includes('ready to create')
           ))) {
         
-        // Add a generating message
+        // Add a generating message with shimmer effect
         const generatingMessage: Message = {
           id: (Date.now() + 1).toString(),
-          content: "🎨 Generating your image now...",
+          content: `<span class="shimmer-text">🎨 Generating your image now...</span>`,
           role: "assistant",
           timestamp: new Date(),
         };
@@ -229,9 +229,10 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
               >
                 <div className={`max-w-[80%] group`}>
                   <div className={`${message.role === "user" ? "inline-block bg-muted px-4 py-2.5 rounded-2xl" : "mb-2 text-left"}`}>
-                    <p className="text-[15px] leading-relaxed font-normal text-foreground">
-                      {message.content}
-                    </p>
+                    <div 
+                      className="text-[15px] leading-relaxed font-normal text-foreground"
+                      dangerouslySetInnerHTML={{ __html: message.content }}
+                    />
                   </div>
                   
                   {/* Action buttons for AI messages */}

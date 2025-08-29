@@ -215,6 +215,30 @@
     }
   }
 
+  /* Shimmer Effect for Loading Text */
+  .shimmer-text {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--foreground)) 40%,
+      hsl(var(--primary)) 50%,
+      hsl(var(--foreground)) 60%
+    );
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 2s ease-in-out infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
   /* Mobile touch improvements */
   @media (max-width: 768px) {
     .apple-button {
