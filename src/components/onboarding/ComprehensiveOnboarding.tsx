@@ -203,12 +203,13 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
         await uploadAllTrainingImages();
         await startTraining();
         toast.success("Training started. Your assistant will be ready soon.");
-        onComplete();
       } catch (error) {
         console.error('Finalize onboarding error:', error);
-        toast.error("Failed to start training. Please try again.");
+        toast.warning("Training couldn't be started, but you can try again from the Brand Kit page.");
       } finally {
         setLoading(false);
+        // Always proceed to dashboard regardless of training success
+        onComplete();
       }
       return;
     }
@@ -219,41 +220,54 @@ export const ComprehensiveOnboarding = ({ onComplete }: ComprehensiveOnboardingP
       
       // Upload avatar if provided
       if (data.avatarFile) {
-        avatarUrl = await uploadAvatar(data.avatarFile);
-        if (!avatarUrl) {
-          toast.error("Failed to upload avatar");
-          setLoading(false);
-          return;
+        try {
+          avatarUrl = await uploadAvatar(data.avatarFile);
+        } catch (error) {
+          console.error('Avatar upload error:', error);
+          toast.warning("Avatar upload failed, but continuing with onboarding.");
         }
       }
 
       // Update user profile
-      await updateProfile({
-        avatar_url: avatarUrl,
-        onboarding_completed: true,
-        onboarding_step: 14
-      });
+      try {
+        await updateProfile({
+          avatar_url: avatarUrl,
+          onboarding_completed: true,
+          onboarding_step: 14
+        });
+      } catch (error) {
+        console.error('Profile update error:', error);
+        toast.warning("Profile update failed, but continuing with onboarding.");
+      }
 
-      // Create brand profile
-      await createBrandProfile({
-        brand_name: data.brandName.trim(),
-        location: data.location.trim(),
-        description: data.description.trim(),
-        industry: 'Hospitality & Travel',
-        brand_tone: data.brandTone.trim(),
-        brand_voice: data.additionalBrandNotes.trim(),
-        content_dos: data.contentDos.trim(),
-        content_donts: data.contentDonts.trim()
-      });
-
-      // TODO: Upload training images to storage and save metadata
-      // This would involve uploading each image category to different folders
-      // and saving the metadata for AI training
+      // Create brand profile - handle duplicate gracefully
+      try {
+        await createBrandProfile({
+          brand_name: data.brandName.trim(),
+          location: data.location.trim(),
+          description: data.description.trim(),
+          industry: 'Hospitality & Travel',
+          brand_tone: data.brandTone.trim(),
+          brand_voice: data.additionalBrandNotes.trim(),
+          content_dos: data.contentDos.trim(),
+          content_donts: data.contentDonts.trim()
+        });
+      } catch (error) {
+        console.error('Brand profile creation error:', error);
+        // If it's a duplicate key error, that's fine - user already has a profile
+        if (error?.code === '23505') {
+          toast.success("Brand profile already exists. Moving to training setup.");
+        } else {
+          toast.warning("Brand profile creation failed, but continuing with onboarding.");
+        }
+      }
 
       setCurrentStep(5); // Move to training flow
     } catch (error) {
       console.error('Onboarding error:', error);
-      toast.error("An error occurred during setup");
+      toast.warning("Some setup steps failed, but you can complete them later from your dashboard.");
+      // Still proceed to training flow even if there were errors
+      setCurrentStep(5);
     } finally {
       setLoading(false);
     }
