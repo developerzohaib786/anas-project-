@@ -16,6 +16,11 @@ serve(async (req) => {
     const { prompt, aspect_ratio, images } = await req.json();
     console.log('📝 Prompt:', prompt);
     console.log('📐 Aspect ratio:', aspect_ratio);
+    console.log('🖼️ Images received:', images ? images.length : 0, 'images');
+    if (images && images.length > 0) {
+      console.log('📄 First image data type:', typeof images[0].data);
+      console.log('📄 First image data preview:', images[0].data?.substring(0, 50) + '...');
+    }
 
     if (!prompt || typeof prompt !== 'string') {
       console.error('❌ Invalid prompt:', prompt);
@@ -77,7 +82,7 @@ serve(async (req) => {
       // Convert images to the format expected by Gemini
       images.forEach((img, index) => {
         if (img.data) {
-          // Extract base64 data from data URL
+          // Extract base64 data from data URL (format: "data:image/png;base64,base64data")
           const base64Data = img.data.split(',')[1];
           const mimeType = img.data.split(';')[0].split(':')[1];
           
