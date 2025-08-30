@@ -268,6 +268,19 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
       });
     }
     
+    // Reset messages immediately to the initial state
+    setMessages([
+      {
+        id: "1",
+        content: "What are we creating today?",
+        role: "assistant",
+        timestamp: new Date(),
+      },
+    ]);
+    
+    // Clear any uploaded images
+    setUploadedImages([]);
+    
     // Create new session and navigate to it
     const newSessionId = createSession();
     navigate(`/chat/${newSessionId}`);
