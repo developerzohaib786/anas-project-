@@ -29,6 +29,7 @@ export default function BrandKit() {
   const [assets, setAssets] = useState<BrandAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadingAssets, setUploadingAssets] = useState(false);
+  const [training, setTraining] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [tagModal, setTagModal] = useState<{ open: boolean; assetId?: string }>({ open: false });
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; asset?: BrandAsset }>({ open: false });
@@ -262,6 +263,23 @@ export default function BrandKit() {
     }
   };
 
+  const handleStartTraining = async () => {
+    if (!brandProfile) return;
+    setTraining(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('training-orchestrator', {
+        body: { brand_profile_id: brandProfile.id }
+      });
+      if (error) throw error;
+      toast.success(`Training started! Processing ${data.total_assets} images across ${data.categories.length} categories.`);
+    } catch (err: any) {
+      console.error('Start training error:', err);
+      toast.error(err?.message || 'Failed to start training');
+    } finally {
+      setTraining(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="px-4 md:px-6 lg:px-8 xl:px-12 py-8 w-full max-w-none">
@@ -310,24 +328,41 @@ export default function BrandKit() {
               <h2 className="text-xl font-medium text-foreground">Brand Assets</h2>
               <p className="text-muted-foreground">Upload photos to help AI learn your brand's visual identity</p>
             </div>
-            <Button 
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingAssets}
-              className="shadow-lg"
-              size="lg"
-            >
-              {uploadingAssets ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Upload Assets
-                </>
-              )}
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingAssets}
+                className="shadow-lg"
+                size="lg"
+              >
+                {uploadingAssets ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Upload Assets
+                  </>
+                )}
+              </Button>
+              <Button
+                onClick={handleStartTraining}
+                disabled={training || assets.length === 0}
+                variant="secondary"
+                size="lg"
+              >
+                {training ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Training...
+                  </>
+                ) : (
+                  <>Train AI on Assets</>
+                )}
+              </Button>
+            </div>
           </div>
 
           <input
