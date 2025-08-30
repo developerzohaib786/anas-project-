@@ -27,54 +27,63 @@ interface ChatInterfaceProps {
   onGenerateImage: (prompt: string, images?: UploadedImage[]) => void;
 }
 
+const DEFAULT_MESSAGE = {
+  id: "1",
+  content: "What are we creating today?",
+  role: "assistant" as const,
+  timestamp: new Date(),
+};
+
 export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
   const { sessionId } = useParams();
   const navigate = useNavigate();
-  const { sessions, currentSessionId, createSession, updateSession, setCurrentSession, getCurrentSession } = useChat();
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      content: "What are we creating today?",
-      role: "assistant",
-      timestamp: new Date(),
-    },
-  ]);
+  const { sessions, currentSessionId, createSession, updateSession, setCurrentSession } = useChat();
+  const [messages, setMessages] = useState<Message[]>([DEFAULT_MESSAGE]);
   const [inputValue, setInputValue] = useState("");
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Load session data when sessionId changes
+  // Initialize or load session
   useEffect(() => {
     if (sessionId) {
+      // Try to find existing session
       const session = sessions.find(s => s.id === sessionId);
       if (session) {
         setCurrentSession(sessionId);
-        setMessages(session.messages.length > 0 ? session.messages : [
-          {
-            id: "1",
-            content: "What are we creating today?",
-            role: "assistant",
-            timestamp: new Date(),
-          },
-        ]);
+        if (session.messages.length > 0) {
+          setMessages(session.messages);
+        } else {
+          setMessages([DEFAULT_MESSAGE]);
+        }
+      } else {
+        // Session doesn't exist, create it
+        const existingSession = sessions.find(s => s.id === sessionId);
+        if (!existingSession) {
+          // Navigate to home to create a new session
+          navigate('/');
+          return;
+        }
       }
-    } else if (!currentSessionId) {
-      // Create a new session if none exists
+    } else {
+      // No sessionId in URL, create a new session
       const newSessionId = createSession();
-      window.history.replaceState(null, '', `/chat/${newSessionId}`);
+      navigate(`/chat/${newSessionId}`, { replace: true });
     }
-  }, [sessionId, sessions, currentSessionId, createSession, setCurrentSession]);
+  }, [sessionId, sessions, createSession, setCurrentSession, navigate]);
 
-  // Save messages to session when they change
+  // Save messages to session when they change (but not on initial load)
   useEffect(() => {
-    if (currentSessionId && messages.length > 1) {
-      updateSession(currentSessionId, { 
-        messages,
-        title: generateSessionTitle(messages)
-      });
+    if (currentSessionId && sessionId === currentSessionId && messages.length > 1) {
+      const session = sessions.find(s => s.id === currentSessionId);
+      if (session) {
+        updateSession(currentSessionId, { 
+          messages,
+          title: generateSessionTitle(messages)
+        });
+      }
     }
-  }, [messages, currentSessionId, updateSession]);
+  }, [messages, currentSessionId, sessionId, updateSession, sessions]);
 
   const generateSessionTitle = (msgs: Message[]): string => {
     const userMessage = msgs.find(m => m.role === "user");
@@ -268,22 +277,16 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
       });
     }
     
-    // Reset messages immediately to the initial state
-    setMessages([
-      {
-        id: "1",
-        content: "What are we creating today?",
-        role: "assistant",
-        timestamp: new Date(),
-      },
-    ]);
-    
-    // Clear any uploaded images
-    setUploadedImages([]);
-    
-    // Create new session and navigate to it
+    // Create new session
     const newSessionId = createSession();
-    navigate(`/chat/${newSessionId}`);
+    
+    // Reset state immediately
+    setMessages([DEFAULT_MESSAGE]);
+    setUploadedImages([]);
+    setInputValue("");
+    
+    // Navigate to new session
+    navigate(`/chat/${newSessionId}`, { replace: true });
   };
 
   return (
