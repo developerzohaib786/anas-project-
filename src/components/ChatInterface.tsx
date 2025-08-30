@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowUp, Copy, ThumbsUp, ThumbsDown, Volume2, Share, RotateCcw } from "lucide-react";
+import { ArrowUp, Copy, ThumbsUp, ThumbsDown, Volume2, Share, RotateCcw, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChat } from "@/contexts/ChatContext";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { ImageUpload } from "@/components/ImageUpload";
 
 interface Message {
@@ -29,6 +29,7 @@ interface ChatInterfaceProps {
 
 export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
   const { sessionId } = useParams();
+  const navigate = useNavigate();
   const { sessions, currentSessionId, createSession, updateSession, setCurrentSession, getCurrentSession } = useChat();
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -257,8 +258,38 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
     }
   };
 
+  const handleNewChat = () => {
+    // Save current session if it has messages
+    if (currentSessionId && messages.length > 1) {
+      updateSession(currentSessionId, { 
+        messages,
+        title: generateSessionTitle(messages),
+        isCompleted: true
+      });
+    }
+    
+    // Create new session and navigate to it
+    const newSessionId = createSession();
+    navigate(`/chat/${newSessionId}`);
+  };
+
   return (
     <div className="flex flex-col h-screen relative">
+      {/* New Chat Button - Show when there are messages beyond the initial one */}
+      {messages.length > 1 && (
+        <div className="absolute top-4 right-4 z-10">
+          <Button
+            onClick={handleNewChat}
+            variant="outline"
+            size="sm"
+            className="bg-background/80 backdrop-blur-sm border-border/50 hover:bg-muted/80"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            New Chat
+          </Button>
+        </div>
+      )}
+      
       {/* Messages */}
       <ScrollArea className="flex-1 minimal-scroll" ref={scrollAreaRef}>
         <div className="w-full px-4 py-8 pb-32 md:px-6 md:py-12">
