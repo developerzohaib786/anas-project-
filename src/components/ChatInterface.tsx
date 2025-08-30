@@ -135,10 +135,32 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
     try {
       // Call the real AI chat API
       const { supabase } = await import("@/integrations/supabase/client");
+
+      // Convert any attached images to base64
+      let imageData: { data: string; name: string }[] | undefined = undefined;
+      if (currentImages && currentImages.length > 0) {
+        const convertToBase64 = (file: File): Promise<string> =>
+          new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+
+        try {
+          imageData = await Promise.all(
+            currentImages.map(async (img) => ({ data: await convertToBase64(img.file), name: img.name }))
+          );
+        } catch (e) {
+          console.error("Failed to convert images for chat:", e);
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke("chat-with-ai", {
         body: { 
           prompt: currentInput,
-          messages: newMessages.slice(1) // Exclude the initial welcome message
+          messages: newMessages.slice(1), // Exclude the initial welcome message
+          images: imageData
         },
       });
 

@@ -148,12 +148,19 @@ serve(async (req) => {
                 ...imageParts
               ]
             }
-          ]
+          ],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 1024
+          }
         }),
       }
     );
 
     console.log('📡 Google API response status:', response.status);
+
 
     if (!response.ok) {
       const errText = await response.text();
