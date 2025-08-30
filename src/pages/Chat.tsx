@@ -8,7 +8,7 @@ const Chat = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | undefined>();
 
-  const handleGenerateImage = async (prompt: string) => {
+  const handleGenerateImage = async (prompt: string, images?: any[]) => {
     console.log("🎨 Starting image generation for prompt:", prompt);
     setCurrentPrompt(prompt);
     setIsGenerating(true);
@@ -18,8 +18,36 @@ const Chat = () => {
       const { supabase } = await import("@/integrations/supabase/client");
       console.log("📡 Calling generate-image function...");
       
+      // Convert uploaded images to base64 for the API call
+      let imageData = undefined;
+      if (images && images.length > 0) {
+        const convertToBase64 = (file: File): Promise<string> => {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+        };
+
+        try {
+          const base64Images = await Promise.all(
+            images.map(async (img) => ({
+              data: await convertToBase64(img.file),
+              name: img.name
+            }))
+          );
+          imageData = base64Images;
+        } catch (error) {
+          console.error("Error converting images to base64:", error);
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke("generate-image", {
-        body: { prompt },
+        body: { 
+          prompt,
+          images: imageData
+        },
       });
       
       console.log("📡 Generate-image response:", { data, error });

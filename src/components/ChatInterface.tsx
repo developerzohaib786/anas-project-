@@ -5,17 +5,26 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChat } from "@/contexts/ChatContext";
 import { useParams } from "react-router-dom";
+import { ImageUpload } from "@/components/ImageUpload";
 
 interface Message {
   id: string;
   content: string;
   role: "user" | "assistant";
   timestamp: Date;
-  isGenerating?: boolean; // Add flag for shimmer effect
+  isGenerating?: boolean;
+  images?: UploadedImage[];
+}
+
+interface UploadedImage {
+  id: string;
+  file: File;
+  url: string;
+  name: string;
 }
 
 interface ChatInterfaceProps {
-  onGenerateImage: (prompt: string) => void;
+  onGenerateImage: (prompt: string, images?: UploadedImage[]) => void;
 }
 
 export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
@@ -30,6 +39,7 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
     },
   ]);
   const [inputValue, setInputValue] = useState("");
+  const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -110,6 +120,7 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
       content: inputValue,
       role: "user",
       timestamp: new Date(),
+      images: uploadedImages.length > 0 ? [...uploadedImages] : undefined,
     };
 
     // Add user message immediately
@@ -117,7 +128,9 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
     setMessages(newMessages);
     
     const currentInput = inputValue;
+    const currentImages = [...uploadedImages];
     setInputValue("");
+    setUploadedImages([]);
 
     try {
       // Call the real AI chat API
@@ -191,7 +204,7 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
         
         // Trigger image generation and remove generating message when done
         try {
-          await onGenerateImage(imagePrompt || currentInput);
+          await onGenerateImage(imagePrompt || currentInput, currentImages);
           // Remove the generating message after image generation completes
           setMessages((prev) => prev.filter(msg => msg.id !== generatingMessageId));
         } catch (error) {
@@ -239,6 +252,20 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
               >
                 <div className={`max-w-[80%] group`}>
                   <div className={`${message.role === "user" ? "inline-block bg-muted px-4 py-2.5 rounded-2xl" : "mb-2 text-left"}`}>
+                    {/* Display images if present */}
+                    {message.images && message.images.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {message.images.map((img) => (
+                          <div key={img.id} className="relative">
+                            <img
+                              src={img.url}
+                              alt={img.name}
+                              className="w-20 h-20 object-cover rounded-lg border border-border"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <div className="text-[15px] leading-relaxed font-normal text-foreground">
                       {message.isGenerating ? (
                         <>🎨 <span className="shimmer-text">Generating your image now...</span></>
@@ -304,6 +331,15 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
             )}
           </div>
 
+          {/* Image Upload */}
+          <div className="mb-4">
+            <ImageUpload 
+              images={uploadedImages}
+              onImagesChange={setUploadedImages}
+              maxImages={3}
+            />
+          </div>
+
           {/* Input Row */}
           <div className="flex items-end gap-3">
             <div className="flex-1">
@@ -319,7 +355,7 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
             </div>
             <Button 
               onClick={handleSendMessage}
-              disabled={!inputValue.trim()}
+              disabled={!inputValue.trim() && uploadedImages.length === 0}
               size="icon"
               className="h-12 w-12 rounded-full bg-muted hover:bg-muted/80 disabled:bg-muted disabled:text-muted-foreground shrink-0 min-h-[48px] min-w-[48px]"
             >

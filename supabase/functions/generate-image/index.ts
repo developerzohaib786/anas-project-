@@ -13,7 +13,7 @@ serve(async (req) => {
 
   try {
     console.log('🎯 Generate image request received');
-    const { prompt, aspect_ratio } = await req.json();
+    const { prompt, aspect_ratio, images } = await req.json();
     console.log('📝 Prompt:', prompt);
     console.log('📐 Aspect ratio:', aspect_ratio);
 
@@ -63,6 +63,16 @@ serve(async (req) => {
 
     const arHint = aspect_ratio ? `\nAspect ratio: ${aspect_ratio}.` : '';
 
+    // Handle reference images if provided
+    let referenceImageContext = '';
+    if (images && images.length > 0) {
+      referenceImageContext = `\n\nREFERENCE IMAGES PROVIDED (${images.length} images):
+- User has uploaded ${images.length} reference image(s) to guide the generation
+- Incorporate visual elements, composition, lighting, or styling cues from these references
+- Maintain the Nino Style Guide while drawing inspiration from the reference materials
+- If the user mentions changing specific elements (like "change the food on the table"), use the reference as the base composition and modify accordingly`;
+    }
+
     const NINO_STYLE_GUIDE = `Nino Style Guide — ALWAYS APPLY unless user explicitly opts out:
 - Shadows: deep, rich, detailed; use to add drama and cinematic depth.
 - Dutch angles: slight tilt for editorial energy; avoid static straight-on shots.
@@ -83,7 +93,7 @@ serve(async (req) => {
 - Halation/glow: soft glow around light sources (sunset, candles, reflections).
 - Lifestyle over portraiture: capture moments and actions versus posed faces.`;
 
-    const finalPrompt = `Create a photorealistic, cinematic, high-end editorial hotel/lifestyle image that strictly follows the Nino Style Guide.\n\n${NINO_STYLE_GUIDE}\n\nUser request (integrate while keeping the style guide primary):\n${prompt}${arHint}\n\nBrand style summary (optional):\n${styleSummary}\n\nPositive modifiers to include:\n${positiveMods}\n\nNegative modifiers to avoid (do NOT include):\n${negativeMods}\n\nRequirements:\n- Correct perspective and professional lighting\n- Cohesive color palette\n- Detailed, tactile textures\n- If conflict arises, prefer the Nino style guide over literal prompt unless user explicitly opts out.`;
+    const finalPrompt = `Create a photorealistic, cinematic, high-end editorial hotel/lifestyle image that strictly follows the Nino Style Guide.\n\n${NINO_STYLE_GUIDE}${referenceImageContext}\n\nUser request (integrate while keeping the style guide primary):\n${prompt}${arHint}\n\nBrand style summary (optional):\n${styleSummary}\n\nPositive modifiers to include:\n${positiveMods}\n\nNegative modifiers to avoid (do NOT include):\n${negativeMods}\n\nRequirements:\n- Correct perspective and professional lighting\n- Cohesive color palette\n- Detailed, tactile textures\n- If conflict arises, prefer the Nino style guide over literal prompt unless user explicitly opts out.`;
 
     console.log('🎨 Final prompt prepared with Nino style guide');
     
