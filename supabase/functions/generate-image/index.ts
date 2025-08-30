@@ -63,9 +63,29 @@ serve(async (req) => {
 
     const arHint = aspect_ratio ? `\nAspect ratio: ${aspect_ratio}.` : '';
 
-    const finalPrompt = `Create a high-end hotel marketing photograph that fits Nino's premium aesthetic.\n\nUser request:\n${prompt}\n\nHotel style summary:\n${styleSummary}\n\nPositive style modifiers to include:\n${positiveMods}\n\nNegative style modifiers to avoid (do NOT include):\n${negativeMods}${arHint}\n\nPhotorealistic, professional lighting, correct perspective, cohesive color palette, detailed textures.`;
+    const NINO_STYLE_GUIDE = `Nino Style Guide — ALWAYS APPLY unless user explicitly opts out:
+- Shadows: deep, rich, detailed; use to add drama and cinematic depth.
+- Dutch angles: slight tilt for editorial energy; avoid static straight-on shots.
+- Reflections: use water, glass, mirrors to layer and add intrigue.
+- Textures: emphasize tactile detail (rain, sand, snow, ripples, stone, fabric).
+- Symmetry & balance: aim for natural balance; not perfectly sterile symmetry.
+- Blurred subjects: tasteful motion blur/soft focus for candid, in-the-moment feel.
+- Not overly staged: natural, editorial/documentary scenes; avoid posed/commercial look.
+- Mixed perspectives: low/high angles, shoot-throughs, foreground elements.
+- Open/negative space: breathing room (sky, water, tabletops, landscape) for luxury calm.
+- Layering: foreground/midground/background for cinematic depth.
+- Flash: on-camera flash at night for raw, high-fashion editorial energy when appropriate.
+- Film-like grain: tactile 35mm feel (not digital noise).
+- Rich contrast: deep blacks, strong highlights; never washed out.
+- Golden warmth: warm highlights (sun/candles) for timeless luxury.
+- Cool shadows: subtle cool green/blue shadow tints for contrast with warm highlights.
+- Muted saturation: earthy, sun-soaked, elegant; avoid touristy brightness.
+- Halation/glow: soft glow around light sources (sunset, candles, reflections).
+- Lifestyle over portraiture: capture moments and actions versus posed faces.`;
 
-    console.log('🎨 Final prompt prepared');
+    const finalPrompt = `Create a photorealistic, cinematic, high-end editorial hotel/lifestyle image that strictly follows the Nino Style Guide.\n\n${NINO_STYLE_GUIDE}\n\nUser request (integrate while keeping the style guide primary):\n${prompt}${arHint}\n\nBrand style summary (optional):\n${styleSummary}\n\nPositive modifiers to include:\n${positiveMods}\n\nNegative modifiers to avoid (do NOT include):\n${negativeMods}\n\nRequirements:\n- Correct perspective and professional lighting\n- Cohesive color palette\n- Detailed, tactile textures\n- If conflict arises, prefer the Nino style guide over literal prompt unless user explicitly opts out.`;
+
+    console.log('🎨 Final prompt prepared with Nino style guide');
     
     const apiKey = Deno.env.get('GOOGLE_STUDIO_API_KEY');
     if (!apiKey) {
