@@ -65,12 +65,30 @@ serve(async (req) => {
 
     // Handle reference images if provided
     let referenceImageContext = '';
+    let imageParts = [];
+    
     if (images && images.length > 0) {
       referenceImageContext = `\n\nREFERENCE IMAGES PROVIDED (${images.length} images):
 - User has uploaded ${images.length} reference image(s) to guide the generation
 - Incorporate visual elements, composition, lighting, or styling cues from these references
 - Maintain the Nino Style Guide while drawing inspiration from the reference materials
 - If the user mentions changing specific elements (like "change the food on the table"), use the reference as the base composition and modify accordingly`;
+      
+      // Convert images to the format expected by Gemini
+      images.forEach((img, index) => {
+        if (img.data) {
+          // Extract base64 data from data URL
+          const base64Data = img.data.split(',')[1];
+          const mimeType = img.data.split(';')[0].split(':')[1];
+          
+          imageParts.push({
+            inlineData: {
+              data: base64Data,
+              mimeType: mimeType
+            }
+          });
+        }
+      });
     }
 
     const NINO_STYLE_GUIDE = `Nino Style Guide — ALWAYS APPLY unless user explicitly opts out:
@@ -121,7 +139,8 @@ serve(async (req) => {
           contents: [
             {
               parts: [
-                { text: finalPrompt }
+                { text: finalPrompt },
+                ...imageParts
               ]
             }
           ]
