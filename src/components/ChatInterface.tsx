@@ -173,8 +173,9 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
           ))) {
         
         // Add a generating message with shimmer effect
+        const generatingMessageId = (Date.now() + 1).toString();
         const generatingMessage: Message = {
-          id: (Date.now() + 1).toString(),
+          id: generatingMessageId,
           content: "🎨 Generating your image now...",
           role: "assistant",
           timestamp: new Date(),
@@ -188,8 +189,15 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
           updateSession(currentSessionId, { isCompleted: true });
         }
         
-        // Trigger image generation
-        onGenerateImage(imagePrompt || currentInput);
+        // Trigger image generation and remove generating message when done
+        try {
+          await onGenerateImage(imagePrompt || currentInput);
+          // Remove the generating message after image generation completes
+          setMessages((prev) => prev.filter(msg => msg.id !== generatingMessageId));
+        } catch (error) {
+          // Remove generating message even if there's an error
+          setMessages((prev) => prev.filter(msg => msg.id !== generatingMessageId));
+        }
       }
 
     } catch (error) {
