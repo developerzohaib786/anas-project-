@@ -147,6 +147,21 @@ export default function BrandKit() {
       const newAssets = await Promise.all(uploadPromises);
       setAssets(prev => [...newAssets, ...prev]);
       toast.success(`${newAssets.length} asset(s) uploaded successfully`);
+
+      // Auto-start training after successful uploads
+      try {
+        setTraining(true);
+        const { data, error } = await supabase.functions.invoke('training-orchestrator', {
+          body: { brand_profile_id: brandProfile.id }
+        });
+        if (error) throw error;
+        toast.success(`Training started automatically on ${data.total_assets} images across ${data.categories.length} categories.`);
+      } catch (err: any) {
+        console.error('Auto training error:', err);
+        toast.error(err?.message || 'Failed to start training automatically');
+      } finally {
+        setTraining(false);
+      }
     } catch (error) {
       console.error('Error uploading assets:', error);
       toast.error("Failed to upload assets");
