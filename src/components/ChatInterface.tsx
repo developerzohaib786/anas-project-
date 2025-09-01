@@ -166,6 +166,8 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
         }
       }
 
+      console.log("📡 Calling chat-with-ai function with:", { prompt: currentInput, messageCount: newMessages.slice(1).length, hasImages: !!imageData });
+      
       const { data, error } = await supabase.functions.invoke("chat-with-ai", {
         body: { 
           prompt: currentInput,
@@ -173,6 +175,8 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
           images: imageData
         },
       });
+      
+      console.log("📡 Chat-with-ai response:", { data, error });
 
       if (error) {
         throw error;
