@@ -47,13 +47,8 @@ export function AppSidebar() {
     
   const initials = brandName.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
 
-  const handleDeleteSession = (sessionId: string, event: React.MouseEvent) => {
-    console.log('Delete button clicked for session:', sessionId);
-    console.log('Current sessions before delete:', sessions.map(s => s.id));
-    event.preventDefault();
-    event.stopPropagation();
+  const handleDeleteSession = (sessionId: string) => {
     deleteSession(sessionId);
-    console.log('Delete function called');
   };
 
   const handleNewProject = () => {
@@ -146,34 +141,36 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 {sessions.slice(0, 5).map((session) => (
-                  <SidebarMenuItem key={session.id}>
-                    <SidebarMenuButton asChild>
-                      <div className="group relative">
-                        <NavLink
-                          to={`/chat/${session.id}`}
-                          className={({ isActive }) =>
-                            `flex items-center px-3 py-2 rounded-lg transition-colors duration-200 font-medium text-sm mb-1 relative pr-8 ${
-                              isActive
-                                ? "bg-gray-100 text-gray-900"
-                                : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                            }`
-                          }
-                          title={session.title}
-                        >
-                          {!session.isCompleted && (
-                            <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0 mr-2" title="Incomplete" />
-                          )}
-                          <span className="truncate flex-1">{session.title}</span>
-                        </NavLink>
-                        <button
-                          onClick={(e) => handleDeleteSession(session.id, e)}
-                          className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 rounded hover:bg-red-100 text-red-500 hover:text-red-700"
-                          title="Delete chat"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    </SidebarMenuButton>
+                  <SidebarMenuItem key={session.id} className="group">
+                    <div className="flex items-center w-full">
+                      <NavLink
+                        to={`/chat/${session.id}`}
+                        className={({ isActive }) =>
+                          `flex items-center px-3 py-2 rounded-lg transition-colors duration-200 font-medium text-sm mb-1 flex-1 min-w-0 ${
+                            isActive
+                              ? "bg-gray-100 text-gray-900"
+                              : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                          }`
+                        }
+                        title={session.title}
+                      >
+                        {!session.isCompleted && (
+                          <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0 mr-2" title="Incomplete" />
+                        )}
+                        <span className="truncate">{session.title}</span>
+                      </NavLink>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleDeleteSession(session.id);
+                        }}
+                        className="flex-shrink-0 ml-1 p-1 rounded hover:bg-red-100 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                        title="Delete chat"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
                   </SidebarMenuItem>
                 ))}
               </SidebarMenu>
