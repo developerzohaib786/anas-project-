@@ -417,7 +417,10 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="Describe your hotel marketing photo..."
+                  placeholder={uploadedImages.length > 0 
+                    ? "Describe the luxury style you want: 'make it commercial', 'make it luxury', 'make it editorial'..." 
+                    : "Upload an iPhone photo and describe the style you want, or describe what you'd like to create"
+                  }
                   className="w-full h-12 bg-transparent border border-[hsl(var(--border))] rounded-full px-6 text-[15px] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[hsl(var(--border))] hover:border-[hsl(var(--border))] resize-none min-h-[48px] max-h-[48px]"
                 />
               </div>

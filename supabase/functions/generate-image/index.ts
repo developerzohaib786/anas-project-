@@ -96,27 +96,145 @@ serve(async (req) => {
       });
     }
 
-    const NINO_STYLE_GUIDE = `Nino Style Guide — ALWAYS APPLY unless user explicitly opts out:
-- Shadows: deep, rich, detailed; use to add drama and cinematic depth.
-- Dutch angles: slight tilt for editorial energy; avoid static straight-on shots.
-- Reflections: use water, glass, mirrors to layer and add intrigue.
-- Textures: emphasize tactile detail (rain, sand, snow, ripples, stone, fabric).
-- Symmetry & balance: aim for natural balance; not perfectly sterile symmetry.
-- Blurred subjects: tasteful motion blur/soft focus for candid, in-the-moment feel.
-- Not overly staged: natural, editorial/documentary scenes; avoid posed/commercial look.
-- Mixed perspectives: low/high angles, shoot-throughs, foreground elements.
-- Open/negative space: breathing room (sky, water, tabletops, landscape) for luxury calm.
-- Layering: foreground/midground/background for cinematic depth.
-- Flash: on-camera flash at night for raw, high-fashion editorial energy when appropriate.
-- Film-like grain: tactile 35mm feel (not digital noise).
-- Rich contrast: deep blacks, strong highlights; never washed out.
-- Golden warmth: warm highlights (sun/candles) for timeless luxury.
-- Cool shadows: subtle cool green/blue shadow tints for contrast with warm highlights.
-- Muted saturation: earthy, sun-soaked, elegant; avoid touristy brightness.
-- Halation/glow: soft glow around light sources (sunset, candles, reflections).
-- Lifestyle over portraiture: capture moments and actions versus posed faces.`;
+    // Transform user-friendly descriptions into technical photography directions
+    const STYLE_TRANSFORMATIONS = {
+      'commercial': 'Professional commercial photography with perfect lighting, marketing-ready composition, high-end hospitality aesthetic, clean and sophisticated styling',
+      'luxury': 'Ultra-luxurious high-end photography with premium lighting, sophisticated composition, elegant styling, aspirational mood, five-star hotel quality',
+      'editorial': 'Editorial-style hospitality photography with dramatic lighting, artistic composition, sophisticated styling, magazine-quality aesthetic',
+      'elegant': 'Sophisticated elegant photography with refined lighting, graceful composition, upscale styling, premium hospitality aesthetic',
+      'sophisticated': 'Professional sophisticated photography with refined lighting, clean composition, high-end styling, luxury hospitality standard',
+      'premium': 'Premium hospitality photography with luxury lighting, professional composition, high-end styling, five-star quality aesthetic',
+      'upscale': 'Upscale hospitality photography with premium lighting, sophisticated composition, elegant styling, luxury hotel standard',
+      'refined': 'Refined hospitality photography with sophisticated lighting, elegant composition, premium styling, upscale aesthetic',
+      'cool': 'Cool, modern hospitality photography with contemporary lighting, sleek composition, minimalist styling, boutique hotel aesthetic',
+      'make it commercial': 'Transform into professional commercial photography with perfect lighting, marketing-ready composition, high-end hospitality aesthetic',
+      'make it luxury': 'Transform into ultra-luxurious photography with premium lighting, sophisticated composition, five-star hotel quality aesthetic',
+      'make it editorial': 'Transform into editorial-style photography with dramatic lighting, artistic composition, magazine-quality aesthetic'
+    };
 
-    const finalPrompt = `Create a photorealistic, cinematic, high-end editorial hotel/lifestyle image that strictly follows the Nino Style Guide.\n\n${NINO_STYLE_GUIDE}${referenceImageContext}\n\nUser request (integrate while keeping the style guide primary):\n${prompt}${arHint}\n\nBrand style summary (optional):\n${styleSummary}\n\nPositive modifiers to include:\n${positiveMods}\n\nNegative modifiers to avoid (do NOT include):\n${negativeMods}\n\nRequirements:\n- Correct perspective and professional lighting\n- Cohesive color palette\n- Detailed, tactile textures\n- If conflict arises, prefer the Nino style guide over literal prompt unless user explicitly opts out.`;
+    // Function to detect if this is a scene capture request
+    const isSceneCaptureRequest = (prompt: string, hasImages: boolean): boolean => {
+      if (!hasImages) return false;
+      
+      const sceneCaptureKeywords = [
+        'make it', 'transform', 'turn this', 'enhance', 'improve', 'upgrade',
+        'commercial', 'luxury', 'editorial', 'professional', 'high-end',
+        'sophisticated', 'elegant', 'premium', 'upscale', 'refined', 'cool'
+      ];
+      
+      const lowerPrompt = prompt.toLowerCase();
+      return sceneCaptureKeywords.some(keyword => lowerPrompt.includes(keyword));
+    };
+
+    // Enhanced Nino Style Guide for scene capture
+    const NINO_STYLE_GUIDE = `Nino Style Guide — LUXURY HOSPITALITY PHOTOGRAPHY TRANSFORMATION:
+
+SCENE CAPTURE MODE - Transform iPhone snapshots into luxury editorial photography:
+
+TECHNICAL ENHANCEMENT:
+- Ultra high-resolution output with professional clarity
+- Perfect exposure balance with rich shadows and clean highlights  
+- Professional color grading with luxury hospitality aesthetics
+- Enhanced depth of field and professional focus
+- Commercial-grade image quality and sharpness
+
+VISUAL TRANSFORMATION:
+- Warm, inviting color palette with sophisticated tone mapping
+- Rich, saturated colors without oversaturation
+- Perfect white balance for hospitality environments
+- Professional lighting enhancement that adds atmosphere
+- Clean, uncluttered compositions with elegant framing
+
+HOSPITALITY LUXURY AESTHETIC:
+- Five-star hotel photography quality
+- Marketing-ready commercial appeal
+- Professional hospitality industry standards
+- Clean, sophisticated brand representation
+- Editorial magazine-quality finish
+
+COMPOSITION REFINEMENT:
+- Professional framing and rule of thirds application
+- Strategic use of negative space for luxury feel
+- Enhanced staging and arrangement
+- Cinematic depth with foreground/midground/background layers
+- Marketing-optimized composition for hospitality use
+
+LIGHTING ENHANCEMENT:
+- Professional hospitality lighting upgrade
+- Soft, even illumination with strategic accent lighting
+- Natural-looking enhancement that feels authentic
+- Perfect contrast ratios for luxury appeal
+- Cinematic mood and atmosphere
+
+STYLE ELEMENTS:
+- Editorial energy with slight dutch angles when appropriate
+- Rich, detailed shadows for drama and depth
+- Tasteful reflections and layering for visual intrigue  
+- Film-like quality with subtle grain texture
+- Golden warmth in highlights, cool shadow tints
+- Muted, elegant saturation avoiding touristy brightness
+- Lifestyle documentary feel over posed commercial look
+
+Transform the reference image while maintaining its core subject and composition, but elevate it to luxury editorial hospitality photography standards.`;
+
+    // Detect if this is a scene capture transformation request
+    const isSceneCapture = isSceneCaptureRequest(prompt, images && images.length > 0);
+    
+    // Enhance prompt with style transformations for user-friendly language
+    let enhancedPrompt = prompt;
+    if (isSceneCapture) {
+      console.log('🎯 Scene capture mode detected');
+      const lowerPrompt = prompt.toLowerCase();
+      
+      // Find matching style transformation
+      const matchingStyle = Object.keys(STYLE_TRANSFORMATIONS).find(key => 
+        lowerPrompt.includes(key.toLowerCase())
+      );
+      
+      if (matchingStyle) {
+        const technicalDirection = STYLE_TRANSFORMATIONS[matchingStyle];
+        enhancedPrompt = `${technicalDirection}. ${prompt}`;
+        console.log('🎨 Applied style transformation for:', matchingStyle);
+      }
+    }
+
+    // Build the final prompt based on whether this is scene capture or text-to-image
+    const finalPrompt = isSceneCapture 
+      ? `SCENE CAPTURE TRANSFORMATION - Transform the uploaded iPhone photo into luxury editorial hospitality photography.
+
+${NINO_STYLE_GUIDE}
+
+TRANSFORMATION INSTRUCTIONS:
+- Analyze the uploaded reference image(s) for composition, subjects, and setting
+- Maintain the core elements and composition of the original photo
+- Transform the lighting, styling, and overall aesthetic to match luxury hospitality standards
+- Apply professional photography techniques to elevate the image quality
+- Keep the same subjects and general layout but enhance everything to editorial quality
+
+${referenceImageContext}
+
+User's style request: ${enhancedPrompt}${arHint}
+
+Brand style summary (apply if relevant): ${styleSummary}
+Positive modifiers: ${positiveMods}
+Negative modifiers to avoid: ${negativeMods}
+
+Transform this iPhone snapshot into a stunning, luxury editorial hospitality photograph while preserving its core composition and subjects.`
+      : `Create a photorealistic, cinematic, high-end editorial hotel/lifestyle image that strictly follows the Nino Style Guide.
+
+${NINO_STYLE_GUIDE}${referenceImageContext}
+
+User request (integrate while keeping the style guide primary): ${enhancedPrompt}${arHint}
+
+Brand style summary (optional): ${styleSummary}
+Positive modifiers to include: ${positiveMods}
+Negative modifiers to avoid (do NOT include): ${negativeMods}
+
+Requirements:
+- Correct perspective and professional lighting
+- Cohesive color palette
+- Detailed, tactile textures
+- If conflict arises, prefer the Nino style guide over literal prompt unless user explicitly opts out.`;
 
     console.log('🎨 Final prompt prepared with Nino style guide');
     
