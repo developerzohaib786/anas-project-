@@ -12,8 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, prompt, images } = await req.json();
-
+    const { messages, prompt } = await req.json();
 
     if (!prompt || typeof prompt !== 'string') {
       return new Response(JSON.stringify({ error: 'Missing prompt' }), {
@@ -53,7 +52,6 @@ serve(async (req) => {
 
     const apiKey = Deno.env.get('GOOGLE_STUDIO_API_KEY');
     if (!apiKey) {
-      console.error('❌ Missing GOOGLE_STUDIO_API_KEY');
       throw new Error('Missing GOOGLE_STUDIO_API_KEY secret');
     }
 
@@ -63,22 +61,10 @@ serve(async (req) => {
       parts: [{ text: msg.content }]
     })) || [];
 
-    // Prepare inline image parts for the current user prompt
-    const imageParts = [] as any[];
-    if (images && images.length > 0) {
-      images.forEach((img: any) => {
-        if (img.data) {
-          const base64Data = img.data.split(',')[1];
-          const mimeType = img.data.split(';')[0].split(':')[1];
-          imageParts.push({ inlineData: { data: base64Data, mimeType } });
-        }
-      });
-    }
-
-    // Add the current user prompt, including any attached images as parts
+    // Add the current user prompt
     conversationHistory.push({
       role: 'user',
-      parts: [ { text: prompt }, ...imageParts ]
+      parts: [{ text: prompt }]
     });
 
     const systemPrompt = `You are Nino, an expert AI assistant specializing in hotel and hospitality marketing. You help create compelling marketing content and generate high-quality promotional images for hotels, resorts, and hospitality businesses.
@@ -98,7 +84,6 @@ When helping with image generation:
 
 Important behavior rules:
 - This app can generate images directly. Never instruct the user to copy prompts into external tools.
-- If images are attached, you CAN see and reference them. Never say you cannot view images; acknowledge and use them in your reasoning.
 - When you have enough detail to proceed, set intent to "generate" and produce a single, photorealistic marketing image description in image_prompt.
 - Otherwise, set intent to "ask" and ask one concise clarifying question.
 
@@ -131,7 +116,7 @@ Respond STRICTLY in the following JSON format with no extra text:
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error('❌ Google AI API error (chat-with-ai):', response.status, errText);
+      console.error('Google AI API error:', response.status, errText);
       return new Response(
         JSON.stringify({ error: 'AI response failed', details: errText }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -139,7 +124,6 @@ Respond STRICTLY in the following JSON format with no extra text:
     }
 
     const aiResponse = await response.json();
-    console.log('🧠 Chat model responded');
     const aiText = aiResponse?.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!aiText) {
