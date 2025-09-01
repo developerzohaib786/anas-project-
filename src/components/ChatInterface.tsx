@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowUp, Copy, ThumbsUp, ThumbsDown, Volume2, Share, RotateCcw } from "lucide-react";
+import { ArrowUp, Copy, ThumbsUp, ThumbsDown, Volume2, Share, RotateCcw, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChat } from "@/contexts/ChatContext";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { ImageUpload } from "@/components/ImageUpload";
 
 interface Message {
@@ -27,53 +27,63 @@ interface ChatInterfaceProps {
   onGenerateImage: (prompt: string, images?: UploadedImage[]) => void;
 }
 
+const DEFAULT_MESSAGE = {
+  id: "1",
+  content: "What are we creating today?",
+  role: "assistant" as const,
+  timestamp: new Date(),
+};
+
 export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
   const { sessionId } = useParams();
-  const { sessions, currentSessionId, createSession, updateSession, setCurrentSession, getCurrentSession } = useChat();
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      content: "What are we creating today?",
-      role: "assistant",
-      timestamp: new Date(),
-    },
-  ]);
+  const navigate = useNavigate();
+  const { sessions, currentSessionId, createSession, updateSession, setCurrentSession } = useChat();
+  const [messages, setMessages] = useState<Message[]>([DEFAULT_MESSAGE]);
   const [inputValue, setInputValue] = useState("");
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Load session data when sessionId changes
+  // Initialize or load session
   useEffect(() => {
     if (sessionId) {
+      // Try to find existing session
       const session = sessions.find(s => s.id === sessionId);
       if (session) {
         setCurrentSession(sessionId);
-        setMessages(session.messages.length > 0 ? session.messages : [
-          {
-            id: "1",
-            content: "What are we creating today?",
-            role: "assistant",
-            timestamp: new Date(),
-          },
-        ]);
+        if (session.messages.length > 0) {
+          setMessages(session.messages);
+        } else {
+          setMessages([DEFAULT_MESSAGE]);
+        }
+      } else {
+        // Session doesn't exist, create it
+        const existingSession = sessions.find(s => s.id === sessionId);
+        if (!existingSession) {
+          // Navigate to home to create a new session
+          navigate('/');
+          return;
+        }
       }
-    } else if (!currentSessionId) {
-      // Create a new session if none exists
+    } else {
+      // No sessionId in URL, create a new session
       const newSessionId = createSession();
-      window.history.replaceState(null, '', `/chat/${newSessionId}`);
+      navigate(`/chat/${newSessionId}`, { replace: true });
     }
-  }, [sessionId, sessions, currentSessionId, createSession, setCurrentSession]);
+  }, [sessionId, sessions, createSession, setCurrentSession, navigate]);
 
-  // Save messages to session when they change
+  // Save messages to session when they change (but not on initial load)
   useEffect(() => {
-    if (currentSessionId && messages.length > 1) {
-      updateSession(currentSessionId, { 
-        messages,
-        title: generateSessionTitle(messages)
-      });
+    if (currentSessionId && sessionId === currentSessionId && messages.length > 1) {
+      const session = sessions.find(s => s.id === currentSessionId);
+      if (session) {
+        updateSession(currentSessionId, { 
+          messages,
+          title: generateSessionTitle(messages)
+        });
+      }
     }
-  }, [messages, currentSessionId, updateSession]);
+  }, [messages, currentSessionId, sessionId, updateSession, sessions]);
 
   const generateSessionTitle = (msgs: Message[]): string => {
     const userMessage = msgs.find(m => m.role === "user");
@@ -156,6 +166,8 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
         }
       }
 
+      console.log("📡 Calling chat-with-ai function with:", { prompt: currentInput, messageCount: newMessages.slice(1).length, hasImages: !!imageData });
+      
       const { data, error } = await supabase.functions.invoke("chat-with-ai", {
         body: { 
           prompt: currentInput,
@@ -163,6 +175,8 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
           images: imageData
         },
       });
+      
+      console.log("📡 Chat-with-ai response:", { data, error });
 
       if (error) {
         throw error;
@@ -257,8 +271,45 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
     }
   };
 
+  const handleNewChat = () => {
+    // Save current session if it has messages
+    if (currentSessionId && messages.length > 1) {
+      updateSession(currentSessionId, { 
+        messages,
+        title: generateSessionTitle(messages),
+        isCompleted: true
+      });
+    }
+    
+    // Create new session
+    const newSessionId = createSession();
+    
+    // Reset state immediately
+    setMessages([DEFAULT_MESSAGE]);
+    setUploadedImages([]);
+    setInputValue("");
+    
+    // Navigate to new session
+    navigate(`/chat/${newSessionId}`, { replace: true });
+  };
+
   return (
     <div className="flex flex-col h-screen relative">
+      {/* New Chat Button - Show when there are messages beyond the initial one */}
+      {messages.length > 1 && (
+        <div className="absolute top-4 right-4 z-10">
+          <Button
+            onClick={handleNewChat}
+            variant="outline"
+            size="sm"
+            className="bg-background/80 backdrop-blur-sm border-border/50 hover:bg-muted/80"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            New Chat
+          </Button>
+        </div>
+      )}
+      
       {/* Messages */}
       <ScrollArea className="flex-1 minimal-scroll" ref={scrollAreaRef}>
         <div className="w-full px-4 py-8 pb-32 md:px-6 md:py-12">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, RotateCcw, Check, ChevronDown } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -20,13 +20,10 @@ const aspectRatioClasses = {
 
 export function ImagePreview({ currentPrompt, isGenerating = false, generatedImage: generatedImageProp }: ImagePreviewProps) {
   const [selectedRatio, setSelectedRatio] = useState<AspectRatio>("1:1");
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [showDone, setShowDone] = useState(false);
-  const [imgError, setImgError] = useState(false);
-  const displayedImage = generatedImageProp;
+  const displayedImage = generatedImageProp ?? generatedImage;
 
-  useEffect(() => {
-    setImgError(false);
-  }, [generatedImageProp]);
   const handleDone = () => {
     setShowDone(true);
   };
@@ -46,7 +43,7 @@ export function ImagePreview({ currentPrompt, isGenerating = false, generatedIma
   const aspectRatios: AspectRatio[] = ["1:1", "4:5", "9:16", "16:9"];
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-screen">
       {/* Aspect Ratio Controls */}
       <div className="p-6">
         <div className="flex justify-center">
@@ -86,12 +83,11 @@ export function ImagePreview({ currentPrompt, isGenerating = false, generatedIma
               <div className="text-center animate-fade-in">
                 <div className="animate-spin w-7 h-7 border-2 border-primary border-t-transparent rounded-full mx-auto"></div>
               </div>
-            ) : displayedImage && !imgError ? (
+            ) : displayedImage ? (
               <img
                 src={displayedImage}
                 alt="Generated"
                 className="w-full h-full object-cover rounded-3xl animate-scale-in"
-                onError={() => setImgError(true)}
               />
             ) : (
               <div className="w-12 h-12 bg-muted rounded-2xl opacity-40"></div>

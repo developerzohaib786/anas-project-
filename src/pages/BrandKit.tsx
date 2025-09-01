@@ -146,6 +146,18 @@ export default function BrandKit() {
       const newAssets = await Promise.all(uploadPromises);
       setAssets(prev => [...newAssets, ...prev]);
       toast.success(`${newAssets.length} asset(s) uploaded successfully`);
+
+      // Auto-start training after successful uploads
+      try {
+        const { data, error } = await supabase.functions.invoke('training-orchestrator', {
+          body: { brand_profile_id: brandProfile.id }
+        });
+        if (error) throw error;
+        toast.success(`Training started automatically on ${data.total_assets} images across ${data.categories.length} categories.`);
+      } catch (err: any) {
+        console.error('Auto training error:', err);
+        toast.warning('Assets uploaded successfully. Training will be retried automatically.');
+      }
     } catch (error) {
       console.error('Error uploading assets:', error);
       toast.error("Failed to upload assets");
@@ -319,7 +331,7 @@ export default function BrandKit() {
               {uploadingAssets ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Uploading...
+                  Uploading & Training...
                 </>
               ) : (
                 <>
