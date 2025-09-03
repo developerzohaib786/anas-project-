@@ -16,6 +16,9 @@ import Projects from "./pages/Projects";
 import BrandKit from "./pages/BrandKit";
 import Settings from "./pages/Settings";
 import Chat from "./pages/Chat";
+import Landing from "./pages/Landing";
+import QuickCapture from "./pages/QuickCapture";
+import CreativeStudio from "./pages/CreativeStudio";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -40,7 +43,9 @@ const App = () => (
                         <AppSidebar />
                         <main className="flex-1">
                           <Routes>
-                            <Route path="/" element={<Chat />} />
+                            <Route path="/" element={<Landing />} />
+                            <Route path="/quick-capture" element={<QuickCapture />} />
+                            <Route path="/creative-studio" element={<CreativeStudio />} />
                             <Route path="/chat/:sessionId" element={<Chat />} />
                             <Route path="/projects" element={<Projects />} />
                             <Route path="/brand-kit" element={<BrandKit />} />

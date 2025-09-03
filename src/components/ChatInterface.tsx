@@ -100,12 +100,12 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
   }, [messages]);
 
   const examplePrompts = [
-    "Create a luxury poolside scene with cabanas at sunset",
-    "Generate an elegant hotel suite with ocean views and modern decor",
-    "Design a sophisticated restaurant dining area with ambient lighting",
-    "Create a spa treatment room with natural elements and soft lighting",
-    "Generate a rooftop bar scene with city skyline views at golden hour",
-    "Design a family-friendly pool area with fun activities and tropical vibes"
+    "A high-flash photo of a martini on a bar top with dramatic shadows",
+    "A golden hour editorial shot of a hotel suite with sunlight spilling in",
+    "An overhead shot of colorful dishes and cocktails artfully arranged",
+    "A cinematic lifestyle photo of guests enjoying the poolside bar",
+    "A moody, commercial-style shot of wine glasses clinking at golden hour",
+    "A night-time luxury shot of the pool glowing under ambient lighting"
   ];
 
   const handlePromptClick = (prompt: string) => {

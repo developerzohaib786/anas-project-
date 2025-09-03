@@ -1,4 +1,4 @@
-import { Paintbrush, FolderOpen, Palette, Settings, ChevronRight, User, LogOut, MessageSquare, X } from "lucide-react";
+import { Camera, MessageSquare, FolderOpen, Palette, Settings, ChevronRight, User, LogOut, X } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChat } from "@/contexts/ChatContext";
@@ -21,7 +21,8 @@ import {
 } from "@/components/ui/sidebar";
 
 const mainNavItems = [
-  { title: "New Project", url: "/", icon: Paintbrush },
+  { title: "Quick Capture", url: "/quick-capture", icon: Camera },
+  { title: "Creative Studio", url: "/creative-studio", icon: MessageSquare },
   { title: "Projects", url: "/projects", icon: FolderOpen },
   { title: "Brand Kit", url: "/brand-kit", icon: Palette },
 ];
@@ -57,14 +58,8 @@ export function AppSidebar() {
   };
 
   const handleNewProject = () => {
-    // If we're already on a chat page, create a new session
-    if (currentPath.startsWith('/chat/')) {
-      const newSessionId = createSession();
-      navigate(`/chat/${newSessionId}`);
-    } else {
-      // Otherwise navigate to the home page
-      navigate('/');
-    }
+    // Navigate to the landing page to choose route
+    navigate('/');
   };
 
   return (
@@ -105,31 +100,20 @@ export function AppSidebar() {
               {mainNavItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    {item.title === "New Project" ? (
-                      <button
-                        onClick={handleNewProject}
-                        className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 font-medium text-sm mb-1 md:justify-start justify-center text-gray-600 hover:bg-gray-100 hover:text-gray-900 w-full text-left`}
-                        title={item.title}
-                      >
-                        <item.icon className="h-4 w-4 md:mr-0 mr-0" />
-                        <span className="md:block hidden">{item.title}</span>
-                      </button>
-                    ) : (
-                      <NavLink
-                        to={item.url}
-                        className={({ isActive }) =>
-                          `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 font-medium text-sm mb-1 md:justify-start justify-center ${
-                            isActive
-                              ? "bg-gray-900 text-white"
-                              : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                          }`
-                        }
-                        title={item.title}
-                      >
-                        <item.icon className="h-4 w-4 md:mr-0 mr-0" />
-                        <span className="md:block hidden">{item.title}</span>
-                      </NavLink>
-                    )}
+                    <NavLink
+                      to={item.url}
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 font-medium text-sm mb-1 md:justify-start justify-center ${
+                          isActive
+                            ? "bg-gray-900 text-white"
+                            : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                        }`
+                      }
+                      title={item.title}
+                    >
+                      <item.icon className="h-4 w-4 md:mr-0 mr-0" />
+                      <span className="md:block hidden">{item.title}</span>
+                    </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
