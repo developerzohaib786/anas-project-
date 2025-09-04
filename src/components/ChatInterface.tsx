@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowUp, Copy, ThumbsUp, ThumbsDown, Volume2, Share, RotateCcw, X } from "lucide-react";
+import { ArrowUp, Copy, ThumbsUp, ThumbsDown, Volume2, Share, RotateCcw, X, Upload, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChat } from "@/contexts/ChatContext";
 import { useParams } from "react-router-dom";
 import { ChatInputControls } from "@/components/ChatInputControls";
+import { PromptLibrary } from "@/components/PromptLibrary";
 
 interface Message {
   id: string;
@@ -40,8 +41,10 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
   ]);
   const [inputValue, setInputValue] = useState("");
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
+  const [promptLibraryOpen, setPromptLibraryOpen] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load session data when sessionId changes
   useEffect(() => {
@@ -144,6 +147,36 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
 
   const handlePromptClick = (prompt: string) => {
     setInputValue(prompt);
+  };
+
+  const handleImageUpload = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+
+    const fileArray = Array.from(e.target.files);
+    const validFiles = fileArray.filter(file => file.type.startsWith('image/'));
+    
+    if (validFiles.length === 0) return;
+
+    const remainingSlots = 3 - uploadedImages.length;
+    const filesToAdd = validFiles.slice(0, remainingSlots);
+
+    const newImages: UploadedImage[] = filesToAdd.map(file => ({
+      id: `${Date.now()}-${Math.random()}`,
+      file,
+      url: URL.createObjectURL(file),
+      name: file.name
+    }));
+
+    setUploadedImages([...uploadedImages, ...newImages]);
+    e.target.value = ''; // Reset input
+  };
+
+  const handleViewPrompts = () => {
+    setPromptLibraryOpen(true);
   };
 
   const removeImage = (id: string) => {
@@ -303,6 +336,15 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
 
   return (
     <div className="flex flex-col h-screen relative">
+      {/* Hidden file input for route guide upload button */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={handleFileInputChange}
+        className="hidden"
+      />
       {/* Messages */}
       <ScrollArea className="flex-1 minimal-scroll" ref={scrollAreaRef}>
         <div className="w-full px-4 py-8 pb-32 md:px-6 md:py-12">
@@ -384,21 +426,37 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
                  <p className="text-sm text-muted-foreground mb-6 font-medium">
                    Choose your creation style:
                  </p>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                   <div className="p-6 rounded-xl bg-muted/20 border border-muted/40 hover:bg-muted/30 transition-all duration-200">
-                     <h3 className="font-semibold text-foreground text-base mb-3">Quick Scene Capture</h3>
-                     <p className="text-sm text-muted-foreground leading-relaxed">
-                       Upload an iPhone photo and let Nino transform it into luxury marketing content. Perfect for turning everyday snapshots into professional visuals.
-                     </p>
-                   </div>
-                   
-                   <div className="p-6 rounded-xl bg-muted/20 border border-muted/40 hover:bg-muted/30 transition-all duration-200">
-                     <h3 className="font-semibold text-foreground text-base mb-3">Chat / Prompts</h3>
-                     <p className="text-sm text-muted-foreground leading-relaxed">
-                       Describe your vision or use our expert prompt library for precise creative control. Ideal for specific requirements and creative exploration.
-                     </p>
-                   </div>
-                 </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div className="p-6 rounded-xl bg-muted/20 border border-muted/40 hover:bg-muted/30 transition-all duration-200">
+                      <h3 className="font-semibold text-foreground text-base mb-3">iPhone to Editorial</h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+                        Upload an iPhone photo and let Nino transform it into luxury marketing content. Perfect for turning everyday snapshots into professional visuals.
+                      </p>
+                      <Button 
+                        onClick={handleImageUpload}
+                        className="w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg"
+                        size="sm"
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        Try now
+                      </Button>
+                    </div>
+                    
+                    <div className="p-6 rounded-xl bg-muted/20 border border-muted/40 hover:bg-muted/30 transition-all duration-200">
+                      <h3 className="font-semibold text-foreground text-base mb-3">Chat / Prompts</h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+                        Describe your vision or use our expert prompt library for precise creative control. Ideal for specific requirements and creative exploration.
+                      </p>
+                      <Button 
+                        onClick={handleViewPrompts}
+                        className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-lg"
+                        size="sm"
+                      >
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        Browse prompts
+                      </Button>
+                    </div>
+                  </div>
                </div>
              )}
            </div>
@@ -492,6 +550,12 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
           </div>
         </div>
       </div>
+
+      <PromptLibrary
+        open={promptLibraryOpen}
+        onOpenChange={setPromptLibraryOpen}
+        onPromptSelect={handlePromptClick}
+      />
     </div>
   );
 }
