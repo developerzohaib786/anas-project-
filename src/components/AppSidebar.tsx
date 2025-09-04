@@ -151,10 +151,8 @@ export function AppSidebar() {
                       <NavLink
                         to={`/chat/${session.id}`}
                         className={({ isActive }) =>
-                          `flex items-center px-3 py-2 rounded-lg transition-all duration-200 text-sm w-full ${
-                            isActive
-                              ? "bg-gray-900 text-white"
-                              : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                          `flex items-center px-3 py-2 rounded-lg transition-all duration-200 text-sm w-full text-gray-600 hover:bg-gray-100 hover:text-gray-900 ${
+                            isActive ? "bg-gray-100" : ""
                           }`
                         }
                         title={session.title}
