@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
-
+import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 const Auth = () => {
@@ -11,44 +11,100 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      if (session) navigate("/");
+    });
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) navigate("/");
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/`
           }
         });
-        if (error) throw error;
+
+        if (error) {
+          if ((error as any).code === "user_already_exists") {
+            const { error: signInError } = await supabase.auth.signInWithPassword({
+              email,
+              password,
+            });
+            if (signInError) throw signInError;
+            toast({ title: "Welcome back!", description: "Signed in successfully." });
+            navigate("/");
+            return;
+          }
+          throw error;
+        }
+
+        if (data.session) {
+          toast({ title: "Account created", description: "Redirecting to dashboard..." });
+          navigate("/");
+          return;
+        }
+
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        if (!signInError) {
+          toast({ title: "Account created", description: "Signed in successfully." });
+          navigate("/");
+        } else {
+          toast({
+            title: "Confirm your email",
+            description: "We sent you a confirmation link. Click it to finish signing in.",
+            variant: "default",
+          });
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
+        toast({ title: "Welcome!", description: "Signed in successfully." });
         navigate("/");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Auth error:", error);
+      toast({
+        title: "Authentication failed",
+        description: error?.message || "Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
   const handleGoogleSignIn = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+        provider: "google",
         options: {
           redirectTo: `${window.location.origin}/`
         }
       });
       if (error) throw error;
-    } catch (error) {
+      toast({ title: "Redirecting to Google...", description: "Continue in the popup/window." });
+    } catch (error: any) {
       console.error("Google auth error:", error);
+      toast({
+        title: "Google sign-in failed",
+        description: error?.message || "Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
