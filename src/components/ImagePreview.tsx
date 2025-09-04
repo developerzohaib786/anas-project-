@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Download, RotateCcw, Check, ChevronDown } from "lucide-react";
+import { Download, RotateCcw, Check, ChevronDown, Crop } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
 interface ImagePreviewProps {
   currentPrompt?: string;
@@ -22,6 +23,7 @@ export function ImagePreview({ currentPrompt, isGenerating = false, generatedIma
   const [selectedRatio, setSelectedRatio] = useState<AspectRatio>("1:1");
   const [showDone, setShowDone] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [isResizeMode, setIsResizeMode] = useState(false);
   const displayedImage = generatedImageProp;
 
   useEffect(() => {
@@ -34,6 +36,22 @@ export function ImagePreview({ currentPrompt, isGenerating = false, generatedIma
   const handleDownload = (format: string) => {
     if (!displayedImage) return;
     
+    // Save to projects by storing in localStorage (you can replace with actual backend later)
+    const projectData = {
+      id: Date.now().toString(),
+      name: `Generated Image ${new Date().toLocaleDateString()}`,
+      category: "AI Generated",
+      thumbnail: displayedImage,
+      prompt: currentPrompt || "Generated image",
+      aspectRatio: selectedRatio,
+      format: format,
+      createdAt: new Date().toISOString()
+    };
+    
+    const existingProjects = JSON.parse(localStorage.getItem('user-projects') || '[]');
+    existingProjects.push(projectData);
+    localStorage.setItem('user-projects', JSON.stringify(existingProjects));
+    
     // Create a temporary anchor element and trigger download
     const link = document.createElement('a');
     link.href = displayedImage;
@@ -41,6 +59,13 @@ export function ImagePreview({ currentPrompt, isGenerating = false, generatedIma
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    
+    toast.success('Image saved to Projects and downloaded!');
+  };
+
+  const handleResize = () => {
+    setIsResizeMode(!isResizeMode);
+    toast.info(isResizeMode ? 'Resize mode disabled' : 'Resize mode enabled - adjust the aspect ratio above');
   };
 
   const aspectRatios: AspectRatio[] = ["1:1", "4:5", "9:16", "16:9"];
@@ -101,7 +126,7 @@ export function ImagePreview({ currentPrompt, isGenerating = false, generatedIma
       </div>
 
       {/* Actions */}
-      <div className="px-6 pb-6">
+      <div className="px-6 pb-6 space-y-3">
         {!showDone ? (
           <Button
             variant="default"
@@ -114,42 +139,61 @@ export function ImagePreview({ currentPrompt, isGenerating = false, generatedIma
             Done
           </Button>
         ) : (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="default"
-                size="lg"
-                className="w-full h-12 rounded-2xl font-semibold bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary/80 text-secondary-foreground border-0 shadow-lg transform hover:scale-[1.02] transition-all duration-200"
-              >
-                <Download className="w-5 h-5 mr-2" />
-                Download
-                <ChevronDown className="w-4 h-4 ml-2" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent 
-              align="center" 
-              className="w-56 bg-background/95 backdrop-blur-xl border border-border/40 rounded-xl shadow-lg"
+          <>
+            {/* Resize Button */}
+            <Button
+              variant="outline"
+              size="lg"
+              disabled={!displayedImage}
+              onClick={handleResize}
+              className={`w-full h-12 rounded-2xl font-semibold border-2 transition-all duration-200 transform hover:scale-[1.02] ${
+                isResizeMode 
+                  ? 'border-primary bg-primary/10 text-primary hover:bg-primary/20' 
+                  : 'border-border/50 bg-background/50 text-foreground hover:border-border'
+              }`}
             >
-              <DropdownMenuItem 
-                onClick={() => handleDownload('PNG')}
-                className="rounded-lg font-medium text-foreground hover:bg-muted/60 cursor-pointer"
+              <Crop className="w-5 h-5 mr-2" />
+              {isResizeMode ? 'Exit Resize' : 'Resize'}
+            </Button>
+
+            {/* Download Button */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="default"
+                  size="lg"
+                  className="w-full h-12 rounded-2xl font-semibold bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary/80 text-secondary-foreground border-0 shadow-lg transform hover:scale-[1.02] transition-all duration-200"
+                >
+                  <Download className="w-5 h-5 mr-2" />
+                  Download
+                  <ChevronDown className="w-4 h-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent 
+                align="center" 
+                className="w-56 bg-background/95 backdrop-blur-xl border border-border/40 rounded-xl shadow-lg"
               >
-                PNG (High Quality)
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => handleDownload('JPG')}
-                className="rounded-lg font-medium text-foreground hover:bg-muted/60 cursor-pointer"
-              >
-                JPG (Smaller Size)
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => handleDownload('WebP')}
-                className="rounded-lg font-medium text-foreground hover:bg-muted/60 cursor-pointer"
-              >
-                WebP (Modern)
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <DropdownMenuItem 
+                  onClick={() => handleDownload('PNG')}
+                  className="rounded-lg font-medium text-foreground hover:bg-muted/60 cursor-pointer"
+                >
+                  PNG (High Quality)
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => handleDownload('JPG')}
+                  className="rounded-lg font-medium text-foreground hover:bg-muted/60 cursor-pointer"
+                >
+                  JPG (Smaller Size)
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => handleDownload('WebP')}
+                  className="rounded-lg font-medium text-foreground hover:bg-muted/60 cursor-pointer"
+                >
+                  WebP (Modern)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
         )}
       </div>
     </div>

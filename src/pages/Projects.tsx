@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Plus, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,8 +7,14 @@ import { useNavigate } from "react-router-dom";
 
 export default function Projects() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [projects] = useState<any[]>([]); // Empty projects array - users will create their own
+  const [projects, setProjects] = useState<any[]>([]);
   const navigate = useNavigate();
+
+  // Load projects from localStorage
+  useEffect(() => {
+    const savedProjects = JSON.parse(localStorage.getItem('user-projects') || '[]');
+    setProjects(savedProjects);
+  }, []);
 
   const filteredProjects = projects.filter(project => 
     project.name.toLowerCase().includes(searchQuery.toLowerCase())
