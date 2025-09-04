@@ -16,6 +16,11 @@ serve(async (req) => {
     const { prompt, aspect_ratio, images } = await req.json();
     console.log('📝 Prompt:', prompt);
     console.log('📐 Aspect ratio:', aspect_ratio);
+    console.log('🖼️ Images received:', images ? images.length : 0, 'images');
+    if (images && images.length > 0) {
+      console.log('📄 First image data type:', typeof images[0].data);
+      console.log('📄 First image data preview:', images[0].data?.substring(0, 50) + '...');
+    }
 
     if (!prompt || typeof prompt !== 'string') {
       console.error('❌ Invalid prompt:', prompt);
@@ -65,12 +70,30 @@ serve(async (req) => {
 
     // Handle reference images if provided
     let referenceImageContext = '';
+    let imageParts = [];
+    
     if (images && images.length > 0) {
       referenceImageContext = `\n\nREFERENCE IMAGES PROVIDED (${images.length} images):
 - User has uploaded ${images.length} reference image(s) to guide the generation
 - Incorporate visual elements, composition, lighting, or styling cues from these references
 - Maintain the Nino Style Guide while drawing inspiration from the reference materials
 - If the user mentions changing specific elements (like "change the food on the table"), use the reference as the base composition and modify accordingly`;
+      
+      // Convert images to the format expected by Gemini
+      images.forEach((img, index) => {
+        if (img.data) {
+          // Extract base64 data from data URL (format: "data:image/png;base64,base64data")
+          const base64Data = img.data.split(',')[1];
+          const mimeType = img.data.split(';')[0].split(':')[1];
+          
+          imageParts.push({
+            inlineData: {
+              data: base64Data,
+              mimeType: mimeType
+            }
+          });
+        }
+      });
     }
 
     const NINO_STYLE_GUIDE = `Nino Style Guide — ALWAYS APPLY unless user explicitly opts out:
@@ -121,15 +144,23 @@ serve(async (req) => {
           contents: [
             {
               parts: [
-                { text: finalPrompt }
+                { text: finalPrompt },
+                ...imageParts
               ]
             }
-          ]
+          ],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 1024
+          }
         }),
       }
     );
 
     console.log('📡 Google API response status:', response.status);
+
 
     if (!response.ok) {
       const errText = await response.text();

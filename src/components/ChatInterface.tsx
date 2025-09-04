@@ -100,12 +100,12 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
   }, [messages]);
 
   const examplePrompts = [
-    "A high-flash photo of a martini on a bar top with dramatic shadows",
-    "A golden hour editorial shot of a hotel suite with sunlight spilling in",
-    "An overhead shot of colorful dishes and cocktails artfully arranged",
-    "A cinematic lifestyle photo of guests enjoying the poolside bar",
-    "A moody, commercial-style shot of wine glasses clinking at golden hour",
-    "A night-time luxury shot of the pool glowing under ambient lighting"
+    "Create a luxury poolside scene with cabanas at sunset",
+    "Generate an elegant hotel suite with ocean views and modern decor",
+    "Design a sophisticated restaurant dining area with ambient lighting",
+    "Create a spa treatment room with natural elements and soft lighting",
+    "Generate a rooftop bar scene with city skyline views at golden hour",
+    "Design a family-friendly pool area with fun activities and tropical vibes"
   ];
 
   const handlePromptClick = (prompt: string) => {
@@ -135,10 +135,32 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
     try {
       // Call the real AI chat API
       const { supabase } = await import("@/integrations/supabase/client");
+
+      // Convert any attached images to base64
+      let imageData: { data: string; name: string }[] | undefined = undefined;
+      if (currentImages && currentImages.length > 0) {
+        const convertToBase64 = (file: File): Promise<string> =>
+          new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+
+        try {
+          imageData = await Promise.all(
+            currentImages.map(async (img) => ({ data: await convertToBase64(img.file), name: img.name }))
+          );
+        } catch (e) {
+          console.error("Failed to convert images for chat:", e);
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke("chat-with-ai", {
         body: { 
           prompt: currentInput,
-          messages: newMessages.slice(1) // Exclude the initial welcome message
+          messages: newMessages.slice(1), // Exclude the initial welcome message
+          images: imageData
         },
       });
 

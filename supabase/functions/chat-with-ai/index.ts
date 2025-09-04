@@ -12,7 +12,8 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, prompt } = await req.json();
+    const { messages, prompt, images } = await req.json();
+
 
     if (!prompt || typeof prompt !== 'string') {
       return new Response(JSON.stringify({ error: 'Missing prompt' }), {
@@ -52,6 +53,7 @@ serve(async (req) => {
 
     const apiKey = Deno.env.get('GOOGLE_STUDIO_API_KEY');
     if (!apiKey) {
+      console.error('❌ Missing GOOGLE_STUDIO_API_KEY');
       throw new Error('Missing GOOGLE_STUDIO_API_KEY secret');
     }
 
@@ -61,50 +63,44 @@ serve(async (req) => {
       parts: [{ text: msg.content }]
     })) || [];
 
-    // Add the current user prompt
+    // Prepare inline image parts for the current user prompt
+    const imageParts = [] as any[];
+    if (images && images.length > 0) {
+      images.forEach((img: any) => {
+        if (img.data) {
+          const base64Data = img.data.split(',')[1];
+          const mimeType = img.data.split(';')[0].split(':')[1];
+          imageParts.push({ inlineData: { data: base64Data, mimeType } });
+        }
+      });
+    }
+
+    // Add the current user prompt, including any attached images as parts
     conversationHistory.push({
       role: 'user',
-      parts: [{ text: prompt }]
+      parts: [ { text: prompt }, ...imageParts ]
     });
 
-    const systemPrompt = `You are Nino, an AI creative director specialized in luxury hospitality marketing photography. Your role is to help hotel teams create stunning, commercial-quality marketing visuals through the Creative Studio interface.
+    const systemPrompt = `You are Nino, an expert AI assistant specializing in hotel and hospitality marketing. You help create compelling marketing content and generate high-quality promotional images for hotels, resorts, and hospitality businesses.
 
-${brandContext}Your personality and approach:
-- You are a creative director with expertise in luxury hospitality photography
-- You understand both technical photography and marketing psychology
-- You speak in a supportive, professional, yet approachable tone
-- You help users translate everyday language into professional photography concepts
-- You bridge the gap between non-creative users and high-end visual results
+${brandContext}Your primary role is to:
+1. Ask thoughtful questions to understand the user's hotel marketing needs
+2. Provide creative suggestions for marketing content and imagery
+3. Help refine image prompts for hotel photography and marketing materials
+4. Offer expertise on hospitality marketing best practices
 
-Key behavioral rules:
-1. When users ask for image generation (using words like "create", "generate", "make", "design", "show me", or describe a visual scene):
-   - Set "intent": "generate"
-   - Provide a helpful "response" explaining what you're creating
-   - Create a detailed "image_prompt" that incorporates:
-     * The user's request
-     * Professional photography terminology (high-flash, editorial, commercial, golden hour, etc.)
-     * Luxury hospitality aesthetic
-     * Specific lighting, composition, and styling details
-     * The Nino style guide elements
+When helping with image generation:
+- Ask about the type of space (lobby, rooms, dining, pools, spa, etc.)
+- Inquire about the mood and style (luxury, modern, cozy, romantic, family-friendly)
+- Suggest including or excluding people in scenes
+- Consider lighting, time of day, and seasonal elements
+- Focus on creating professional, marketing-quality image descriptions
 
-2. When users ask questions, need clarification, or want to chat:
-   - Set "intent": "ask"
-   - Provide a helpful "response"
-   - Ask one concise clarifying question
-
-3. PROMPT ENHANCEMENT STRATEGIES:
-   - Use professional photography terms: "high-flash", "editorial shot", "commercial style", "golden hour", "moody lighting"
-   - Include composition details: "overhead shot", "wide angle", "close-up", "cinematic angle"
-   - Add luxury descriptors: "elegant", "sophisticated", "premium", "luxury", "high-end"
-   - Specify marketing context: "commercial quality", "marketing ready", "social media optimized"
-
-4. HOSPITALITY-SPECIFIC ENHANCEMENTS:
-   - Food & Beverage: "artfully arranged", "perfect garnish", "steam effects", "stylized plating"
-   - Rooms & Suites: "sunlight spilling in", "luxurious linens", "ambient lighting", "architectural details"
-   - Pools & Amenities: "reflective water", "sunset glow", "infinity edge", "cabana styling"
-   - Lifestyle: "guests enjoying", "intimate moments", "social interactions", "experiential"
-
-Remember: You're turning everyday requests into professional, luxury marketing visuals that hotels can use across all their marketing channels.
+Important behavior rules:
+- This app can generate images directly. Never instruct the user to copy prompts into external tools.
+- If images are attached, you CAN see and reference them. Never say you cannot view images; acknowledge and use them in your reasoning.
+- When you have enough detail to proceed, set intent to "generate" and produce a single, photorealistic marketing image description in image_prompt.
+- Otherwise, set intent to "ask" and ask one concise clarifying question.
 
 Respond STRICTLY in the following JSON format with no extra text:
 {"response": "<what you say to the user>", "intent": "ask|generate", "image_prompt": "<only when intent=generate>"}`;
@@ -135,7 +131,7 @@ Respond STRICTLY in the following JSON format with no extra text:
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error('Google AI API error:', response.status, errText);
+      console.error('❌ Google AI API error (chat-with-ai):', response.status, errText);
       return new Response(
         JSON.stringify({ error: 'AI response failed', details: errText }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -143,6 +139,7 @@ Respond STRICTLY in the following JSON format with no extra text:
     }
 
     const aiResponse = await response.json();
+    console.log('🧠 Chat model responded');
     const aiText = aiResponse?.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!aiText) {

@@ -1,12 +1,9 @@
 import { useState } from "react";
 import { ChatInterface } from "@/components/ChatInterface";
-import { QuickCaptureInterface } from "@/components/QuickCaptureInterface";
 import { ImagePreview } from "@/components/ImagePreview";
-import { ModeToggle } from "@/components/ModeToggle";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 
 const Chat = () => {
-  const [mode, setMode] = useState<'quick' | 'creative'>('quick');
   const [currentPrompt, setCurrentPrompt] = useState<string>();
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | undefined>();
@@ -74,73 +71,34 @@ const Chat = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col">
-      {/* Header with Mode Toggle */}
-      <div className="border-b border-border bg-card/50 backdrop-blur-sm p-4">
-        <div className="flex items-center justify-center">
-          <ModeToggle mode={mode} onModeChange={setMode} />
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1">
-        {/* Desktop Layout */}
-        <div className="hidden md:block h-full">
-          <ResizablePanelGroup direction="horizontal" className="h-full">
-            {/* Main Interface Panel */}
-            <ResizablePanel defaultSize={70} minSize={50}>
-              <div className="h-full transition-all duration-500 ease-out">
-                {mode === 'quick' ? (
-                  <QuickCaptureInterface 
-                    onGenerateImage={handleGenerateImage}
-                    isGenerating={isGenerating}
-                  />
-                ) : (
-                  <ChatInterface onGenerateImage={handleGenerateImage} />
-                )}
-              </div>
-            </ResizablePanel>
-            
-            {/* Resizable Handle */}
-            <ResizableHandle className="w-1 bg-border hover:bg-border/80 transition-colors duration-200" />
-            
-            {/* Image Preview Panel */}
-            <ResizablePanel defaultSize={30} minSize={25} maxSize={50}>
-              <div className="bg-card h-full">
-                <ImagePreview 
-                  currentPrompt={currentPrompt}
-                  isGenerating={isGenerating}
-                  generatedImage={generatedImage}
-                />
-              </div>
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        </div>
-        
-        {/* Mobile Layout */}
-        <div className="md:hidden h-full flex flex-col">
-          <div className="flex-1 transition-all duration-500 ease-out">
-            {mode === 'quick' ? (
-              <QuickCaptureInterface 
-                onGenerateImage={handleGenerateImage}
-                isGenerating={isGenerating}
-              />
-            ) : (
-              <ChatInterface onGenerateImage={handleGenerateImage} />
-            )}
-          </div>
+    <div className="h-screen">
+      {/* Desktop Layout */}
+      <div className="hidden md:block h-full">
+        <ResizablePanelGroup direction="horizontal" className="h-full">
+          {/* Chat Interface Panel */}
+          <ResizablePanel defaultSize={70} minSize={50}>
+            <ChatInterface onGenerateImage={handleGenerateImage} />
+          </ResizablePanel>
           
-          {/* Mobile Preview (when generating or has result) */}
-          {(isGenerating || generatedImage) && (
-            <div className="border-t border-border bg-card max-h-80">
+          {/* Resizable Handle */}
+          <ResizableHandle className="w-1 bg-border hover:bg-border/80 transition-colors duration-200" />
+          
+          {/* Image Preview Panel */}
+          <ResizablePanel defaultSize={30} minSize={25} maxSize={50}>
+            <div className="bg-card h-full">
               <ImagePreview 
                 currentPrompt={currentPrompt}
                 isGenerating={isGenerating}
                 generatedImage={generatedImage}
               />
             </div>
-          )}
-        </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </div>
+      
+      {/* Mobile Layout */}
+      <div className="md:hidden h-full">
+        <ChatInterface onGenerateImage={handleGenerateImage} />
       </div>
     </div>
   );
