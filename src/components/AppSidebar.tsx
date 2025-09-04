@@ -1,10 +1,11 @@
-import { Paintbrush, FolderOpen, Palette, Settings, ChevronRight, User, LogOut, MessageSquare, X } from "lucide-react";
+import { Paintbrush, FolderOpen, Palette, Settings, ChevronRight, User, LogOut, MessageSquare } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChat } from "@/contexts/ChatContext";
 import { useBrand } from "@/contexts/BrandContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { ChatActionsMenu } from "@/components/ChatActionsMenu";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -37,7 +38,7 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const currentPath = location.pathname;
   const { user, signOut } = useAuth();
-  const { sessions, deleteSession, createSession } = useChat();
+  const { sessions, deleteSession, createSession, renameSession } = useChat();
   const { brandProfile, profile } = useBrand();
   const isActive = (path: string) => currentPath === path;
   const brandName = brandProfile?.brand_name || "Your Brand";
@@ -47,10 +48,12 @@ export function AppSidebar() {
     
   const initials = brandName.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
 
-  const handleDeleteSession = (sessionId: string, event: React.MouseEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
+  const handleDeleteSession = (sessionId: string) => {
     deleteSession(sessionId);
+  };
+
+  const handleRenameSession = (sessionId: string, newTitle: string) => {
+    renameSession(sessionId, newTitle);
   };
 
   const handleNewProject = () => {
@@ -157,20 +160,15 @@ export function AppSidebar() {
                         title={session.title}
                       >
                         <div className="flex items-center min-w-0 flex-1">
-                          {!session.isCompleted && (
-                            <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mr-2" />
-                          )}
-                          <span className="truncate flex-1">{session.title}</span>
+                          <span className="truncate flex-1 pr-8">{session.title}</span>
                         </div>
                       </NavLink>
-                      <button
-                        type="button"
-                        onClick={(e) => handleDeleteSession(session.id, e)}
-                        className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-100 text-red-500 hover:text-red-700"
-                        title="Delete chat"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
+                      <ChatActionsMenu
+                        sessionId={session.id}
+                        sessionTitle={session.title}
+                        onDelete={handleDeleteSession}
+                        onRename={handleRenameSession}
+                      />
                     </div>
                   </SidebarMenuItem>
                 ))}

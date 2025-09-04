@@ -15,6 +15,7 @@ interface ChatContextType {
   createSession: (title?: string) => string;
   updateSession: (sessionId: string, updates: Partial<ChatSession>) => void;
   deleteSession: (sessionId: string) => void;
+  renameSession: (sessionId: string, newTitle: string) => void;
   setCurrentSession: (sessionId: string | null) => void;
   getCurrentSession: () => ChatSession | null;
   clearAllSessions: () => void;
@@ -104,9 +105,24 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const deleteSession = (sessionId: string) => {
     setSessions(prev => prev.filter(session => session.id !== sessionId));
     
+    // If we're deleting the current session, clear the current session
     if (currentSessionId === sessionId) {
       setCurrentSessionId(null);
+      // Navigate to home if we're currently viewing this session
+      if (typeof window !== 'undefined' && window.location.pathname === `/chat/${sessionId}`) {
+        window.location.href = '/';
+      }
     }
+  };
+
+  const renameSession = (sessionId: string, newTitle: string) => {
+    setSessions(prev => 
+      prev.map(session => 
+        session.id === sessionId 
+          ? { ...session, title: newTitle.trim() || 'Untitled Chat', updatedAt: new Date() }
+          : session
+      )
+    );
   };
 
   const setCurrentSession = (sessionId: string | null) => {
@@ -131,6 +147,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       createSession,
       updateSession,
       deleteSession,
+      renameSession,
       setCurrentSession,
       getCurrentSession,
       clearAllSessions
