@@ -3,8 +3,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/AppSidebar";
+import { SidebarProvider } from "@/components/ui/sidebar"; // kept for other usages
+import { AppSidebar } from "@/components/AppSidebar"; // kept for other usages
+import ProtectedAppLayout from "@/components/ProtectedAppLayout";
 
 import { ChatProvider } from "@/contexts/ChatContext";
 import { BrandProvider } from "@/contexts/BrandContext";
@@ -30,23 +31,14 @@ const App = () => (
           <div className="min-h-screen bg-background">
             <Routes>
               <Route path="/auth" element={<Auth />} />
-              <Route path="/*" element={
-                <SidebarProvider>
-                  <div className="flex min-h-screen w-full">
-                    <AppSidebar />
-                    <main className="flex-1 min-w-0">
-                      <Routes>
-                        <Route path="/" element={<Chat />} />
-                        <Route path="/chat/:sessionId" element={<Chat />} />
-                        <Route path="/projects" element={<Projects />} />
-                        <Route path="/brand-kit" element={<BrandKit />} />
-                        <Route path="/settings" element={<Settings />} />
-                        <Route path="*" element={<NotFound />} />
-                      </Routes>
-                    </main>
-                  </div>
-                </SidebarProvider>
-              } />
+              <Route element={<ProtectedAppLayout />}>
+                <Route path="/" element={<Chat />} />
+                <Route path="/chat/:sessionId" element={<Chat />} />
+                <Route path="/projects" element={<Projects />} />
+                <Route path="/brand-kit" element={<BrandKit />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="*" element={<NotFound />} />
+              </Route>
             </Routes>
           </div>
         </BrowserRouter>
