@@ -434,7 +434,7 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
                  </p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                     <div className="p-6 rounded-xl bg-muted/20 border border-muted/40 hover:bg-muted/30 transition-all duration-200 flex flex-col">
-                      <h3 className="font-medium text-foreground text-base mb-3">Any photo to ad ready</h3>
+                      <h3 className="font-medium text-foreground text-base mb-3">Turn any photo into ad-ready content</h3>
                       <p className="text-sm text-muted-foreground leading-relaxed mb-4 flex-1">
                         Upload any photo and we'll turn it into ad-ready, professional content.
                       </p>
