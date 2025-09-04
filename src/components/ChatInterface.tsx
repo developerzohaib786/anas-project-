@@ -434,10 +434,10 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
                       </p>
                       <Button 
                         onClick={handleImageUpload}
-                        className="w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg"
+                        variant="secondary"
+                        className="w-full"
                         size="sm"
                       >
-                        <Upload className="h-4 w-4 mr-2" />
                         Try now
                       </Button>
                     </div>
@@ -449,10 +449,10 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
                       </p>
                       <Button 
                         onClick={handleViewPrompts}
-                        className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-lg"
+                        variant="secondary"
+                        className="w-full"
                         size="sm"
                       >
-                        <Sparkles className="h-4 w-4 mr-2" />
                         Browse prompts
                       </Button>
                     </div>
