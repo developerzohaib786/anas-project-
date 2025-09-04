@@ -434,9 +434,9 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
                  </p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                     <div className="p-6 rounded-xl bg-muted/20 border border-muted/40 hover:bg-muted/30 transition-all duration-200 flex flex-col">
-                      <h3 className="font-semibold text-foreground text-base mb-3">iPhone to Editorial</h3>
+                      <h3 className="font-medium text-foreground text-base mb-3">Any photo to ad ready</h3>
                       <p className="text-sm text-muted-foreground leading-relaxed mb-4 flex-1">
-                        Upload an iPhone photo and let Nino transform it into luxury marketing content. Perfect for turning everyday snapshots into professional visuals.
+                        Upload any photo and we'll turn it into ad-ready, professional content.
                       </p>
                       <Button 
                         onClick={handleImageUpload}
@@ -449,9 +449,9 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
                     </div>
                     
                     <div className="p-6 rounded-xl bg-muted/20 border border-muted/40 hover:bg-muted/30 transition-all duration-200 flex flex-col">
-                      <h3 className="font-semibold text-foreground text-base mb-3">Chat / Prompts</h3>
+                      <h3 className="font-medium text-foreground text-base mb-3">Chat / Prompts</h3>
                       <p className="text-sm text-muted-foreground leading-relaxed mb-4 flex-1">
-                        Describe your vision or use our expert prompt library for precise creative control. Ideal for specific requirements and creative exploration.
+                        Share your vision or use our prompt library for tailored, creative results.
                       </p>
                       <Button 
                         onClick={handleViewPrompts}
