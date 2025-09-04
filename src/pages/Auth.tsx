@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import logo from "@/assets/logo.png";
+import { supabase } from "@/integrations/supabase/client";
 
 const Auth = () => {
   const [email, setEmail] = useState("");
@@ -11,10 +12,44 @@ const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // For now, just navigate to main app
-    navigate("/");
+    
+    try {
+      if (isSignUp) {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`
+          }
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
+        navigate("/");
+      }
+    } catch (error) {
+      console.error("Auth error:", error);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`
+        }
+      });
+      if (error) throw error;
+    } catch (error) {
+      console.error("Google auth error:", error);
+    }
   };
 
   return (
@@ -23,7 +58,7 @@ const Auth = () => {
         {/* Logo */}
         <div className="text-center">
           <img 
-            src="/lovable-uploads/d43af6be-1954-4034-bdcf-3d846070e35e.png" 
+            src="/lovable-uploads/941c544f-33d7-4463-a848-f7d47c4cb515.png" 
             alt="Logo" 
             className="mx-auto h-10 w-10 mb-4"
           />
@@ -31,21 +66,17 @@ const Auth = () => {
             {isSignUp ? "Create your account" : "Welcome back"}
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            {isSignUp ? "Sign up with your Apple or Google account" : "Login with your Apple or Google account"}
+            {isSignUp ? "Sign up with your Google account" : "Login with your Google account"}
           </p>
         </div>
 
         {/* Social Login Buttons */}
         <div className="space-y-2">
-          <Button variant="outline" className="w-full h-10 text-sm font-medium">
-            <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
-              <path fill="currentColor" d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09z"/>
-              <path fill="currentColor" d="M15.53 3.83c.893-1.09 1.479-2.58 1.306-4.089-1.265.056-2.847.875-3.758 1.944-.806.942-1.526 2.486-1.34 3.938 1.421.106 2.88-.717 3.792-1.793z"/>
-            </svg>
-            {isSignUp ? "Sign up with Apple" : "Login with Apple"}
-          </Button>
-          
-          <Button variant="outline" className="w-full h-10 text-sm font-medium">
+          <Button 
+            variant="outline" 
+            className="w-full h-10 text-sm font-medium"
+            onClick={handleGoogleSignIn}
+          >
             <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
               <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
               <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
