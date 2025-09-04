@@ -132,13 +132,13 @@ export default function Settings() {
   };
 
   return (
-    <div className="px-4 md:px-6 lg:px-8 xl:px-12 py-8 w-full max-w-none">
-      <div className="mb-8 flex justify-between items-center">
+    <div className="px-4 md:px-6 lg:px-8 xl:px-12 py-6 md:py-8 w-full max-w-none">
+      <div className="mb-6 md:mb-8 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-semibold text-gray-900 mb-2" style={{ letterSpacing: '-0.02em' }}>
+          <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-2" style={{ letterSpacing: '-0.02em' }}>
             Settings
           </h1>
-          <p className="text-gray-600">
+          <p className="text-sm md:text-base text-muted-foreground">
             Manage your account settings and brand preferences
           </p>
         </div>
@@ -153,11 +153,11 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 max-w-lg">
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="brand">Brand</TabsTrigger>
-          <TabsTrigger value="teams">Teams</TabsTrigger>
-          <TabsTrigger value="security">Security</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 max-w-lg">
+          <TabsTrigger value="profile" className="text-xs md:text-sm">Profile</TabsTrigger>
+          <TabsTrigger value="brand" className="text-xs md:text-sm">Brand</TabsTrigger>
+          <TabsTrigger value="teams" className="text-xs md:text-sm">Teams</TabsTrigger>
+          <TabsTrigger value="security" className="text-xs md:text-sm">Security</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile" className="space-y-6">

@@ -25,13 +25,13 @@ export default function Projects() {
   };
 
   return (
-    <div className="px-4 md:px-6 lg:px-8 xl:px-12 py-8 w-full max-w-none">
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+    <div className="px-4 md:px-6 lg:px-8 xl:px-12 py-6 md:py-8 w-full max-w-none">
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 md:mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-semibold text-foreground mb-2" style={{ letterSpacing: '-0.02em' }}>
+          <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-2" style={{ letterSpacing: '-0.02em' }}>
             Projects
           </h1>
-          <p className="text-muted-foreground">Manage your created content and campaigns</p>
+          <p className="text-sm md:text-base text-muted-foreground">Manage your created content and campaigns</p>
         </div>
       </div>
 
@@ -60,11 +60,11 @@ export default function Projects() {
 
       {/* Projects Grid - will be populated when users create projects */}
       {filteredProjects.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
           {filteredProjects.map((project) => (
             <div
               key={project.id}
-              className="group relative bg-card rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 border"
+              className="group relative bg-card rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 md:hover:-translate-y-2 border"
             >
               <div className="relative overflow-hidden aspect-[4/3]">
                 <img
@@ -74,9 +74,9 @@ export default function Projects() {
                   loading="lazy"
                 />
               </div>
-              <div className="p-4">
-                <h3 className="font-medium text-foreground mb-1">{project.name}</h3>
-                <p className="text-sm text-muted-foreground">{project.category}</p>
+              <div className="p-3 md:p-4">
+                <h3 className="font-medium text-foreground mb-1 text-sm md:text-base">{project.name}</h3>
+                <p className="text-xs md:text-sm text-muted-foreground">{project.category}</p>
               </div>
             </div>
           ))}

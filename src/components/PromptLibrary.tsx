@@ -85,9 +85,9 @@ export function PromptLibrary({ open, onOpenChange, onPromptSelect }: PromptLibr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh] p-0">
-        <DialogHeader className="p-6 pb-0">
-          <DialogTitle className="text-xl font-semibold">Prompt Library</DialogTitle>
+      <DialogContent className="max-w-4xl max-h-[85vh] md:max-h-[80vh] p-0 m-4">
+        <DialogHeader className="p-4 md:p-6 pb-0">
+          <DialogTitle className="text-lg md:text-xl font-semibold">Prompt Library</DialogTitle>
           <div className="relative mt-4">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -99,14 +99,14 @@ export function PromptLibrary({ open, onOpenChange, onPromptSelect }: PromptLibr
           </div>
         </DialogHeader>
 
-        <ScrollArea className="px-6 pb-6 max-h-[60vh]">
+        <ScrollArea className="px-4 md:px-6 pb-4 md:pb-6 max-h-[70vh] md:max-h-[60vh]">
           <div className="space-y-6">
             {Object.entries(filteredCategories).map(([category, prompts]) => (
               <div key={category} className="space-y-3">
-                <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
+                <h3 className="font-medium text-xs md:text-sm text-muted-foreground uppercase tracking-wide">
                   {category}
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3">
                   {prompts.map((prompt, index) => (
                     <Button
                       key={index}

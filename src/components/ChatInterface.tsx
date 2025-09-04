@@ -423,7 +423,7 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
 
       {/* Fixed Input Area at bottom */}
       <div className="absolute bottom-0 left-0 right-0 border-t border-[hsl(var(--border))] bg-[hsl(var(--background))]">
-        <div className="w-full px-4 py-6 md:px-6">
+        <div className="w-full px-4 py-4 md:px-6 md:py-6">
           <div className="max-w-3xl mx-auto">
            {/* Route Guide - Fixed height container to prevent layout shift */}
             <div className="mb-8 transition-all duration-300" style={{ height: messages.length <= 1 && !inputValue.trim() && uploadedImages.length === 0 ? 'auto' : '0', overflow: 'hidden' }}>

@@ -73,10 +73,10 @@ export function ImagePreview({ currentPrompt, isGenerating = false, generatedIma
   return (
     <div className="flex flex-col h-full">
       {/* Aspect Ratio Controls */}
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         <div className="flex justify-center">
           <div 
-            className="apple-toggle bg-[hsl(var(--toggle-bg))] p-1 rounded-full inline-flex gap-1"
+            className="apple-toggle bg-[hsl(var(--toggle-bg))] p-1 rounded-full inline-flex gap-1 w-full max-w-xs"
             style={{
               boxShadow: 'var(--shadow-minimal)'
             }}
@@ -85,7 +85,7 @@ export function ImagePreview({ currentPrompt, isGenerating = false, generatedIma
               <button
                 key={ratio}
                 onClick={() => setSelectedRatio(ratio)}
-                className={`apple-button px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                className={`apple-button flex-1 px-3 py-2 rounded-full text-xs md:text-sm font-medium transition-all duration-200 ${
                   selectedRatio === ratio 
                     ? "bg-[hsl(var(--toggle-active-bg))] text-[hsl(var(--toggle-active-text))] shadow-sm" 
                     : "text-[hsl(var(--toggle-inactive-text))] hover:text-foreground"
@@ -99,7 +99,7 @@ export function ImagePreview({ currentPrompt, isGenerating = false, generatedIma
       </div>
 
       {/* Preview Area */}
-      <div className="flex-1 px-6 pb-4">
+      <div className="flex-1 px-4 md:px-6 pb-4">
         <div className="flex items-center justify-center h-full">
           <div
             className={`${aspectRatioClasses[selectedRatio]} w-full max-w-sm bg-muted/30 border border-dashed border-border rounded-3xl flex items-center justify-center relative overflow-hidden transition-all duration-300 hover:border-border/60`}
@@ -126,7 +126,7 @@ export function ImagePreview({ currentPrompt, isGenerating = false, generatedIma
       </div>
 
       {/* Actions */}
-      <div className="px-6 pb-6 space-y-3">
+      <div className="px-4 md:px-6 pb-4 md:pb-6 space-y-3">
         {!showDone ? (
           <Button
             variant="default"

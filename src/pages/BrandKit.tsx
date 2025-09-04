@@ -274,7 +274,7 @@ export default function BrandKit() {
 
   if (!brandProfile) {
     return (
-      <div className="px-4 md:px-6 lg:px-8 xl:px-12 py-8 w-full max-w-none">
+      <div className="px-4 md:px-6 lg:px-8 xl:px-12 py-6 md:py-8 w-full max-w-none">
         <EmptyState
           icon={Edit3}
           title="Complete your brand profile"
@@ -287,12 +287,12 @@ export default function BrandKit() {
   }
 
   return (
-    <div className="px-4 md:px-6 lg:px-8 xl:px-12 py-8 w-full max-w-none">
-      <div className="mb-8">
-        <h1 className="text-3xl font-semibold text-foreground mb-2" style={{ letterSpacing: '-0.02em' }}>
+    <div className="px-4 md:px-6 lg:px-8 xl:px-12 py-6 md:py-8 w-full max-w-none">
+      <div className="mb-6 md:mb-8">
+        <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-2" style={{ letterSpacing: '-0.02em' }}>
           Brand Kit
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-sm md:text-base text-muted-foreground">
           Manage your brand assets for consistent, high-end content creation
         </p>
       </div>

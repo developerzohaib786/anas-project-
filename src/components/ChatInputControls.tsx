@@ -85,7 +85,7 @@ export function ChatInputControls({
             <Plus className="h-4 w-4" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-64 p-0 border-0 shadow-lg" align="start">
+        <PopoverContent className="w-64 md:w-72 p-0 border-0 shadow-lg" align="start">
           <div className="bg-card rounded-xl border border-border/50 backdrop-blur-sm">
             <div className="p-2 space-y-1">
               <Button
