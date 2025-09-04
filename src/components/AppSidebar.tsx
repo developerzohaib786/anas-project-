@@ -1,6 +1,6 @@
 import { Paintbrush, FolderOpen, Palette, Settings, ChevronRight, User, LogOut, MessageSquare } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+
 import { useChat } from "@/contexts/ChatContext";
 import { useBrand } from "@/contexts/BrandContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -37,7 +37,7 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const currentPath = location.pathname;
-  const { user, signOut } = useAuth();
+  
   const { sessions, deleteSession, createSession, renameSession } = useChat();
   const { brandProfile, profile } = useBrand();
   const isActive = (path: string) => currentPath === path;
@@ -194,37 +194,6 @@ export function AppSidebar() {
                 <Settings className="h-4 w-4" />
                 <span className="md:block hidden">Settings</span>
               </NavLink>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <button
-                onClick={async () => {
-                  try {
-                    // Clean up any existing auth state
-                    Object.keys(localStorage).forEach((key) => {
-                      if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-                        localStorage.removeItem(key);
-                      }
-                    });
-                    
-                    // Sign out with global scope
-                    await signOut();
-                    
-                    // Force page reload for clean state
-                    window.location.href = '/auth';
-                  } catch (error) {
-                    console.error('Error signing out:', error);
-                    // Force logout even if there's an error
-                    window.location.href = '/auth';
-                  }
-                }}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 font-medium text-sm md:justify-start justify-center text-gray-600 hover:bg-gray-100 hover:text-gray-900 w-full"
-                title="Sign Out"
-              >
-                <LogOut className="h-4 w-4" />
-                <span className="md:block hidden">Sign Out</span>
-              </button>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

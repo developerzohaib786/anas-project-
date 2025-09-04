@@ -9,7 +9,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { TeamInvitations } from "@/components/TeamInvitations";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
+
 import { useBrand } from "@/contexts/BrandContext";
 import { Loader2, LogOut, Upload, User } from "lucide-react";
 
@@ -25,42 +25,18 @@ export default function Settings() {
   const [isLoading, setIsLoading] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const { user, signOut } = useAuth();
+  
   const { profile, brandProfile, updateProfile, updateBrandProfile, uploadAvatar } = useBrand();
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (user) {
-      loadTeams();
-    }
-  }, [user]);
 
   const loadTeams = async () => {
-    if (!user) return;
-
-    try {
-      // Load user's teams
-      const { data: teamsData } = await supabase
-        .from('team_memberships')
-        .select(`
-          teams (
-            id,
-            name,
-            description
-          )
-        `)
-        .eq('user_id', user.id)
-        .eq('invitation_accepted', true);
-
-      const userTeams = teamsData?.map(tm => tm.teams).filter(Boolean) || [];
-      setTeams(userTeams);
-      
-      if (userTeams.length > 0 && !selectedTeam) {
-        setSelectedTeam(userTeams[0].id);
-      }
-    } catch (error) {
-      console.error('Error loading teams:', error);
-    }
+    // Demo teams for UI purposes
+    const demoTeams = [
+      { id: '1', name: 'Demo Team', description: 'A sample team for demonstration' }
+    ];
+    setTeams(demoTeams);
+    setSelectedTeam(demoTeams[0].id);
   };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -74,7 +50,7 @@ export default function Settings() {
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !profile) return;
+    if (!profile) return;
 
     setIsLoading(true);
     
@@ -142,14 +118,6 @@ export default function Settings() {
             Manage your account settings and brand preferences
           </p>
         </div>
-        <Button 
-          variant="outline" 
-          onClick={signOut}
-          className="flex items-center gap-2 rounded-full"
-        >
-          <LogOut className="h-4 w-4" />
-          Sign Out
-        </Button>
       </div>
 
       <Tabs defaultValue="profile" className="space-y-6">
@@ -431,16 +399,10 @@ export default function Settings() {
                 <Button 
                   variant="outline" 
                   onClick={() => {
-                    if (profile?.email) {
-                      // Trigger password reset
-                      supabase.auth.resetPasswordForEmail(profile.email, {
-                        redirectTo: `${window.location.origin}/reset-password`,
-                      });
-                      toast({
-                        title: "Reset email sent",
-                        description: "Check your email for password reset instructions.",
-                      });
-                    }
+                    toast({
+                      title: "Demo mode",
+                      description: "Password reset is not available in demo mode.",
+                    });
                   }}
                   className="rounded-full"
                 >

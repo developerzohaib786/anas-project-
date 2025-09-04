@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+
 
 export interface Profile {
   id: string;
@@ -53,130 +53,47 @@ interface BrandContextType {
 const BrandContext = createContext<BrandContextType | undefined>(undefined);
 
 export function BrandProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [brandProfile, setBrandProfile] = useState<BrandProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  // Load profile and brand data
-  const loadData = async () => {
-    if (!user) {
-      setProfile(null);
-      setBrandProfile(null);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      // Load profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (profileError) {
-        console.error('Error loading profile:', profileError);
-      } else {
-        setProfile(profileData);
-      }
-
-      // Load brand profile
-      const { data: brandData, error: brandError } = await supabase
-        .from('brand_profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (brandError) {
-        console.error('Error loading brand profile:', brandError);
-      } else {
-        setBrandProfile(brandData);
-      }
-    } catch (error) {
-      console.error('Error loading data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Load data when user changes
-  useEffect(() => {
-    loadData();
-  }, [user]);
+  const [profile, setProfile] = useState<Profile | null>({
+    id: 'demo',
+    onboarding_completed: true,
+    onboarding_step: 0,
+    first_name: 'Demo',
+    last_name: 'User',
+    email: 'demo@example.com'
+  });
+  const [brandProfile, setBrandProfile] = useState<BrandProfile | null>({
+    id: 'demo-brand',
+    user_id: 'demo',
+    brand_name: 'Demo Brand',
+    industry: 'Technology',
+    is_active: true
+  });
+  const [loading, setLoading] = useState(false);
 
   const updateProfile = async (updates: Partial<Profile>) => {
-    if (!user) throw new Error('No user logged in');
-
-    const { error } = await supabase
-      .from('profiles')
-      .update(updates)
-      .eq('id', user.id);
-
-    if (error) throw error;
-
     setProfile(prev => prev ? { ...prev, ...updates } : null);
   };
 
   const uploadAvatar = async (file: File): Promise<string | null> => {
-    if (!user) throw new Error('No user logged in');
-
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${user.id}/avatar.${fileExt}`;
-
-    // Upload to the new bucket
-    const { error: uploadError } = await supabase.storage
-      .from('user-avatars')
-      .upload(fileName, file, { upsert: true });
-
-    if (uploadError) {
-      console.error('Upload error:', uploadError);
-      throw uploadError;
-    }
-
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from('user-avatars')
-      .getPublicUrl(fileName);
-
-    return publicUrl;
+    return URL.createObjectURL(file);
   };
 
   const createBrandProfile = async (data: Omit<BrandProfile, 'id' | 'user_id' | 'is_active'>) => {
-    if (!user) throw new Error('No user logged in');
-
-    const { data: newBrandProfile, error } = await supabase
-      .from('brand_profiles')
-      .insert({
-        ...data,
-        user_id: user.id,
-        is_active: true
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-
+    const newBrandProfile = {
+      ...data,
+      id: Date.now().toString(),
+      user_id: 'demo',
+      is_active: true
+    };
     setBrandProfile(newBrandProfile);
   };
 
   const updateBrandProfile = async (updates: Partial<BrandProfile>) => {
-    if (!user || !brandProfile) throw new Error('No user or brand profile');
-
-    const { error } = await supabase
-      .from('brand_profiles')
-      .update(updates)
-      .eq('id', brandProfile.id);
-
-    if (error) throw error;
-
     setBrandProfile(prev => prev ? { ...prev, ...updates } : null);
   };
 
   const refreshData = async () => {
-    await loadData();
+    // No-op for demo
   };
 
   return (
