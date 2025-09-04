@@ -22,10 +22,15 @@ const Auth = () => {
       <div className="w-full max-w-md space-y-8">
         {/* Logo */}
         <div className="text-center">
-          <div className="mx-auto h-12 w-12 mb-4 bg-foreground rounded-full flex items-center justify-center">
-            <div className="grid grid-cols-3 gap-1 w-8 h-8">
-              {[...Array(8)].map((_, i) => (
-                <div key={i} className="w-1.5 h-1.5 bg-background rounded-full" />
+          <div className="mx-auto h-16 w-16 mb-6 bg-foreground rounded-full flex items-center justify-center">
+            <div className="grid grid-cols-3 gap-1.5 w-10 h-10">
+              {[0,1,2,3,4,5,6,7].map((i) => (
+                <div 
+                  key={i} 
+                  className={`w-2 h-2 rounded-full ${
+                    i === 4 ? 'col-start-2 row-start-2 bg-background' : 'bg-background'
+                  }`} 
+                />
               ))}
             </div>
           </div>

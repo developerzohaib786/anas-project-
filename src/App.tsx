@@ -28,22 +28,26 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <div className="min-h-screen bg-background">
-            <SidebarProvider>
-              <div className="flex min-h-screen w-full">
-                <AppSidebar />
-                <main className="flex-1 min-w-0">
-                  <Routes>
-                    <Route path="/" element={<Chat />} />
-                    <Route path="/auth" element={<Auth />} />
-                    <Route path="/chat/:sessionId" element={<Chat />} />
-                    <Route path="/projects" element={<Projects />} />
-                    <Route path="/brand-kit" element={<BrandKit />} />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </main>
-              </div>
-            </SidebarProvider>
+            <Routes>
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/*" element={
+                <SidebarProvider>
+                  <div className="flex min-h-screen w-full">
+                    <AppSidebar />
+                    <main className="flex-1 min-w-0">
+                      <Routes>
+                        <Route path="/" element={<Chat />} />
+                        <Route path="/chat/:sessionId" element={<Chat />} />
+                        <Route path="/projects" element={<Projects />} />
+                        <Route path="/brand-kit" element={<BrandKit />} />
+                        <Route path="/settings" element={<Settings />} />
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </main>
+                  </div>
+                </SidebarProvider>
+              } />
+            </Routes>
           </div>
         </BrowserRouter>
         </TooltipProvider>
