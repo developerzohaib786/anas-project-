@@ -172,6 +172,12 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
     }));
 
     setUploadedImages([...uploadedImages, ...newImages]);
+    
+    // Set default prompt if this is the first image and input is empty
+    if (uploadedImages.length === 0 && !inputValue.trim()) {
+      setInputValue("Take this phone photo and make it beautiful");
+    }
+    
     e.target.value = ''; // Reset input
   };
 
@@ -420,8 +426,8 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
         <div className="w-full px-4 py-6 md:px-6">
           <div className="max-w-3xl mx-auto">
            {/* Route Guide - Fixed height container to prevent layout shift */}
-           <div className="mb-8 transition-all duration-300" style={{ height: messages.length <= 1 && !inputValue.trim() ? 'auto' : '0', overflow: 'hidden' }}>
-             {messages.length <= 1 && !inputValue.trim() && (
+            <div className="mb-8 transition-all duration-300" style={{ height: messages.length <= 1 && !inputValue.trim() && uploadedImages.length === 0 ? 'auto' : '0', overflow: 'hidden' }}>
+              {messages.length <= 1 && !inputValue.trim() && uploadedImages.length === 0 && (
                <div className="animate-fade-in">
                  <p className="text-sm text-muted-foreground mb-6 font-medium">
                    Choose your creation style:
