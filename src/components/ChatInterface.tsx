@@ -381,44 +381,22 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
            <div className="mb-8 transition-all duration-300" style={{ height: messages.length <= 1 && !inputValue.trim() ? 'auto' : '0', overflow: 'hidden' }}>
              {messages.length <= 1 && !inputValue.trim() && (
                <div className="animate-fade-in">
-                 <p className="text-sm text-muted-foreground mb-4 font-medium">
+                 <p className="text-sm text-muted-foreground mb-6 font-medium">
                    Choose your creation style:
                  </p>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                   <div className="p-5 rounded-xl bg-muted/20 border border-muted/40 hover:bg-muted/30 transition-all duration-200">
-                     <div className="flex items-start gap-3">
-                       <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                         <span className="text-primary font-semibold text-sm">1</span>
-                       </div>
-                       <div className="flex-1">
-                         <h3 className="font-semibold text-foreground text-sm mb-2">Quick Scene Capture</h3>
-                         <p className="text-xs text-muted-foreground leading-relaxed mb-3">
-                           Upload an iPhone photo and let Nino transform it into luxury marketing content.
-                         </p>
-                         <div className="text-xs text-muted-foreground">
-                           <span className="inline-block bg-muted/60 px-2 py-1 rounded mr-2">Upload + "Make this beautiful"</span>
-                           <span className="inline-block bg-muted/60 px-2 py-1 rounded">Upload + Brief description</span>
-                         </div>
-                       </div>
-                     </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                   <div className="p-6 rounded-xl bg-muted/20 border border-muted/40 hover:bg-muted/30 transition-all duration-200">
+                     <h3 className="font-semibold text-foreground text-base mb-3">Quick Scene Capture</h3>
+                     <p className="text-sm text-muted-foreground leading-relaxed">
+                       Upload an iPhone photo and let Nino transform it into luxury marketing content. Perfect for turning everyday snapshots into professional visuals.
+                     </p>
                    </div>
                    
-                   <div className="p-5 rounded-xl bg-muted/20 border border-muted/40 hover:bg-muted/30 transition-all duration-200">
-                     <div className="flex items-start gap-3">
-                       <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
-                         <span className="text-amber-600 font-semibold text-sm">2</span>
-                       </div>
-                       <div className="flex-1">
-                         <h3 className="font-semibold text-foreground text-sm mb-2">Chat / Prompts</h3>
-                         <p className="text-xs text-muted-foreground leading-relaxed mb-3">
-                           Describe your vision or use our expert prompt library for precise creative control.
-                         </p>
-                         <div className="text-xs text-muted-foreground">
-                           <span className="inline-block bg-muted/60 px-2 py-1 rounded mr-2">Detailed descriptions</span>
-                           <span className="inline-block bg-muted/60 px-2 py-1 rounded">Prompt helpers</span>
-                         </div>
-                       </div>
-                     </div>
+                   <div className="p-6 rounded-xl bg-muted/20 border border-muted/40 hover:bg-muted/30 transition-all duration-200">
+                     <h3 className="font-semibold text-foreground text-base mb-3">Chat / Prompts</h3>
+                     <p className="text-sm text-muted-foreground leading-relaxed">
+                       Describe your vision or use our expert prompt library for precise creative control. Ideal for specific requirements and creative exploration.
+                     </p>
                    </div>
                  </div>
                </div>
