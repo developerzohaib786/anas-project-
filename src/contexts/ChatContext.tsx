@@ -22,70 +22,88 @@ interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
+const STORAGE_KEY = 'nino-chat-sessions';
+const MAX_SESSIONS = 50; // Limit to prevent storage bloat
+
 export function ChatProvider({ children }: { children: ReactNode }) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   // Load sessions from localStorage on mount
   useEffect(() => {
-    const saved = localStorage.getItem('chat-sessions');
-    if (saved) {
-      try {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
         const parsed = JSON.parse(saved);
-        // Only load sessions if the array is valid and not empty
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setSessions(parsed.map((session: any) => ({
-            ...session,
-            createdAt: new Date(session.createdAt),
-            updatedAt: new Date(session.updatedAt)
-          })));
+        if (Array.isArray(parsed)) {
+          const validSessions = parsed
+            .filter(session => session.id && session.title)
+            .map((session: any) => ({
+              ...session,
+              createdAt: new Date(session.createdAt),
+              updatedAt: new Date(session.updatedAt)
+            }))
+            .slice(0, MAX_SESSIONS); // Limit sessions
+          
+          setSessions(validSessions);
         }
-      } catch (error) {
-        console.error('Error loading chat sessions:', error);
-        // Clear corrupted data
-        localStorage.removeItem('chat-sessions');
       }
+    } catch (error) {
+      console.error('Error loading chat sessions:', error);
+      localStorage.removeItem(STORAGE_KEY);
+    } finally {
+      setIsLoaded(true);
     }
   }, []);
 
-  // Save sessions to localStorage whenever they change
+  // Save sessions to localStorage when they change (but only after initial load)
   useEffect(() => {
-    localStorage.setItem('chat-sessions', JSON.stringify(sessions));
-  }, [sessions]);
+    if (isLoaded) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+      } catch (error) {
+        console.error('Error saving chat sessions:', error);
+      }
+    }
+  }, [sessions, isLoaded]);
 
   const createSession = (title?: string): string => {
-    const id = `chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const timestamp = Date.now();
+    const randomId = Math.random().toString(36).substring(2, 9);
+    const id = `chat-${timestamp}-${randomId}`;
+    
     const newSession: ChatSession = {
       id,
-      title: title || `Chat ${sessions.length + 1}`,
+      title: title || `New Chat`,
       messages: [],
       isCompleted: false,
       createdAt: new Date(),
       updatedAt: new Date()
     };
 
-    setSessions(prev => [newSession, ...prev]);
+    setSessions(prev => {
+      const updated = [newSession, ...prev].slice(0, MAX_SESSIONS);
+      return updated;
+    });
+    
     setCurrentSessionId(id);
     return id;
   };
 
   const updateSession = (sessionId: string, updates: Partial<ChatSession>) => {
-    setSessions(prev => prev.map(session => 
-      session.id === sessionId 
-        ? { ...session, ...updates, updatedAt: new Date() }
-        : session
-    ));
+    setSessions(prev => 
+      prev.map(session => 
+        session.id === sessionId 
+          ? { ...session, ...updates, updatedAt: new Date() }
+          : session
+      )
+    );
   };
 
   const deleteSession = (sessionId: string) => {
-    console.log('deleteSession called with:', sessionId);
-    console.log('Sessions before filter:', sessions.map(s => s.id));
-    setSessions(prev => {
-      const filtered = prev.filter(session => session.id !== sessionId);
-      console.log('Sessions after filter:', filtered.map(s => s.id));
-      // Always allow deletion, even if it results in empty array
-      return filtered;
-    });
+    setSessions(prev => prev.filter(session => session.id !== sessionId));
+    
     if (currentSessionId === sessionId) {
       setCurrentSessionId(null);
     }
@@ -103,7 +121,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const clearAllSessions = () => {
     setSessions([]);
     setCurrentSessionId(null);
-    localStorage.removeItem('chat-sessions');
+    localStorage.removeItem(STORAGE_KEY);
   };
 
   return (

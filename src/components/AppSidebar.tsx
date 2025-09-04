@@ -22,7 +22,7 @@ import {
 
 const mainNavItems = [
   { title: "New Project", url: "/", icon: Paintbrush },
-  { title: "Search Projects", url: "/projects", icon: FolderOpen },
+  { title: "Projects", url: "/projects", icon: FolderOpen },
   { title: "Brand Kit", url: "/brand-kit", icon: Palette },
 ];
 
@@ -134,37 +134,39 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Chat Sessions Section */}
+        {/* Recent Chats Section */}
         {sessions.length > 0 && (
           <SidebarGroup className="mt-8 md:block hidden">
             <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
               Recent Chats
             </SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu>
-                {sessions.slice(0, 5).map((session) => (
+              <SidebarMenu className="space-y-1">
+                {sessions.slice(0, 8).map((session) => (
                   <SidebarMenuItem key={session.id}>
-                    <div className="group flex items-center w-full relative">
+                    <div className="group relative">
                       <NavLink
                         to={`/chat/${session.id}`}
                         className={({ isActive }) =>
-                          `flex items-center px-3 py-2 rounded-lg transition-colors duration-200 font-medium text-sm mb-1 w-full pr-8 ${
+                          `flex items-center px-3 py-2 rounded-lg transition-all duration-200 text-sm w-full ${
                             isActive
-                              ? "bg-gray-100 text-gray-900"
+                              ? "bg-gray-900 text-white"
                               : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                           }`
                         }
                         title={session.title}
                       >
-                        {!session.isCompleted && (
-                          <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0 mr-2" title="Incomplete" />
-                        )}
-                        <span className="truncate">{session.title}</span>
+                        <div className="flex items-center min-w-0 flex-1">
+                          {!session.isCompleted && (
+                            <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mr-2" />
+                          )}
+                          <span className="truncate flex-1">{session.title}</span>
+                        </div>
                       </NavLink>
                       <button
                         type="button"
                         onClick={(e) => handleDeleteSession(session.id, e)}
-                        className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded hover:bg-red-100 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-100 text-red-500 hover:text-red-700"
                         title="Delete chat"
                       >
                         <X className="h-3 w-3" />
