@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowUp, Copy, ThumbsUp, ThumbsDown, Volume2, Share, RotateCcw } from "lucide-react";
+import { ArrowUp, Copy, ThumbsUp, ThumbsDown, Volume2, Share, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChat } from "@/contexts/ChatContext";
 import { useParams } from "react-router-dom";
-import { ImageUpload } from "@/components/ImageUpload";
+import { ChatInputControls } from "@/components/ChatInputControls";
 
 interface Message {
   id: string;
@@ -99,17 +99,61 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
     scrollToBottom();
   }, [messages]);
 
-  const examplePrompts = [
-    "Create a luxury poolside scene with cabanas at sunset",
-    "Generate an elegant hotel suite with ocean views and modern decor",
-    "Design a sophisticated restaurant dining area with ambient lighting",
-    "Create a spa treatment room with natural elements and soft lighting",
-    "Generate a rooftop bar scene with city skyline views at golden hour",
-    "Design a family-friendly pool area with fun activities and tropical vibes"
+  // All available prompts pool
+  const allPrompts = [
+    "A high-flash photo of a martini on a bar top",
+    "An overhead editorial shot of colorful dishes and cocktails", 
+    "A moody, commercial-style shot of wine glasses clinking at golden hour",
+    "A golden hour aerial shot of our hotel pool",
+    "A cinematic lifestyle photo of sun loungers with cocktails",
+    "A night-time luxury shot of the pool glowing under ambient lighting",
+    "A golden hour editorial shot of a hotel suite with sunlight spilling in",
+    "A commercial lifestyle shot of a guest reading on the balcony", 
+    "A wide editorial shot of a king bed styled with plush linens",
+    "A dramatic sunset shot of the hotel exterior with glowing windows",
+    "A flash-lit night photo of the hotel entrance with cars arriving",
+    "A golden hour shot of the rooftop terrace with city skyline views",
+    "An editorial photo of a couple toasting champagne on a balcony at dusk",
+    "A cinematic travel-style photo of friends laughing at the poolside bar",
+    "An elegant lifestyle shot of spa treatments with tea service",
+    "A vibrant lifestyle photo of a chef plating an elegant dish",
+    "A dramatic close-up of champagne being poured into crystal glasses",
+    "An artistic flat-lay of a gourmet breakfast spread with natural lighting",
+    "An editorial photo of a couple relaxing by the infinity pool at sunset",
+    "A dramatic overhead shot of the pool deck with geometric shadows",
+    "A lifestyle photo of friends enjoying poolside cabanas",
+    "A dramatic photo of a luxury bathroom with marble and ambient lighting",
+    "An intimate shot of a couple enjoying room service on the terrace",
+    "A design-focused photo showcasing the room's architectural details",
+    "An architectural photo highlighting the building's unique design elements",
+    "A cinematic wide shot of the hotel set against natural landscapes",
+    "A commercial photo of the valet area with luxury vehicles",
+    "A commercial photo of guests enjoying a sunset yoga session",
+    "An editorial shot of a romantic dinner setup on a private terrace",
+    "A lifestyle photo of a family enjoying hotel activities together"
   ];
+
+  // Get 6 rotating prompts based on session ID or current time
+  const getRotatingPrompts = () => {
+    const seed = sessionId ? sessionId.split('').reduce((a, b) => a + b.charCodeAt(0), 0) : Date.now();
+    const shuffled = [...allPrompts].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, 6);
+  };
+
+  const [examplePrompts] = useState(() => getRotatingPrompts());
 
   const handlePromptClick = (prompt: string) => {
     setInputValue(prompt);
+  };
+
+  const removeImage = (id: string) => {
+    const updatedImages = uploadedImages.filter(img => img.id !== id);
+    // Clean up object URLs
+    const removedImage = uploadedImages.find(img => img.id === id);
+    if (removedImage) {
+      URL.revokeObjectURL(removedImage.url);
+    }
+    setUploadedImages(updatedImages);
   };
 
   const handleSendMessage = async () => {
@@ -333,57 +377,92 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
       <div className="absolute bottom-0 left-0 right-0 border-t border-[hsl(var(--border))] bg-[hsl(var(--background))]">
         <div className="w-full px-4 py-6 md:px-6">
           <div className="max-w-3xl mx-auto">
-          {/* Example Prompts - Fixed height container to prevent layout shift */}
-          <div className="mb-6 transition-all duration-300" style={{ height: messages.length <= 1 && !inputValue.trim() ? 'auto' : '0', overflow: 'hidden' }}>
-            {messages.length <= 1 && !inputValue.trim() && (
-              <div className="animate-fade-in">
-                <p className="text-sm text-muted-foreground mb-4 font-medium">Try these examples:</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {examplePrompts.map((prompt, index) => (
-                    <button
-                      key={index}
-                      onClick={() => handlePromptClick(prompt)}
-                      className="text-left p-4 rounded-xl bg-muted/30 hover:bg-muted/60 text-sm text-muted-foreground hover:text-foreground transition-all duration-200"
-                    >
-                      {prompt}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+           {/* Example Prompts - Fixed height container to prevent layout shift */}
+           <div className="mb-6 transition-all duration-300" style={{ height: messages.length <= 1 && !inputValue.trim() ? 'auto' : '0', overflow: 'hidden' }}>
+             {messages.length <= 1 && !inputValue.trim() && (
+               <div className="animate-fade-in">
+                 <p className="text-sm text-muted-foreground mb-4 font-medium">
+                   Get inspired with these examples:
+                 </p>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                   {examplePrompts.map((prompt, index) => (
+                     <button
+                       key={index}
+                       onClick={() => handlePromptClick(prompt)}
+                       className="text-left p-4 rounded-xl bg-muted/30 hover:bg-muted/60 text-sm text-muted-foreground hover:text-foreground transition-all duration-200"
+                     >
+                       {prompt}
+                     </button>
+                   ))}
+                 </div>
+               </div>
+             )}
+           </div>
 
-          {/* Image Upload */}
-          <div className="mb-4">
-            <ImageUpload 
-              images={uploadedImages}
-              onImagesChange={setUploadedImages}
-              maxImages={3}
-            />
-          </div>
+           {/* Uploaded Images Preview */}
+           {uploadedImages.length > 0 && (
+             <div className="mb-4">
+               <div className="flex flex-wrap gap-2">
+                 {uploadedImages.map((image) => (
+                   <div key={image.id} className="relative group">
+                     <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-muted">
+                       <img
+                         src={image.url}
+                         alt={image.name}
+                         className="w-full h-full object-cover"
+                       />
+                       <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                       <Button
+                         size="icon"
+                         variant="destructive"
+                         className="absolute top-1 right-1 w-5 h-5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                         onClick={(e) => {
+                           e.stopPropagation();
+                           removeImage(image.id);
+                         }}
+                       >
+                         <X className="h-3 w-3" />
+                       </Button>
+                     </div>
+                     <p className="text-xs text-muted-foreground mt-1 truncate w-16">
+                       {image.name}
+                     </p>
+                   </div>
+                 ))}
+               </div>
+             </div>
+           )}
 
-          {/* Input Row */}
-          <div className="flex items-end gap-3">
-            <div className="flex-1">
-              <div className="relative">
-                <Input
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Describe your hotel marketing photo..."
-                  className="w-full h-12 bg-transparent border border-[hsl(var(--border))] rounded-full px-6 text-[15px] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[hsl(var(--border))] hover:border-[hsl(var(--border))] resize-none min-h-[48px] max-h-[48px]"
-                />
-              </div>
-            </div>
-            <Button 
-              onClick={handleSendMessage}
-              disabled={!inputValue.trim() && uploadedImages.length === 0}
-              size="icon"
-              className="h-12 w-12 rounded-full bg-muted hover:bg-muted/80 disabled:bg-muted disabled:text-muted-foreground shrink-0 min-h-[48px] min-w-[48px]"
-            >
-              <ArrowUp className="h-5 w-5 text-foreground" strokeWidth={3} />
-            </Button>
-          </div>
+           {/* Input Row */}
+           <div className="flex items-end gap-3">
+             <div className="flex-1">
+               <div className="relative">
+                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10">
+                   <ChatInputControls
+                     images={uploadedImages}
+                     onImagesChange={setUploadedImages}
+                     onPromptSelect={handlePromptClick}
+                     maxImages={3}
+                   />
+                 </div>
+                 <Input
+                   value={inputValue}
+                   onChange={(e) => setInputValue(e.target.value)}
+                   onKeyPress={handleKeyPress}
+                   placeholder="Describe your hotel marketing photo..."
+                   className="w-full h-12 bg-transparent border border-[hsl(var(--border))] rounded-full pl-12 pr-6 text-[15px] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[hsl(var(--border))] hover:border-[hsl(var(--border))] resize-none min-h-[48px] max-h-[48px]"
+                 />
+               </div>
+             </div>
+             <Button 
+               onClick={handleSendMessage}
+               disabled={!inputValue.trim() && uploadedImages.length === 0}
+               size="icon"
+               className="h-12 w-12 rounded-full bg-muted hover:bg-muted/80 disabled:bg-muted disabled:text-muted-foreground shrink-0 min-h-[48px] min-w-[48px]"
+             >
+               <ArrowUp className="h-5 w-5 text-foreground" strokeWidth={3} />
+             </Button>
+           </div>
           </div>
         </div>
       </div>

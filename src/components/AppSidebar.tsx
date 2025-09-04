@@ -22,7 +22,7 @@ import {
 
 const mainNavItems = [
   { title: "New Project", url: "/", icon: Paintbrush },
-  { title: "Projects", url: "/projects", icon: FolderOpen },
+  { title: "Search Projects", url: "/projects", icon: FolderOpen },
   { title: "Brand Kit", url: "/brand-kit", icon: Palette },
 ];
 
