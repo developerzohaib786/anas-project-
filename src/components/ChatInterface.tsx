@@ -136,11 +136,11 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
     "A lifestyle photo of a family enjoying hotel activities together"
   ];
 
-  // Get 6 rotating prompts based on session ID or current time
+  // Get 4 rotating prompts based on session ID or current time
   const getRotatingPrompts = () => {
     const seed = sessionId ? sessionId.split('').reduce((a, b) => a + b.charCodeAt(0), 0) : Date.now();
     const shuffled = [...allPrompts].sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, 6);
+    return shuffled.slice(0, 4);
   };
 
   const [examplePrompts] = useState(() => getRotatingPrompts());
@@ -433,30 +433,30 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
                    Choose your creation style:
                  </p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    <div className="p-6 rounded-xl bg-muted/20 border border-muted/40 hover:bg-muted/30 transition-all duration-200">
+                    <div className="p-6 rounded-xl bg-muted/20 border border-muted/40 hover:bg-muted/30 transition-all duration-200 flex flex-col">
                       <h3 className="font-semibold text-foreground text-base mb-3">iPhone to Editorial</h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+                      <p className="text-sm text-muted-foreground leading-relaxed mb-4 flex-1">
                         Upload an iPhone photo and let Nino transform it into luxury marketing content. Perfect for turning everyday snapshots into professional visuals.
                       </p>
                       <Button 
                         onClick={handleImageUpload}
                         variant="secondary"
-                        className="w-full"
+                        className="w-full mt-auto"
                         size="sm"
                       >
                         Try now
                       </Button>
                     </div>
                     
-                    <div className="p-6 rounded-xl bg-muted/20 border border-muted/40 hover:bg-muted/30 transition-all duration-200">
+                    <div className="p-6 rounded-xl bg-muted/20 border border-muted/40 hover:bg-muted/30 transition-all duration-200 flex flex-col">
                       <h3 className="font-semibold text-foreground text-base mb-3">Chat / Prompts</h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+                      <p className="text-sm text-muted-foreground leading-relaxed mb-4 flex-1">
                         Describe your vision or use our expert prompt library for precise creative control. Ideal for specific requirements and creative exploration.
                       </p>
                       <Button 
                         onClick={handleViewPrompts}
                         variant="secondary"
-                        className="w-full"
+                        className="w-full mt-auto"
                         size="sm"
                       >
                         Browse prompts
