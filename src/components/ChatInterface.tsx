@@ -341,7 +341,7 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
   };
 
   return (
-    <div className="flex flex-col h-screen relative">
+    <div className="flex flex-col h-full relative">
       {/* Hidden file input for route guide upload button */}
       <input
         ref={fileInputRef}
@@ -352,9 +352,10 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
         className="hidden"
       />
       {/* Messages */}
-      <ScrollArea className="flex-1 minimal-scroll" ref={scrollAreaRef}>
-        <div className="w-full px-4 py-8 pb-32 md:px-6 md:py-12">
-          <div className="max-w-3xl mx-auto space-y-6">
+      <div className="flex-1 overflow-hidden">
+        <ScrollArea className="h-full minimal-scroll" ref={scrollAreaRef}>
+          <div className="w-full px-4 py-6 pb-4 md:px-6 md:py-8 md:pb-32">
+            <div className="max-w-3xl mx-auto space-y-6">
             {messages.map((message, index) => (
               <div
                 key={message.id}
@@ -417,23 +418,24 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
             ))}
             {/* Invisible element to scroll to */}
             <div ref={messagesEndRef} />
+            </div>
           </div>
-        </div>
-      </ScrollArea>
+        </ScrollArea>
+      </div>
 
-      {/* Fixed Input Area at bottom */}
-      <div className="absolute bottom-0 left-0 right-0 border-t border-[hsl(var(--border))] bg-[hsl(var(--background))]">
+      {/* Input Area at bottom */}
+      <div className="border-t border-[hsl(var(--border))] bg-[hsl(var(--background))] flex-shrink-0">
         <div className="w-full px-4 py-4 md:px-6 md:py-6">
           <div className="max-w-3xl mx-auto">
-           {/* Route Guide - Fixed height container to prevent layout shift */}
-            <div className="mb-8 transition-all duration-300" style={{ height: messages.length <= 1 && !inputValue.trim() && uploadedImages.length === 0 ? 'auto' : '0', overflow: 'hidden' }}>
+            {/* Route Guide - Mobile optimized container */}
+            <div className="mb-6 md:mb-8 transition-all duration-300" style={{ height: messages.length <= 1 && !inputValue.trim() && uploadedImages.length === 0 ? 'auto' : '0', overflow: 'hidden' }}>
               {messages.length <= 1 && !inputValue.trim() && uploadedImages.length === 0 && (
                <div className="animate-fade-in">
                  <p className="text-sm text-muted-foreground mb-6 font-medium">
                    Choose your creation style:
                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    <div className="p-6 rounded-xl bg-muted/20 border border-muted/40 hover:bg-muted/30 transition-all duration-200 flex flex-col">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
+                    <div className="p-4 md:p-6 rounded-xl bg-muted/20 border border-muted/40 hover:bg-muted/30 transition-all duration-200 flex flex-col">
                       <h3 className="font-medium text-foreground text-base mb-3">Turn any photo into ad-ready content</h3>
                       <p className="text-sm text-muted-foreground leading-relaxed mb-4 flex-1">
                         Upload any photo and we'll turn it into ad-ready, professional content.
@@ -448,7 +450,7 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
                       </Button>
                     </div>
                     
-                    <div className="p-6 rounded-xl bg-muted/20 border border-muted/40 hover:bg-muted/30 transition-all duration-200 flex flex-col">
+                    <div className="p-4 md:p-6 rounded-xl bg-muted/20 border border-muted/40 hover:bg-muted/30 transition-all duration-200 flex flex-col">
                       <h3 className="font-medium text-foreground text-base mb-3">Chat / Prompts</h3>
                       <p className="text-sm text-muted-foreground leading-relaxed mb-4 flex-1">
                         Share your vision or use our prompt library for tailored, creative results.

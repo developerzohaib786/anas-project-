@@ -71,7 +71,7 @@ const Chat = () => {
   };
 
   return (
-    <div className="h-screen">
+    <div className="h-screen flex flex-col">
       {/* Desktop Layout */}
       <div className="hidden md:block h-full">
         <ResizablePanelGroup direction="horizontal" className="h-full">
@@ -97,7 +97,7 @@ const Chat = () => {
       </div>
       
       {/* Mobile Layout */}
-      <div className="md:hidden h-full">
+      <div className="md:hidden flex-1 min-h-0">
         <ChatInterface onGenerateImage={handleGenerateImage} />
       </div>
     </div>

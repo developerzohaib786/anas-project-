@@ -241,6 +241,24 @@
 
   /* Mobile touch improvements */
   @media (max-width: 768px) {
+    /* Fix viewport height issues */
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+    
+    /* Fix iOS Safari viewport issues */
+    .h-screen {
+      height: 100vh;
+      height: 100dvh; /* Dynamic viewport height */
+    }
+    
+    /* Improve touch scrolling */
+    .minimal-scroll {
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+    
     .apple-button {
       min-height: 44px; /* Apple's minimum touch target */
     }
@@ -253,6 +271,16 @@
     button, [role="button"] {
       min-height: 44px;
       min-width: 44px;
+    }
+    
+    /* Prevent zoom on input focus */
+    input, textarea, select {
+      font-size: 16px;
+    }
+    
+    /* Better mobile scroll behavior */
+    * {
+      -webkit-tap-highlight-color: transparent;
     }
   }
 }
