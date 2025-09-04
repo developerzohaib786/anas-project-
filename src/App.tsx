@@ -14,6 +14,7 @@ import Projects from "./pages/Projects";
 import BrandKit from "./pages/BrandKit";
 import Settings from "./pages/Settings";
 import Chat from "./pages/Chat";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ const App = () => (
                 <main className="flex-1 min-w-0">
                   <Routes>
                     <Route path="/" element={<Chat />} />
+                    <Route path="/auth" element={<Auth />} />
                     <Route path="/chat/:sessionId" element={<Chat />} />
                     <Route path="/projects" element={<Projects />} />
                     <Route path="/brand-kit" element={<BrandKit />} />
