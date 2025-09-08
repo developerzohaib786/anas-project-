@@ -1,14 +1,13 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { TeamInvitations } from "@/components/TeamInvitations";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 import { useBrand } from "@/contexts/BrandContext";
 import { Loader2, LogOut, Upload, User } from "lucide-react";
@@ -26,9 +25,34 @@ export default function Settings() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   
+  // Local state for form inputs to prevent buggy typing
+  const [localBrandName, setLocalBrandName] = useState('');
+  const [localLocation, setLocalLocation] = useState('');
+  const [localWebsite, setLocalWebsite] = useState('');
+  const [localDescription, setLocalDescription] = useState('');
+  
+  // Local state for email/password updates
+  const [localEmail, setLocalEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  
   const { profile, brandProfile, updateProfile, updateBrandProfile, uploadAvatar } = useBrand();
-  const { toast } = useToast();
 
+  // Initialize local state when profile/brandProfile loads
+  useEffect(() => {
+    if (brandProfile) {
+      setLocalBrandName(brandProfile.brand_name || '');
+      setLocalLocation(brandProfile.location || '');
+      setLocalWebsite(brandProfile.website_url || '');
+      setLocalDescription(brandProfile.description || '');
+    }
+  }, [brandProfile]);
+
+  useEffect(() => {
+    if (profile) {
+      setLocalEmail(profile.email || '');
+    }
+  }, [profile]);
 
   const loadTeams = async () => {
     // Demo teams for UI purposes
@@ -68,75 +92,90 @@ export default function Settings() {
         avatar_url: avatarUrl,
       });
 
+      // Save brand profile changes with local state values
+      await updateBrandProfile({
+        brand_name: localBrandName,
+        location: localLocation,
+        website_url: localWebsite,
+        description: localDescription,
+      });
+
       setAvatarFile(null);
       setAvatarPreview(null);
 
-      toast({
-        title: "Profile updated",
-        description: "Your profile has been saved successfully.",
-      });
+      toast.success("Profile updated successfully!");
     } catch (error: any) {
-      toast({
-        title: "Update failed",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Failed to update profile: " + error.message);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSaveBrandProfile = async () => {
-    if (!brandProfile) return;
-
+  const handleUpdateEmailPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsLoading(true);
+
     try {
-      // Brand profile is already updated through the form inputs
-      toast({
-        title: "Brand settings saved",
-        description: "Your brand settings have been updated successfully.",
-      });
+      // Validate password match
+      if (newPassword && newPassword !== confirmPassword) {
+        toast.error("Passwords do not match");
+        return;
+      }
+
+      // Update email if changed
+      if (localEmail !== profile?.email) {
+        const { error: emailError } = await supabase.auth.updateUser({
+          email: localEmail
+        });
+        
+        if (emailError) throw emailError;
+        toast.success("Email update initiated. Please check your new email for confirmation.");
+      }
+
+      // Update password if provided
+      if (newPassword) {
+        const { error: passwordError } = await supabase.auth.updateUser({
+          password: newPassword
+        });
+        
+        if (passwordError) throw passwordError;
+        toast.success("Password updated successfully!");
+        setNewPassword('');
+        setConfirmPassword('');
+      }
+
+      if (!newPassword && localEmail === profile?.email) {
+        toast.info("No changes to save");
+      }
+
     } catch (error: any) {
-      toast({
-        title: "Update failed",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Failed to update: " + error.message);
     } finally {
       setIsLoading(false);
     }
   };
+
 
   return (
-    <div className="px-4 md:px-6 lg:px-8 xl:px-12 py-6 md:py-8 w-full max-w-none">
-      <div className="mb-6 md:mb-8 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-2" style={{ letterSpacing: '-0.02em' }}>
-            Settings
-          </h1>
-          <p className="text-sm md:text-base text-muted-foreground">
-            Manage your account settings and brand preferences
-          </p>
-        </div>
-      </div>
+    <div className="px-4 py-4 md:px-6 lg:px-8 xl:px-12 md:py-6 md:py-8 w-full max-w-none min-h-screen md:min-h-0">
 
-      <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 max-w-lg">
-          <TabsTrigger value="profile" className="text-xs md:text-sm">Profile</TabsTrigger>
-          <TabsTrigger value="brand" className="text-xs md:text-sm">Brand</TabsTrigger>
-          <TabsTrigger value="teams" className="text-xs md:text-sm">Teams</TabsTrigger>
-          <TabsTrigger value="security" className="text-xs md:text-sm">Security</TabsTrigger>
-        </TabsList>
+      <div className="space-y-6 max-w-4xl">
+        <Tabs defaultValue="profile" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3 max-w-lg">
+            <TabsTrigger value="profile" className="text-xs md:text-sm">Profile</TabsTrigger>
+            <TabsTrigger value="teams" className="text-xs md:text-sm">Teams</TabsTrigger>
+            <TabsTrigger value="security" className="text-xs md:text-sm">Email/Password</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="profile" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Profile Information</CardTitle>
-              <CardDescription>
-                Update your personal information and contact details
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+          <TabsContent value="profile" className="space-y-6">
+            {/* Profile Information */}
+            <div>
+              <h3 className="text-lg font-medium mb-2">Profile Information</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Update your personal information and brand details
+              </p>
+              <Card>
+                <CardContent className="space-y-4 pt-6">
               <form onSubmit={handleSaveProfile} className="space-y-6">
                 {/* Avatar Upload */}
                 <div className="flex flex-col items-center space-y-4">
@@ -169,250 +208,146 @@ export default function Settings() {
                   <p className="text-sm text-muted-foreground">Upload a profile picture</p>
                 </div>
 
+                
+
+                {/* Hotel/Brand Information */}
                 <div className="space-y-2">
-                  <Label htmlFor="first-name">First Name</Label>
+                  <Label htmlFor="brand-name">Hotel/Brand Name</Label>
                   <Input 
-                    id="first-name" 
-                    value={profile?.first_name || ''}
-                    onChange={(e) => updateProfile({ first_name: e.target.value })}
-                    placeholder="Enter your first name"
-                    className="mt-2 rounded-full" 
+                    id="brand-name" 
+                    value={localBrandName}
+                    onChange={(e) => setLocalBrandName(e.target.value)}
+                    placeholder="Enter your hotel or brand name"
+                    className="mt-2" 
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="last-name">Last Name</Label>
+                  <Label htmlFor="location">Location</Label>
                   <Input 
-                    id="last-name" 
-                    value={profile?.last_name || ''}
-                    onChange={(e) => updateProfile({ last_name: e.target.value })}
-                    placeholder="Enter your last name"
-                    className="mt-2 rounded-full" 
+                    id="location" 
+                    value={localLocation}
+                    onChange={(e) => setLocalLocation(e.target.value)}
+                    placeholder="Enter your hotel location"
+                    className="mt-2" 
                   />
                 </div>
-                
-                <div>
-                  <Label htmlFor="email">Email Address</Label>
+
+                <div className="space-y-2">
+                  <Label htmlFor="website">Website (Optional)</Label>
                   <Input 
-                    id="email" 
-                    type="email" 
-                    value={profile?.email || ''}
-                    disabled
-                    className="mt-2 rounded-full bg-muted" 
+                    id="website" 
+                    type="text"
+                    value={localWebsite}
+                    onChange={(e) => setLocalWebsite(e.target.value)}
+                    placeholder="https://yourhotel.com"
+                    className="mt-2" 
                   />
-                  <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
                 </div>
-                <Button type="submit" disabled={isLoading} className="rounded-full">
+
+                <div className="space-y-2">
+                  <Label htmlFor="description">Brand Description</Label>
+                  <Textarea 
+                    id="description" 
+                    value={localDescription}
+                    onChange={(e) => setLocalDescription(e.target.value)}
+                    placeholder="Tell us about your hotel or brand..."
+                    className="mt-2"
+                    rows={4}
+                  />
+                </div>
+                <Button type="submit" disabled={isLoading}>
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save Changes
                 </Button>
               </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
 
-        <TabsContent value="brand" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Brand Information</CardTitle>
-              <CardDescription>
-                Basic information about your brand
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="brand-name">Brand Name</Label>
-                <Input 
-                  id="brand-name" 
-                  value={brandProfile?.brand_name || ''}
-                  onChange={(e) => updateBrandProfile({ brand_name: e.target.value })}
-                  placeholder="Your Hotel/Resort Name" 
-                  className="mt-2 rounded-full" 
-                />
-                <p className="text-xs text-gray-500 mt-1">The official name of your property</p>
-              </div>
-              <div>
-                <Label htmlFor="brand-description">Description</Label>
-                <Textarea 
-                  id="brand-description" 
-                  value={brandProfile?.description || ''}
-                  onChange={(e) => updateBrandProfile({ description: e.target.value })}
-                  placeholder="Brief description of your brand and what makes it unique..."
-                  className="mt-2 min-h-[100px]"
-                />
-                <p className="text-xs text-gray-500 mt-1">A short overview of your property and its unique features</p>
-              </div>
-              <div>
-                <Label htmlFor="brand-location">Location</Label>
-                <Input 
-                  id="brand-location" 
-                  value={brandProfile?.location || ''}
-                  onChange={(e) => updateBrandProfile({ location: e.target.value })}
-                  placeholder="e.g., Waikiki Beach, Honolulu, Hawaii" 
-                  className="mt-2 rounded-full" 
-                />
-                <p className="text-xs text-gray-500 mt-1">Primary location of your property</p>
-              </div>
-              <div>
-                <Label htmlFor="brand-industry">Industry</Label>
-                <Input 
-                  id="brand-industry" 
-                  value={brandProfile?.industry || 'Hospitality & Travel'} 
-                  onChange={(e) => updateBrandProfile({ industry: e.target.value })}
-                  className="mt-2 rounded-full" 
-                />
-              </div>
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Brand Voice & Tone</CardTitle>
-              <CardDescription>
-                How should your brand communicate and what personality should it convey?
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="brand-tone">Brand Tone</Label>
-                <Input 
-                  id="brand-tone" 
-                  value={brandProfile?.brand_tone || ''}
-                  onChange={(e) => updateBrandProfile({ brand_tone: e.target.value })}
-                  placeholder="e.g., Luxurious, Friendly, Professional, Sophisticated" 
-                  className="mt-2 rounded-full"
-                />
-                <p className="text-xs text-gray-500 mt-1">Describe the personality and feeling your brand should convey</p>
-              </div>
-              <div>
-                <Label htmlFor="brand-voice">Brand Voice</Label>
-                <Textarea 
-                  id="brand-voice" 
-                  value={brandProfile?.brand_voice || ''}
-                  onChange={(e) => updateBrandProfile({ brand_voice: e.target.value })}
-                  placeholder="e.g., We speak with confidence and warmth, using inclusive language that makes every guest feel valued..."
-                  className="mt-2 min-h-[100px]"
-                />
-                <p className="text-xs text-gray-500 mt-1">How does your brand communicate? What words and phrases do you use?</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Content Guidelines</CardTitle>
-              <CardDescription>
-                Specific guidelines for what should and shouldn't be included in your content
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="content-dos">Always Include</Label>
-                <Textarea 
-                  id="content-dos" 
-                  value={brandProfile?.content_dos || ''}
-                  onChange={(e) => updateBrandProfile({ content_dos: e.target.value })}
-                  placeholder="e.g., Ocean views, Local culture, Premium amenities, Personalized service..."
-                  className="mt-2 min-h-[80px]"
-                />
-                <p className="text-xs text-gray-500 mt-1">Elements that should always be highlighted in your content</p>
-              </div>
-              <div>
-                <Label htmlFor="content-donts">Never Include</Label>
-                <Textarea 
-                  id="content-donts" 
-                  value={brandProfile?.content_donts || ''}
-                  onChange={(e) => updateBrandProfile({ content_donts: e.target.value })}
-                  placeholder="e.g., Crowded spaces, Generic stock photo feel, Overly promotional language..."
-                  className="mt-2 min-h-[80px]"
-                />
-                <p className="text-xs text-gray-500 mt-1">Elements to avoid in your content</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="flex justify-end">
-            <Button onClick={handleSaveBrandProfile} disabled={isLoading} className="rounded-full">
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Brand Settings
-            </Button>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="teams" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Team Selection</CardTitle>
-              <CardDescription>
-                Select a team to manage members and invitations
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {teams.length > 0 ? (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {teams.map((team) => (
-                      <button
-                        key={team.id}
-                        onClick={() => setSelectedTeam(team.id)}
-                        className={`p-4 border rounded-lg text-left transition-all ${
-                          selectedTeam === team.id
-                            ? 'border-primary bg-primary/5'
-                            : 'border-border hover:border-primary/50'
-                        }`}
-                      >
-                        <h3 className="font-medium">{team.name}</h3>
-                        {team.description && (
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {team.description}
-                          </p>
-                        )}
-                      </button>
-                    ))}
+          <TabsContent value="teams" className="space-y-6">
+            {/* Team Management */}
+            <div>
+              <h3 className="text-lg font-medium mb-2">Team Management</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Collaborate with team members on your projects
+              </p>
+              <Card>
+                <CardContent className="space-y-4 pt-6">
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                      <User className="w-8 h-8 text-muted-foreground" />
+                    </div>
+                    <h4 className="text-lg font-medium mb-2">Feature Coming Soon</h4>
+                    <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                      Team collaboration features are in development. Soon you'll be able to invite team members, assign roles, and work together on your projects.
+                    </p>
                   </div>
-                </div>
-              ) : (
-                <p className="text-muted-foreground">No teams found. Complete onboarding to create your first team.</p>
-              )}
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
 
-          {selectedTeam && (
-            <TeamInvitations teamId={selectedTeam} />
-          )}
-        </TabsContent>
+          <TabsContent value="security" className="space-y-6">
+            {/* Email/Password Management */}
+            <div>
+              <h3 className="text-lg font-medium mb-2">Email & Password</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Update your email address and password
+              </p>
+              <Card>
+                <CardContent className="space-y-4 pt-6">
+                  <form onSubmit={handleUpdateEmailPassword} className="space-y-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="email-update">Email Address</Label>
+                      <Input 
+                        id="email-update"
+                        type="email" 
+                        value={localEmail}
+                        onChange={(e) => setLocalEmail(e.target.value)}
+                        placeholder="Enter your email address"
+                        className="mt-2"
+                      />
+                    </div>
 
-        <TabsContent value="security" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Account Security</CardTitle>
-              <CardDescription>
-                Manage your account security settings
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="p-4 border rounded-lg">
-                <h3 className="font-medium mb-2">Password Management</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  To change your password, you'll need to reset it via email.
-                </p>
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    toast({
-                      title: "Demo mode",
-                      description: "Password reset is not available in demo mode.",
-                    });
-                  }}
-                  className="rounded-full"
-                >
-                  Reset Password
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                    <div className="space-y-2">
+                      <Label htmlFor="new-password">New Password</Label>
+                      <Input 
+                        id="new-password"
+                        type="password" 
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Enter new password (leave blank to keep current)"
+                        className="mt-2"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="confirm-password">Confirm New Password</Label>
+                      <Input 
+                        id="confirm-password"
+                        type="password" 
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Confirm new password"
+                        className="mt-2"
+                        disabled={!newPassword}
+                      />
+                    </div>
+
+                    <Button type="submit" disabled={isLoading}>
+                      {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Update Email & Password
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }

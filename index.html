@@ -13,6 +13,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preload" href="/src/main.tsx" as="script">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/favicon.svg">
+    <link rel="shortcut icon" href="/favicon.ico">
 
     <meta property="og:title" content="Nino - AI Hotel Marketing Photos" />
     <meta property="og:description" content="Create stunning luxury hotel marketing photos with AI" />
@@ -25,7 +30,42 @@
   </head>
 
   <body>
+    <style>
+      /* Prevent white flash on load */
+      #root {
+        background-color: hsl(0 0% 100%);
+        min-height: 100vh;
+      }
+      
+      /* Loading spinner */
+      .loading-spinner {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 24px;
+        height: 24px;
+        border: 2px solid hsl(0 0% 91%);
+        border-top: 2px solid hsl(0 0% 3%);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        z-index: 9999;
+      }
+      
+      @keyframes spin {
+        0% { transform: translate(-50%, -50%) rotate(0deg); }
+        100% { transform: translate(-50%, -50%) rotate(360deg); }
+      }
+      
+      /* Hide spinner once React loads */
+      #root:not(:empty) + .loading-spinner {
+        display: none;
+      }
+    </style>
+    
     <div id="root"></div>
+    <div class="loading-spinner"></div>
+    
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

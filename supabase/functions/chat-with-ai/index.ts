@@ -6,24 +6,86 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Nino Style Guidelines - Built into the model
+const NINO_SYSTEM_INSTRUCTIONS = `You are Nino, an AI assistant specialized in creating luxury hotel marketing content. You help hotels create stunning promotional images and marketing materials.
+
+NINO PHOTO GUIDELINES FOR IMAGE CREATION AND TRANSFORMATION:
+
+If a user provides an image and asks to make it beautiful or similar, transform it into a luxury campaign-ready ad using these guidelines.
+If they ask for a new image, follow their guidance and use these rules to craft the image.
+
+WE LIKE:
+- Shadows: Deep, rich shadows with detail preserved. Shadows add drama, mystery, and cinematic depth
+- Dutch angles: Tilted compositions that feel slightly off-balance and editorial
+- Reflections: Surfaces like water, glass, or mirrors for visual intrigue
+- Textures: Tactile details (rain, sand, snow, ripples, stone, fabric). Photos should feel touchable
+- Symmetry & balance: Natural balance preferred over perfect symmetry
+- Blurred subjects: Motion blur or soft focus for candid feeling
+- Natural scenes: Editorial or documentary feel, not posed or commercial
+- Varied perspectives: Low angles, high vantage points, foreground framing
+- Open space/negative space: Breathing room with sky, water, landscape for luxurious calm
+- Layering: Foreground/midground/background for cinematic depth
+- Flash photography: On-camera flash at night for editorial energy
+- Film-like grain: Tactile, cinematic 35mm film grain
+- Rich contrast: Deep blacks, strong highlights, bold cinematic feel
+- Golden warmth: Warm highlights (golden sunlight, candlelight)
+- Cool shadows: Subtle cool tints in shadows for contrast
+- Muted saturation: Earthy tones, elegant and natural
+- Halation/glow: Soft glowing edges around light sources
+- Lifestyle over portraiture: Capture moments, not posed faces
+
+WE DO NOT LIKE:
+- Smiles: Avoid posed, tourist-style smiling
+- Faces as focal points: People should be part of the scene, not the subject
+- Faded colors: No washed-out, flat grading
+- Overly staged shots: No cliché hotel marketing photos
+- Neon or oversaturated tones: Avoid loud, Instagram-influencer vibrancy
+
+NINO STYLE SUMMARY:
+Editorial luxury lifestyle — cinematic, natural, warm, and timeless. Images should have depth, texture, and richness. Think Condé Nast Traveler meets Kinfolk magazine: cinematic storytelling, natural imperfection, and quiet luxury.
+
+Your responses should be conversational and helpful, guiding users to create marketing content that follows these aesthetic principles.`;
+
+// Environment validation
+function validateEnvironment() {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY');
+  const geminiApiKey = Deno.env.get('GOOGLE_STUDIO_API_KEY');
+  
+  if (!supabaseUrl) {
+    throw new Error('SUPABASE_URL environment variable is required');
+  }
+  if (!supabaseAnon) {
+    throw new Error('SUPABASE_ANON_KEY environment variable is required');
+  }
+  if (!geminiApiKey) {
+    throw new Error('GOOGLE_STUDIO_API_KEY environment variable is required');
+  }
+  
+  return { supabaseUrl, supabaseAnon, geminiApiKey };
+}
+
 serve(async (req) => {
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // Validate environment first
+    const { supabaseUrl, supabaseAnon, geminiApiKey } = validateEnvironment();
+    
+    // Parse and validate request body
     const { messages, prompt, images } = await req.json();
 
-
     if (!prompt || typeof prompt !== 'string') {
-      return new Response(JSON.stringify({ error: 'Missing prompt' }), {
+      return new Response(JSON.stringify({ 
+        error: 'Missing or invalid prompt parameter' 
+      }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 
     // Create a client scoped to the end-user (RLS enforced)
     const supabase = createClient(supabaseUrl, supabaseAnon, {
@@ -51,125 +113,112 @@ serve(async (req) => {
 `;
     }
 
-    const apiKey = Deno.env.get('GOOGLE_STUDIO_API_KEY');
-    if (!apiKey) {
-      console.error('❌ Missing GOOGLE_STUDIO_API_KEY');
-      throw new Error('Missing GOOGLE_STUDIO_API_KEY secret');
+    console.log('🤖 Calling Gemini API for hotel marketing assistance...');
+    
+    // Build conversation context
+    let conversationHistory = '';
+    if (messages && Array.isArray(messages)) {
+      conversationHistory = messages.map(msg => 
+        `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`
+      ).join('\n');
     }
 
-    // Convert message history to Google AI format
-    const conversationHistory = messages?.map((msg: any) => ({
-      role: msg.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: msg.content }]
-    })) || [];
+    // Prepare content for Gemini API
+    const contentParts = [
+      {
+        text: `${NINO_SYSTEM_INSTRUCTIONS}
 
-    // Prepare inline image parts for the current user prompt
-    const imageParts = [] as any[];
+${brandContext}
+Previous conversation:
+${conversationHistory}
+
+Current request: ${prompt}
+
+Please respond as Nino, the luxury hotel marketing AI assistant. If the user is asking for image creation, provide both a conversational response AND include [IMAGE_PROMPT: detailed prompt here] in your response. The image prompt should follow the Nino style guidelines and be detailed enough for image generation.
+
+For image prompts, include specific details about:
+- Lighting (golden hour, soft natural light, dramatic shadows)
+- Composition (Dutch angles, layering, negative space)
+- Mood (cinematic, editorial, natural luxury)
+- Textures and details that align with Nino aesthetic
+- Hospitality context relevant to their request`
+      }
+    ];
+
+    // Add any uploaded images to the content
     if (images && images.length > 0) {
-      images.forEach((img: any) => {
-        if (img.data) {
-          const base64Data = img.data.split(',')[1];
-          const mimeType = img.data.split(';')[0].split(':')[1];
-          imageParts.push({ inlineData: { data: base64Data, mimeType } });
+      for (const image of images) {
+        if (image.data) {
+          const base64Data = image.data.includes(',') ? image.data.split(',')[1] : image.data;
+          contentParts.push({
+            inlineData: {
+              mimeType: image.type || 'image/jpeg',
+              data: base64Data
+            }
+          });
         }
-      });
+      }
     }
 
-    // Add the current user prompt, including any attached images as parts
-    conversationHistory.push({
-      role: 'user',
-      parts: [ { text: prompt }, ...imageParts ]
-    });
-
-    const systemPrompt = `You are Nino, an expert AI assistant specializing in hotel and hospitality marketing. You help create compelling marketing content and generate high-quality promotional images for hotels, resorts, and hospitality businesses.
-
-${brandContext}Your primary role is to:
-1. Ask thoughtful questions to understand the user's hotel marketing needs
-2. Provide creative suggestions for marketing content and imagery
-3. Help refine image prompts for hotel photography and marketing materials
-4. Offer expertise on hospitality marketing best practices
-
-When helping with image generation:
-- Ask about the type of space (lobby, rooms, dining, pools, spa, etc.)
-- Inquire about the mood and style (luxury, modern, cozy, romantic, family-friendly)
-- Suggest including or excluding people in scenes
-- Consider lighting, time of day, and seasonal elements
-- Focus on creating professional, marketing-quality image descriptions
-
-Important behavior rules:
-- This app can generate images directly. Never instruct the user to copy prompts into external tools.
-- If images are attached, you CAN see and reference them. Never say you cannot view images; acknowledge and use them in your reasoning.
-- When you have enough detail to proceed, set intent to "generate" and produce a single, photorealistic marketing image description in image_prompt.
-- Otherwise, set intent to "ask" and ask one concise clarifying question.
-
-Respond STRICTLY in the following JSON format with no extra text:
-{"response": "<what you say to the user>", "intent": "ask|generate", "image_prompt": "<only when intent=generate>"}`;
-
-    // Call Google AI Studio for chat
-    const response = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+    // Call Gemini API
+    const geminiResponse = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
       {
         method: 'POST',
         headers: {
-          'x-goog-api-key': apiKey,
           'Content-Type': 'application/json',
+          'X-goog-api-key': geminiApiKey,
         },
         body: JSON.stringify({
-          contents: conversationHistory,
-          systemInstruction: {
-            parts: [{ text: systemPrompt }]
-          },
+          contents: [
+            {
+              parts: contentParts
+            }
+          ],
           generationConfig: {
             temperature: 0.7,
             topK: 40,
             topP: 0.95,
             maxOutputTokens: 1024,
-          },
+          }
         }),
       }
     );
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error('❌ Google AI API error (chat-with-ai):', response.status, errText);
-      return new Response(
-        JSON.stringify({ error: 'AI response failed', details: errText }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (!geminiResponse.ok) {
+      const errorText = await geminiResponse.text();
+      console.error('Gemini API error:', errorText);
+      throw new Error(`Gemini API error: ${geminiResponse.status} - ${errorText}`);
     }
 
-    const aiResponse = await response.json();
-    console.log('🧠 Chat model responded');
-    const aiText = aiResponse?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const geminiData = await geminiResponse.json();
+    console.log('✅ Gemini API response received');
 
-    if (!aiText) {
-      console.error('No text in AI response:', JSON.stringify(aiResponse));
-      return new Response(
-        JSON.stringify({ error: 'No response text from AI' }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (!geminiData.candidates || geminiData.candidates.length === 0) {
+      throw new Error('No response generated from Gemini API');
     }
 
-    let payload: { response: string; intent?: 'ask'|'generate'; image_prompt?: string } = { response: aiText };
+    const aiResponse = geminiData.candidates[0].content.parts[0].text;
+    
+    // Parse response to extract image prompt if present
+    let responseText = aiResponse;
+    let imagePrompt = null;
+    let intent = 'ask';
 
-    try {
-      // Try to parse strict JSON
-      payload = JSON.parse(aiText);
-    } catch {
-      // Try to extract JSON block if wrapped in prose
-      const match = aiText.match(/\{[\s\S]*\}/);
-      if (match) {
-        try { payload = JSON.parse(match[0]); } catch { /* ignore */ }
-      }
+    const imagePromptMatch = aiResponse.match(/\[IMAGE_PROMPT:\s*(.*?)\]/s);
+    if (imagePromptMatch) {
+      imagePrompt = imagePromptMatch[1].trim();
+      responseText = aiResponse.replace(/\[IMAGE_PROMPT:.*?\]/s, '').trim();
+      intent = 'generate';
     }
 
-    // Ensure minimal shape
-    if (!payload.response) payload.response = aiText;
-
-    return new Response(
-      JSON.stringify(payload),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({
+      response: responseText,
+      intent: intent,
+      image_prompt: imagePrompt
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error: any) {
     console.error('chat-with-ai error:', error);
     return new Response(

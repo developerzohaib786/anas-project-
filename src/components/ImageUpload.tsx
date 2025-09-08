@@ -1,67 +1,124 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback, memo } from "react";
 import { ImagePlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { validateFiles, validateFileContent, generateSecureFileName } from "@/lib/file-validation";
+import { handleError } from "@/lib/error-handler";
+import { toast } from "sonner";
 
-interface UploadedImage {
-  id: string;
-  file: File;
-  url: string;
-  name: string;
-}
+import { UploadedImage } from "@/types/common";
 
+/**
+ * Props for the ImageUpload component
+ * @interface ImageUploadProps
+ * @property {UploadedImage[]} images - Array of currently uploaded images
+ * @property {function} onImagesChange - Callback when images change (add/remove)
+ * @property {number} maxImages - Maximum number of images allowed (default: 5)
+ * @property {boolean} showPreview - Whether to show image previews with delete buttons (default: true)
+ */
 interface ImageUploadProps {
   images: UploadedImage[];
   onImagesChange: (images: UploadedImage[]) => void;
   maxImages?: number;
+  showPreview?: boolean;
 }
 
-export function ImageUpload({ images, onImagesChange, maxImages = 5 }: ImageUploadProps) {
+/**
+ * ImageUpload Component
+ * 
+ * Handles drag-and-drop and click-to-upload functionality for images.
+ * Features:
+ * - File validation (type, size, content)
+ * - Drag and drop support
+ * - Optional image preview with delete functionality
+ * - Secure file handling with magic byte verification
+ * - Toast notifications for user feedback
+ * 
+ * @param {ImageUploadProps} props - Component props
+ * @returns {JSX.Element} The ImageUpload component
+ */
+const ImageUpload = memo(function ImageUpload({ images, onImagesChange, maxImages = 5, showPreview = true }: ImageUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  const handleFileSelect = (files: FileList | null) => {
+  const handleFileSelect = useCallback(async (files: FileList | null) => {
     if (!files) return;
 
     const fileArray = Array.from(files);
-    const validFiles = fileArray.filter(file => file.type.startsWith('image/'));
     
-    if (validFiles.length === 0) return;
+    // Validate files first
+    const validation = validateFiles(fileArray, {
+      maxFiles: maxImages - images.length,
+      maxSize: 10 * 1024 * 1024, // 10MB
+      allowedTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    });
+
+    if (!validation.isValid) {
+      toast.error(validation.error || 'Invalid file selection');
+      return;
+    }
+
+    // Show warnings if any
+    if (validation.warnings) {
+      validation.warnings.forEach(warning => toast.warning(warning));
+    }
 
     const remainingSlots = maxImages - images.length;
-    const filesToAdd = validFiles.slice(0, remainingSlots);
+    const filesToAdd = fileArray.slice(0, remainingSlots);
 
-    const newImages: UploadedImage[] = filesToAdd.map(file => ({
-      id: `${Date.now()}-${Math.random()}`,
-      file,
-      url: URL.createObjectURL(file),
-      name: file.name
-    }));
+    // Process files with enhanced security
+    const newImages: UploadedImage[] = [];
+    
+    for (const file of filesToAdd) {
+      try {
+        // Validate file content
+        const contentValidation = await validateFileContent(file);
+        if (!contentValidation.isValid) {
+          toast.error(`${file.name}: ${contentValidation.error}`);
+          continue;
+        }
 
-    onImagesChange([...images, ...newImages]);
-  };
+        // Create secure file reference
+        const newImage: UploadedImage = {
+          id: `${Date.now()}-${Math.random()}`,
+          file,
+          url: URL.createObjectURL(file),
+          name: file.name
+        };
 
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        newImages.push(newImage);
+      } catch (error) {
+        handleError(error, 'File Upload');
+      }
+    }
+
+    if (newImages.length > 0) {
+      onImagesChange([...images, ...newImages]);
+      toast.success(`Added ${newImages.length} image(s)`);
+    }
+  }, [images, maxImages, onImagesChange]);
+
+  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     handleFileSelect(e.target.files);
     e.target.value = ''; // Reset input
-  };
+  }, [handleFileSelect]);
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     handleFileSelect(e.dataTransfer.files);
-  };
+  }, [handleFileSelect]);
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
-  };
+  }, []);
 
-  const handleDragLeave = (e: React.DragEvent) => {
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-  };
+  }, []);
 
-  const removeImage = (id: string) => {
+  const removeImage = useCallback((id: string) => {
     const updatedImages = images.filter(img => img.id !== id);
     // Clean up object URLs
     const removedImage = images.find(img => img.id === id);
@@ -69,7 +126,7 @@ export function ImageUpload({ images, onImagesChange, maxImages = 5 }: ImageUplo
       URL.revokeObjectURL(removedImage.url);
     }
     onImagesChange(updatedImages);
-  };
+  }, [images, onImagesChange]);
 
   return (
     <div className="space-y-3">
@@ -111,7 +168,7 @@ export function ImageUpload({ images, onImagesChange, maxImages = 5 }: ImageUplo
       )}
 
       {/* Uploaded Images Preview */}
-      {images.length > 0 && (
+      {showPreview && images.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {images.map((image) => (
             <div key={image.id} className="relative group">
@@ -143,4 +200,6 @@ export function ImageUpload({ images, onImagesChange, maxImages = 5 }: ImageUplo
       )}
     </div>
   );
-}
+});
+
+export { ImageUpload };

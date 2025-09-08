@@ -108,10 +108,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     // If we're deleting the current session, clear the current session
     if (currentSessionId === sessionId) {
       setCurrentSessionId(null);
-      // Navigate to home if we're currently viewing this session
-      if (typeof window !== 'undefined' && window.location.pathname === `/chat/${sessionId}`) {
-        window.location.href = '/';
-      }
     }
   };
 

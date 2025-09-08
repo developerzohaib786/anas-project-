@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowUp, Copy, ThumbsUp, ThumbsDown, Volume2, Share, RotateCcw, X, Upload, Sparkles } from "lucide-react";
+import { ArrowUp, Copy, ThumbsUp, ThumbsDown, Volume2, Share, RotateCcw, X, Upload, Sparkles, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -7,34 +7,51 @@ import { useChat } from "@/contexts/ChatContext";
 import { useParams } from "react-router-dom";
 import { ChatInputControls } from "@/components/ChatInputControls";
 import { PromptLibrary } from "@/components/PromptLibrary";
+import { ImageUpload } from "@/components/ImageUpload";
+import { handleError, withErrorHandling, ApiError, NetworkError } from "@/lib/error-handler";
 
-interface Message {
-  id: string;
-  content: string;
-  role: "user" | "assistant";
-  timestamp: Date;
-  isGenerating?: boolean;
-  images?: UploadedImage[];
-}
+import { Message, UploadedImage } from "@/types/common";
 
-interface UploadedImage {
-  id: string;
-  file: File;
-  url: string;
-  name: string;
-}
-
+/**
+ * Props for the ChatInterface component
+ * @interface ChatInterfaceProps
+ * @property {function} onGenerateImage - Callback to generate images from prompts
+ * @property {string} initialPrompt - Pre-fill the input with this prompt
+ * @property {boolean} showImageUpload - Show the 3-step upload process (for Enhance Photo page)
+ * @property {string} initialMessage - Custom greeting message
+ * @property {boolean} showPrompts - Show example prompt suggestions
+ */
 interface ChatInterfaceProps {
   onGenerateImage: (prompt: string, images?: UploadedImage[]) => void;
+  initialPrompt?: string;
+  showImageUpload?: boolean;
+  initialMessage?: string;
+  showPrompts?: boolean;
+  onNewChat?: () => void;
 }
 
-export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
+/**
+ * ChatInterface Component
+ * 
+ * Main chat interface for both Enhance Photo and Chat to Create workflows.
+ * Features:
+ * - Conditional UI based on workflow (showImageUpload, showPrompts)
+ * - Auto-prompt filling for image enhancement
+ * - User input tracking to prevent unwanted prompt regeneration
+ * - Dual image display (upload area + chat preview)
+ * - Example prompt suggestions
+ * - Style transformation options for Chat to Create
+ * 
+ * @param {ChatInterfaceProps} props - Component props
+ * @returns {JSX.Element} The ChatInterface component
+ */
+export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload = false, initialMessage, showPrompts = true, onNewChat }: ChatInterfaceProps) {
   const { sessionId } = useParams();
   const { sessions, currentSessionId, createSession, updateSession, setCurrentSession, getCurrentSession } = useChat();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      content: "What are we creating today?",
+      content: initialMessage || "What are we creating today?",
       role: "assistant",
       timestamp: new Date(),
     },
@@ -44,7 +61,28 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
   const [promptLibraryOpen, setPromptLibraryOpen] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Track if user manually cleared the text to prevent unwanted auto-filling
+  const hasUserClearedText = useRef(false);
+
+  // Set initial prompt if provided (one-time setup)
+  useEffect(() => {
+    if (initialPrompt && !inputValue) {
+      setInputValue(initialPrompt);
+    }
+  }, [initialPrompt, inputValue]);
+
+  // Auto-set prompt when images are uploaded (for Enhanced Photo workflow only)
+  // Only triggers if user hasn't manually cleared the text
+  useEffect(() => {
+    if (showImageUpload && uploadedImages.length > 0 && !inputValue.trim() && !hasUserClearedText.current) {
+      setInputValue("Make this image beautiful");
+    }
+  }, [uploadedImages.length, showImageUpload]);
+
+  // Reset the user cleared flag when images change (new upload session)
+  useEffect(() => {
+    hasUserClearedText.current = false;
+  }, [uploadedImages.length]);
 
   // Load session data when sessionId changes
   useEffect(() => {
@@ -52,7 +90,27 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
       const session = sessions.find(s => s.id === sessionId);
       if (session) {
         setCurrentSession(sessionId);
-        setMessages(session.messages.length > 0 ? session.messages : [
+        // Always load session messages, even if empty (start fresh)
+        if (session.messages.length > 0) {
+          setMessages(session.messages);
+        } else {
+          // Fresh session - reset to default message
+          setMessages([
+            {
+              id: "1",
+              content: "What are we creating today?",
+              role: "assistant",
+              timestamp: new Date(),
+            },
+          ]);
+        }
+        // Clear uploaded images for new session
+        setUploadedImages([]);
+        setInputValue("");
+      } else {
+        // Session not found, navigate to home using React Router
+        // This will be handled by the parent component navigation
+        setMessages([
           {
             id: "1",
             content: "What are we creating today?",
@@ -60,11 +118,17 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
             timestamp: new Date(),
           },
         ]);
+        setUploadedImages([]);
+        setInputValue("");
       }
-    } else if (!currentSessionId) {
-      // Create a new session if none exists
-      const newSessionId = createSession();
-      window.history.replaceState(null, '', `/chat/${newSessionId}`);
+    } else if (!currentSessionId && !sessionId) {
+      // Only create a new session if we're on the root path without a sessionId
+      // This prevents creating sessions when we navigate to home after deleting
+      const currentPath = window.location.pathname;
+      if (currentPath === '/') {
+        const newSessionId = createSession();
+        window.history.replaceState(null, '', `/chat/${newSessionId}`);
+      }
     }
   }, [sessionId, sessions, currentSessionId, createSession, setCurrentSession]);
 
@@ -149,51 +213,25 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
     setInputValue(prompt);
   };
 
-  const handleImageUpload = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files) return;
-
-    const fileArray = Array.from(e.target.files);
-    const validFiles = fileArray.filter(file => file.type.startsWith('image/'));
+  /**
+   * Handle input changes and track user intent
+   * If user clears text on Enhance Photo page, prevent auto-refilling
+   */
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setInputValue(newValue);
     
-    if (validFiles.length === 0) return;
-
-    const remainingSlots = 3 - uploadedImages.length;
-    const filesToAdd = validFiles.slice(0, remainingSlots);
-
-    const newImages: UploadedImage[] = filesToAdd.map(file => ({
-      id: `${Date.now()}-${Math.random()}`,
-      file,
-      url: URL.createObjectURL(file),
-      name: file.name
-    }));
-
-    setUploadedImages([...uploadedImages, ...newImages]);
-    
-    // Set default prompt if this is the first image and input is empty
-    if (uploadedImages.length === 0 && !inputValue.trim()) {
-      setInputValue("Take this phone photo and make it beautiful");
+    // If user manually clears the text (and there are uploaded images), mark that they've cleared it
+    if (showImageUpload && uploadedImages.length > 0 && newValue.trim() === "") {
+      hasUserClearedText.current = true;
     }
-    
-    e.target.value = ''; // Reset input
   };
+
 
   const handleViewPrompts = () => {
     setPromptLibraryOpen(true);
   };
 
-  const removeImage = (id: string) => {
-    const updatedImages = uploadedImages.filter(img => img.id !== id);
-    // Clean up object URLs
-    const removedImage = uploadedImages.find(img => img.id === id);
-    if (removedImage) {
-      URL.revokeObjectURL(removedImage.url);
-    }
-    setUploadedImages(updatedImages);
-  };
 
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
@@ -319,12 +357,21 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
       }
 
     } catch (error) {
-      console.error('AI chat error:', error);
+      const appError = handleError(error, 'Chat AI');
+      
+      // Determine appropriate error message based on error type
+      let errorContent = "I'm having trouble responding right now. Please try again.";
+      
+      if (appError instanceof NetworkError) {
+        errorContent = "I can't connect right now. Please check your internet connection and try again.";
+      } else if (appError.code === 'AUTH_ERROR') {
+        errorContent = "Please sign in to continue our conversation.";
+      }
       
       // Fallback error message
       const errorMessage: Message = {
         id: Date.now().toString(),
-        content: "I'm sorry, I'm having trouble connecting right now. Please try again in a moment.",
+        content: errorContent,
         role: "assistant",
         timestamp: new Date(),
       };
@@ -342,15 +389,20 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
 
   return (
     <div className="flex flex-col h-full relative">
-      {/* Hidden file input for route guide upload button */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        onChange={handleFileInputChange}
-        className="hidden"
-      />
+      {/* New Chat Button - Top Right */}
+      {onNewChat && (
+        <div className="absolute top-4 right-4 z-10">
+          <Button
+            onClick={onNewChat}
+            variant="outline"
+            size="sm"
+            className="h-9 w-9 rounded-full p-0 bg-background/80 backdrop-blur-sm border-border/50 hover:bg-accent"
+            title="New Chat"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
       {/* Messages */}
       <div className="flex-1 overflow-hidden">
         <ScrollArea className="h-full minimal-scroll" ref={scrollAreaRef}>
@@ -425,96 +477,119 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
 
       {/* Input Area at bottom */}
       <div className="border-t border-[hsl(var(--border))] bg-[hsl(var(--background))] flex-shrink-0">
-        <div className="w-full px-4 py-4 md:px-6 md:py-6">
+        <div className="w-full px-4 py-3 md:px-6 md:py-4">
           <div className="max-w-3xl mx-auto">
-            {/* Route Guide - Mobile optimized container */}
-            <div className="mb-6 md:mb-8 transition-all duration-300" style={{ height: messages.length <= 1 && !inputValue.trim() && uploadedImages.length === 0 ? 'auto' : '0', overflow: 'hidden' }}>
-              {messages.length <= 1 && !inputValue.trim() && uploadedImages.length === 0 && (
-               <div className="animate-fade-in">
-                 <p className="text-sm text-muted-foreground mb-6 font-medium">
-                   Choose your creation style:
-                 </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
-                    <div className="p-4 md:p-6 rounded-xl bg-muted/20 border border-muted/40 hover:bg-muted/30 transition-all duration-200 flex flex-col">
-                      <h3 className="font-medium text-foreground text-base mb-3">Turn any photo into ad-ready content</h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed mb-4 flex-1">
-                        Upload any photo and we'll turn it into ad-ready, professional content.
-                      </p>
-                      <Button 
-                        onClick={handleImageUpload}
-                        variant="secondary"
-                        className="w-full mt-auto"
-                        size="sm"
-                      >
-                        Try now
-                      </Button>
+            {/* Route Guide - Minimal and Modern */}
+            <div className="mb-4 transition-all duration-300" style={{ height: messages.length <= 1 && !inputValue.trim() && (uploadedImages.length === 0 || showImageUpload) ? 'auto' : '0', overflow: 'hidden' }}>
+              {messages.length <= 1 && !inputValue.trim() && (uploadedImages.length === 0 || showImageUpload) && (
+               <div className="animate-fade-in space-y-3 relative">
+                  {/* Combined Photo Upload Section - Only show if enabled */}
+                  {showImageUpload && (
+                  <div className="border border-border rounded-lg p-4 hover:bg-muted/50 transition-colors relative">
+                    {/* Recommended Badge - Inside container, top right */}
+                    <div className="absolute top-3 right-3">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-300 shadow-sm">
+                        Recommended
+                      </span>
                     </div>
                     
-                    <div className="p-4 md:p-6 rounded-xl bg-muted/20 border border-muted/40 hover:bg-muted/30 transition-all duration-200 flex flex-col">
-                      <h3 className="font-medium text-foreground text-base mb-3">Chat / Prompts</h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed mb-4 flex-1">
-                        Share your vision or use our prompt library for tailored, creative results.
-                      </p>
-                      <Button 
-                        onClick={handleViewPrompts}
-                        variant="secondary"
-                        className="w-full mt-auto"
-                        size="sm"
-                      >
-                        Browse prompts
-                      </Button>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 pr-20">
+                        <h3 className="font-medium text-foreground mb-2">Upload photo</h3>
+                        
+                        {/* 3-Step Process */}
+                        <div className="space-y-1.5 mb-4">
+                          <div className="text-xs text-muted-foreground flex items-center gap-2">
+                            <span className="text-primary font-medium">1.</span>
+                            Use your phone or upload existing image
+                          </div>
+                          <div className="text-xs text-muted-foreground flex items-center gap-2">
+                            <span className="text-primary font-medium">2.</span>
+                            Press "Make this beautiful" or describe what you want
+                          </div>
+                          <div className="text-xs text-muted-foreground flex items-center gap-2">
+                            <span className="text-primary font-medium">3.</span>
+                            Let us cook
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                {/* Upload Component - With proper padding */}
+                <div className="-mx-2 -mb-2 mt-2 px-2">
+                  <ImageUpload
+                    images={uploadedImages}
+                    onImagesChange={setUploadedImages}
+                    maxImages={1}
+                    showPreview={false}
+                  />
+                </div>
+                  </div>
+                  )}
+                  
+              {/* Flow 2: Chat - Only show if image upload is disabled */}
+              {!showImageUpload && (
+                <div className="border border-border rounded-lg p-4 hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="font-medium text-foreground">Describe your vision</h3>
+                      <p className="text-sm text-muted-foreground">Tell us what you want to create, share a reference image or select one of our crafted prompts</p>
                     </div>
                   </div>
+                  <ImageUpload
+                    images={uploadedImages}
+                    onImagesChange={setUploadedImages}
+                    maxImages={5}
+                    showPreview={true}
+                  />
+                </div>
+              )}
                </div>
              )}
            </div>
 
-           {/* Example Prompts - Fixed height container to prevent layout shift */}
-           <div className="mb-6 transition-all duration-300" style={{ height: messages.length <= 1 && !inputValue.trim() ? 'auto' : '0', overflow: 'hidden' }}>
-             {messages.length <= 1 && !inputValue.trim() && (
-               <div className="animate-fade-in">
-                 <p className="text-sm text-muted-foreground mb-4 font-medium">
-                   Get inspired with these examples:
-                 </p>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                   {examplePrompts.map((prompt, index) => (
+           {/* Example Prompts - Flexible Fill */}
+           {showPrompts && (
+             <div className="mb-3 transition-all duration-300" style={{ height: messages.length <= 1 && !inputValue.trim() && uploadedImages.length === 0 ? 'auto' : '0', overflow: 'hidden' }}>
+               {messages.length <= 1 && !inputValue.trim() && uploadedImages.length === 0 && (
+                 <div className="animate-fade-in">
+                   <div className="flex items-center gap-3 w-full">
+                     {/* 3 Example Prompts - Flexible sizing */}
+                     {examplePrompts.slice(0, 3).map((prompt, index) => (
+                       <button
+                         key={index}
+                         onClick={() => handlePromptClick(prompt)}
+                         className="text-xs px-3 py-2 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap flex-1 min-w-0 overflow-hidden text-ellipsis"
+                       >
+                         {prompt}
+                       </button>
+                     ))}
+                     
+                     {/* View All Prompts Button - Fixed width */}
                      <button
-                       key={index}
-                       onClick={() => handlePromptClick(prompt)}
-                       className="text-left p-4 rounded-xl bg-muted/30 hover:bg-muted/60 text-sm text-muted-foreground hover:text-foreground transition-all duration-200"
+                       onClick={handleViewPrompts}
+                       className="text-xs px-4 py-2 rounded-full bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-colors whitespace-nowrap flex-shrink-0 font-medium"
                      >
-                       {prompt}
+                       View all prompts →
                      </button>
-                   ))}
+                   </div>
                  </div>
-               </div>
-             )}
-           </div>
+               )}
+             </div>
+           )}
 
-           {/* Uploaded Images Preview */}
+           {/* Uploaded Images Preview - Read-only display */}
            {uploadedImages.length > 0 && (
              <div className="mb-4">
-               <div className="flex flex-wrap gap-2">
+               <div className="flex flex-wrap gap-2 mb-3">
                  {uploadedImages.map((image) => (
-                   <div key={image.id} className="relative group">
+                   <div key={image.id} className="relative">
                      <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-muted">
                        <img
                          src={image.url}
                          alt={image.name}
                          className="w-full h-full object-cover"
                        />
-                       <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-                       <Button
-                         size="icon"
-                         variant="destructive"
-                         className="absolute top-1 right-1 w-5 h-5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                         onClick={(e) => {
-                           e.stopPropagation();
-                           removeImage(image.id);
-                         }}
-                       >
-                         <X className="h-3 w-3" />
-                       </Button>
                      </div>
                      <p className="text-xs text-muted-foreground mt-1 truncate w-16">
                        {image.name}
@@ -522,6 +597,35 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
                    </div>
                  ))}
                </div>
+               
+               {/* Step 2 Indicator & Quick Actions - Only show for Chat to Create page */}
+               {!showImageUpload && !inputValue.trim() && (
+                 <div className="bg-primary/5 rounded-lg p-3">
+                   <div className="flex items-center gap-2 mb-2">
+                     <span className="text-xs font-medium text-primary">Step 2: Choose your transformation</span>
+                   </div>
+                   <div className="flex flex-wrap gap-2">
+                     <button
+                       onClick={() => setInputValue("Make this photo beautiful and professional for luxury hotel marketing")}
+                       className="text-xs px-3 py-1.5 rounded-full bg-primary hover:bg-primary/90 text-white transition-colors font-medium"
+                     >
+                       ✨ Make this beautiful
+                     </button>
+                     <button
+                       onClick={() => setInputValue("Transform this into luxury hotel marketing content")}
+                       className="text-xs px-3 py-1.5 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground transition-colors"
+                     >
+                       Hotel style
+                     </button>
+                     <button
+                       onClick={() => setInputValue("Apply golden hour lighting and rich contrast to this image")}
+                       className="text-xs px-3 py-1.5 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground transition-colors"
+                     >
+                       Golden hour
+                     </button>
+                   </div>
+                 </div>
+               )}
              </div>
            )}
 
@@ -539,7 +643,7 @@ export function ChatInterface({ onGenerateImage }: ChatInterfaceProps) {
                  </div>
                  <Input
                    value={inputValue}
-                   onChange={(e) => setInputValue(e.target.value)}
+                   onChange={handleInputChange}
                    onKeyPress={handleKeyPress}
                    placeholder="Describe your hotel marketing photo..."
                    className="w-full h-12 bg-transparent border border-[hsl(var(--border))] rounded-full pl-12 pr-6 text-[15px] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[hsl(var(--border))] hover:border-[hsl(var(--border))] resize-none min-h-[48px] max-h-[48px]"

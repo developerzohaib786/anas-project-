@@ -1,8 +1,11 @@
-import { Paintbrush, FolderOpen, Palette, Settings, ChevronRight, User, LogOut, MessageSquare } from "lucide-react";
+import { Paintbrush, FolderOpen, Palette, Settings, ChevronRight, User, LogOut, Moon, Sun, Film, Edit3, Plus } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 import { useChat } from "@/contexts/ChatContext";
 import { useBrand } from "@/contexts/BrandContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { ChatActionsMenu } from "@/components/ChatActionsMenu";
@@ -22,9 +25,10 @@ import {
 } from "@/components/ui/sidebar";
 
 const mainNavItems = [
-  { title: "New Project", url: "/", icon: Paintbrush },
-  { title: "Projects", url: "/projects", icon: FolderOpen },
-  { title: "Brand Kit", url: "/brand-kit", icon: Palette },
+  { title: "Enhance Photo", url: "/", icon: Paintbrush },
+  { title: "Chat to Create", url: "/create", icon: Edit3 },
+  { title: "Image to Video", url: "/video", icon: Film },
+  { title: "Brand Assets", url: "/brand-kit", icon: Palette },
 ];
 
 const projectItems = [
@@ -38,18 +42,41 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const currentPath = location.pathname;
   
-  const { sessions, deleteSession, createSession, renameSession } = useChat();
+  const { sessions, deleteSession, createSession, createNewProjectSession, renameSession, currentSessionId, setCurrentSession } = useChat();
+
+  // Determine which page a session should open on based on its title
+  const getSessionRoute = (session: any) => {
+    const title = session.title.toLowerCase();
+    if (title.includes('enhancement') || title.includes('photo')) {
+      return `/`;
+    } else if (title.includes('video')) {
+      return `/video`;
+    } else if (title.includes('creative') || title.includes('chat')) {
+      return `/create`;
+    }
+    // Default to enhance page for older sessions
+    return `/`;
+  };
   const { brandProfile, profile } = useBrand();
+  const { theme, toggleTheme } = useTheme();
   const isActive = (path: string) => currentPath === path;
   const brandName = brandProfile?.brand_name || "Your Brand";
   
-  // Use the user's profile photo, not brand logo
-  const avatarUrl = profile?.avatar_url;
+  // Use the brand's logo from onboarding, fallback to user profile photo
+  const avatarUrl = brandProfile?.logo_url || profile?.avatar_url;
     
   const initials = brandName.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
 
   const handleDeleteSession = (sessionId: string) => {
+    // Check if we're deleting the currently viewed session
+    const isCurrentSession = currentPath === `/chat/${sessionId}`;
+    
     deleteSession(sessionId);
+    
+    // If we deleted the current session, navigate to home
+    if (isCurrentSession) {
+      navigate('/');
+    }
   };
 
   const handleRenameSession = (sessionId: string, newTitle: string) => {
@@ -57,20 +84,47 @@ export function AppSidebar() {
   };
 
   const handleNewProject = () => {
-    // If we're already on a chat page, create a new session
-    if (currentPath.startsWith('/chat/')) {
-      const newSessionId = createSession();
-      navigate(`/chat/${newSessionId}`);
-    } else {
-      // Otherwise navigate to the home page
+    // Check if current session is already empty - if so, don't create a new one
+    const currentSession = sessions.find(s => s.id === currentSessionId);
+    
+    if (currentSession) {
+      // Check if current session is empty (only has default assistant message or no messages)
+      const hasUserMessages = currentSession.messages.some(m => m.role === 'user');
+      const isEmptySession = !hasUserMessages && currentSession.messages.length <= 1;
+      
+      if (isEmptySession) {
+        // Already on empty session - stay here
+        navigate(`/chat/${currentSession.id}`);
+        return;
+      }
+    } else if (!currentSessionId) {
+      // No current session at all - navigate to root which will create one
       navigate('/');
+      return;
+    }
+    
+    // Only create new session if current one has content
+    const newSessionId = createNewProjectSession();
+    navigate(`/chat/${newSessionId}`);
+  };
+
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Error signing out:', error);
+      } else {
+        navigate('/auth');
+      }
+    } catch (error) {
+      console.error('Error during logout:', error);
     }
   };
 
   return (
-    <Sidebar className="w-60 bg-white border-r border-gray-200 md:w-60 w-16">
-      <div className="flex flex-col h-full">
-      <SidebarHeader className="p-4 border-b border-gray-100 md:p-4 p-3">
+    <Sidebar className="w-60 bg-background border-r border-border h-screen flex-shrink-0">
+      <div className="flex flex-col h-full overflow-hidden">
+      <SidebarHeader className="p-4 border-b border-border md:p-4 p-3">
         <div className="flex items-center gap-3 md:flex hidden min-w-0">
           <Avatar className="h-8 w-8 flex-shrink-0">
             <AvatarImage src={avatarUrl || ""} alt={brandName} />
@@ -79,10 +133,10 @@ export function AppSidebar() {
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col min-w-0 flex-1">
-            <div className="font-semibold text-sm text-gray-900 truncate" style={{ fontFamily: 'Inter, sans-serif' }}>
+            <div className="font-semibold text-sm text-foreground truncate" style={{ fontFamily: 'Inter, sans-serif' }}>
               {brandName}'s
             </div>
-            <div className="text-xs text-gray-500 font-normal">
+            <div className="text-xs text-muted-foreground font-normal">
               Workspace
             </div>
           </div>
@@ -97,39 +151,28 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-4 py-6 flex-1 md:px-4 px-2">
-        {/* Main Navigation */}
-        <SidebarGroup>
+      <SidebarContent className="px-4 py-6 flex-1 md:px-4 px-2 flex flex-col overflow-hidden">
+        {/* Main Navigation - Fixed */}
+        <SidebarGroup className="flex-shrink-0">
           <SidebarGroupContent>
             <SidebarMenu>
               {mainNavItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    {item.title === "New Project" ? (
-                      <button
-                        onClick={handleNewProject}
-                        className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 font-medium text-sm mb-1 md:justify-start justify-center text-gray-600 hover:bg-gray-100 hover:text-gray-900 w-full text-left`}
-                        title={item.title}
-                      >
-                        <item.icon className="h-4 w-4 md:mr-0 mr-0" />
-                        <span className="md:block hidden">{item.title}</span>
-                      </button>
-                    ) : (
-                      <NavLink
-                        to={item.url}
-                        className={({ isActive }) =>
-                          `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 font-medium text-sm mb-1 md:justify-start justify-center ${
-                            isActive
-                              ? "bg-gray-900 text-white"
-                              : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                          }`
-                        }
-                        title={item.title}
-                      >
-                        <item.icon className="h-4 w-4 md:mr-0 mr-0" />
-                        <span className="md:block hidden">{item.title}</span>
-                      </NavLink>
-                    )}
+                    <NavLink
+                      to={item.url}
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 font-medium text-sm mb-1 md:justify-start justify-center w-full text-left ${
+                          isActive
+                            ? "bg-accent text-accent-foreground"
+                            : "text-foreground hover:bg-accent hover:text-accent-foreground"
+                        }`
+                      }
+                      title={item.title}
+                    >
+                      <item.icon className="h-4 w-4 md:mr-0 mr-0" />
+                      <span className="md:block hidden font-medium">{item.title}</span>
+                    </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -137,24 +180,30 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Recent Chats Section */}
-        {sessions.length > 0 && (
-          <SidebarGroup className="mt-8 md:block hidden">
-            <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              Recent Chats
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
+        {/* Recent Projects Section - Scrollable */}
+        <SidebarGroup className="mt-8 md:block hidden flex-1 min-h-0">
+          <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            Recent Projects
+          </SidebarGroupLabel>
+          <SidebarGroupContent className="overflow-y-auto flex-1">
+            {sessions.length === 0 ? (
+              <div className="px-3 py-2 text-xs text-muted-foreground">
+                No projects yet. Click + to start!
+              </div>
+            ) : (
               <SidebarMenu className="space-y-1">
-                {sessions.slice(0, 8).map((session) => (
+                {sessions.map((session) => (
                   <SidebarMenuItem key={session.id}>
                     <div className="group relative">
                       <NavLink
-                        to={`/chat/${session.id}`}
-                        className={({ isActive }) =>
-                          `flex items-center px-3 py-2 rounded-lg transition-all duration-200 text-sm w-full text-gray-600 hover:bg-gray-100 hover:text-gray-900 ${
-                            isActive ? "bg-gray-100" : ""
-                          }`
-                        }
+                        to={getSessionRoute(session)}
+                        onClick={() => setCurrentSession(session.id)}
+                        className={() => {
+                          const isCurrentSession = currentSessionId === session.id;
+                          return `flex items-center px-3 py-2 rounded-lg transition-all duration-200 text-sm w-full text-foreground hover:bg-accent hover:text-accent-foreground ${
+                            isCurrentSession ? "bg-accent text-accent-foreground" : ""
+                          }`;
+                        }}
                         title={session.title}
                       >
                         <div className="flex items-center min-w-0 flex-1">
@@ -164,36 +213,64 @@ export function AppSidebar() {
                       <ChatActionsMenu
                         sessionId={session.id}
                         sessionTitle={session.title}
-                        onDelete={handleDeleteSession}
-                        onRename={handleRenameSession}
+                        onDelete={deleteSession}
+                        onRename={renameSession}
                       />
                     </div>
                   </SidebarMenuItem>
                 ))}
               </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
+            )}
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t border-gray-100 mt-auto md:p-4 p-2">
+      <SidebarFooter className="p-4 border-t border-border mt-auto md:p-4 p-2">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
-              <NavLink
-                to="/settings"
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 font-medium text-sm md:justify-start justify-center ${
-                    isActive
-                      ? "bg-gray-100 text-gray-900"
-                      : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                  }`
-                }
+              <button
+                onClick={toggleTheme}
+                className="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 text-sm md:justify-start justify-center text-foreground hover:bg-accent hover:text-accent-foreground w-full text-left font-medium"
+                title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+              >
+                {theme === 'light' ? (
+                  <Moon className="h-4 w-4" strokeWidth={1.5} />
+                ) : (
+                  <Sun className="h-4 w-4" strokeWidth={1.5} />
+                )}
+                <span className="md:block hidden font-medium">
+                  {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
+                </span>
+              </button>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <button
+                onClick={() => navigate('/settings')}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 text-sm md:justify-start justify-center w-full text-left font-medium ${
+                  location.pathname === '/settings'
+                    ? "bg-accent text-accent-foreground"
+                    : "text-foreground hover:bg-accent hover:text-accent-foreground"
+                }`}
                 title="Settings"
               >
-                <Settings className="h-4 w-4" />
-                <span className="md:block hidden">Settings</span>
-              </NavLink>
+                <Settings className="h-4 w-4" strokeWidth={1.5} />
+                <span className="md:block hidden font-medium">Settings</span>
+              </button>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 text-sm md:justify-start justify-center text-foreground hover:bg-accent hover:text-accent-foreground w-full text-left font-medium"
+                title="Log Out"
+              >
+                <LogOut className="h-4 w-4" strokeWidth={1.5} />
+                <span className="md:block hidden font-medium">Log Out</span>
+              </button>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

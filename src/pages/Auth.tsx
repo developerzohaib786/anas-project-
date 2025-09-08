@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+import { Eye, EyeOff } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 
@@ -10,35 +12,66 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/`
           }
         });
+        
         if (error) throw error;
+        
+        if (data.user && !data.user.email_confirmed_at) {
+          toast({
+            title: "Check your email",
+            description: "We've sent you a confirmation link to complete your account setup.",
+          });
+        } else {
+          toast({
+            title: "Account created successfully",
+            description: "Welcome to Nino! You're now logged in.",
+          });
+          navigate("/");
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
+        
+        toast({
+          title: "Welcome back!",
+          description: "You've successfully signed in.",
+        });
         navigate("/");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Auth error:", error);
+      toast({
+        title: "Authentication failed",
+        description: error.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleGoogleSignIn = async () => {
+    setLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -47,13 +80,19 @@ const Auth = () => {
         }
       });
       if (error) throw error;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Google auth error:", error);
+      toast({
+        title: "Google sign-in failed",
+        description: error.message || "Unable to sign in with Google. Please try again.",
+        variant: "destructive",
+      });
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="light min-h-screen bg-white flex items-center justify-center p-4">
       <div className="w-full max-w-sm space-y-6">
         {/* Logo */}
         <div className="text-center">
@@ -62,10 +101,10 @@ const Auth = () => {
             alt="Logo" 
             className="mx-auto h-10 w-10 mb-4"
           />
-          <h2 className="text-xl font-semibold text-foreground">
+          <h2 className="text-xl font-semibold text-gray-900">
             {isSignUp ? "Create your account" : "Welcome back"}
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-sm text-gray-600 mt-1">
             {isSignUp ? "Sign up with your Google account" : "Login with your Google account"}
           </p>
         </div>
@@ -76,6 +115,7 @@ const Auth = () => {
             variant="outline" 
             className="w-full h-10 text-sm font-medium"
             onClick={handleGoogleSignIn}
+            disabled={loading}
           >
             <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
               <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -90,10 +130,10 @@ const Auth = () => {
         {/* Divider */}
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-border" />
+            <span className="w-full border-t border-gray-200" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+            <span className="bg-white px-2 text-gray-500">Or continue with</span>
           </div>
         </div>
 
@@ -106,7 +146,7 @@ const Auth = () => {
             <Input
               id="email"
               type="email"
-              placeholder="m@example.com"
+              placeholder="hello@nino.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="h-9"
@@ -120,29 +160,48 @@ const Auth = () => {
                 Password
               </Label>
               {!isSignUp && (
-                <Button variant="link" className="h-auto p-0 text-xs text-muted-foreground">
+                <Button variant="link" className="h-auto p-0 text-xs text-gray-500">
                   Forgot your password?
                 </Button>
               )}
             </div>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="h-9"
-              required
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="h-9 pr-10"
+                required
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute right-0 top-0 h-9 w-9 px-0"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+                <span className="sr-only">
+                  {showPassword ? "Hide password" : "Show password"}
+                </span>
+              </Button>
+            </div>
           </div>
           
-          <Button type="submit" className="w-full h-9 text-sm font-medium mt-4">
-            {isSignUp ? "Create account" : "Login"}
+          <Button type="submit" className="w-full h-9 text-sm font-medium mt-4" disabled={loading}>
+            {loading ? "Please wait..." : (isSignUp ? "Create account" : "Login")}
           </Button>
         </form>
 
         {/* Sign up link */}
         <div className="text-center">
-          <span className="text-sm text-muted-foreground">
+          <span className="text-sm text-gray-600">
             {isSignUp ? "Already have an account? " : "Don't have an account? "}
           </span>
           <Button 
@@ -155,7 +214,7 @@ const Auth = () => {
         </div>
 
         {/* Terms and Privacy */}
-        <div className="text-center text-xs text-muted-foreground">
+        <div className="text-center text-xs text-gray-500">
           By clicking continue, you agree to our{" "}
           <Button variant="link" className="h-auto p-0 text-xs underline">
             Terms of Service

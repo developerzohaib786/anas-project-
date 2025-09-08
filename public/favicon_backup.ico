@@ -1,0 +1,19 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Eight black circles arranged in a circular pattern -->
+  <!-- Top circle -->
+  <circle cx="16" cy="6" r="3" fill="#000000"/>
+  <!-- Top-right circle -->
+  <circle cx="24" cy="10" r="3" fill="#000000"/>
+  <!-- Right circle -->
+  <circle cx="26" cy="18" r="3" fill="#000000"/>
+  <!-- Bottom-right circle -->
+  <circle cx="22" cy="26" r="3" fill="#000000"/>
+  <!-- Bottom circle -->
+  <circle cx="16" cy="28" r="3" fill="#000000"/>
+  <!-- Bottom-left circle -->
+  <circle cx="8" cy="26" r="3" fill="#000000"/>
+  <!-- Left circle -->
+  <circle cx="6" cy="18" r="3" fill="#000000"/>
+  <!-- Top-left circle -->
+  <circle cx="10" cy="10" r="3" fill="#000000"/>
+</svg>

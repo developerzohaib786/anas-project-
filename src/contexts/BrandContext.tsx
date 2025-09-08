@@ -169,14 +169,22 @@ export function BrandProvider({ children }: { children: ReactNode }) {
   };
 
   const updateBrandProfile = async (updates: Partial<BrandProfile>) => {
-    if (!brandProfile) return;
+    if (!brandProfile) {
+      throw new Error('No brand profile found to update');
+    }
+    
     const { data: updated, error } = await supabase
       .from('brand_profiles')
       .update(updates)
       .eq('id', brandProfile.id)
       .select()
       .single();
-    if (error) { console.error('Update brand profile error', error); return; }
+      
+    if (error) {
+      console.error('Update brand profile error', error);
+      throw new Error(`Failed to update brand profile: ${error.message}`);
+    }
+    
     setBrandProfile(updated as BrandProfile);
   };
 
