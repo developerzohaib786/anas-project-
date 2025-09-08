@@ -8,6 +8,12 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    hmr: {
+      overlay: false, // Disable error overlay that can cause white flashes
+    },
+    fs: {
+      strict: false, // Allow serving files from outside root
+    },
   },
   plugins: [
     react(),
@@ -18,5 +24,20 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: undefined, // Prevent chunk splitting that can cause loading issues
+      },
+    },
+  },
+  optimizeDeps: {
+    include: [
+      "react",
+      "react-dom",
+      "react-router-dom",
+      "@tanstack/react-query",
+    ], // Pre-bundle these to prevent reload on first use
   },
 }));
