@@ -736,14 +736,15 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
                    value={inputValue}
                    onChange={handleInputChange}
                    onKeyPress={handleKeyPress}
-                   placeholder="Describe your hotel marketing photo..."
-                   className="w-full h-12 bg-transparent border border-[hsl(var(--border))] rounded-full pl-4 pr-6 text-[15px] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[hsl(var(--border))] hover:border-[hsl(var(--border))] resize-none min-h-[48px] max-h-[48px]"
+                   placeholder={showImageUpload && uploadedImages.length === 0 ? "Upload an image first to get started..." : "Describe your hotel marketing photo..."}
+                   disabled={showImageUpload && uploadedImages.length === 0}
+                   className={`w-full h-12 bg-transparent border border-[hsl(var(--border))] rounded-full pl-4 pr-6 text-[15px] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[hsl(var(--border))] hover:border-[hsl(var(--border))] resize-none min-h-[48px] max-h-[48px] ${showImageUpload && uploadedImages.length === 0 ? 'opacity-50 cursor-not-allowed bg-muted/30' : ''}`}
                  />
                </div>
              </div>
              <Button 
                onClick={handleSendMessage}
-               disabled={!inputValue.trim() && uploadedImages.length === 0}
+               disabled={!inputValue.trim() && uploadedImages.length === 0 || (showImageUpload && uploadedImages.length === 0)}
                size="icon"
                className="h-12 w-12 rounded-full bg-muted hover:bg-muted/80 disabled:bg-muted disabled:text-muted-foreground shrink-0 min-h-[48px] min-w-[48px]"
              >
