@@ -671,13 +671,25 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
              <div className="mb-4">
                <div className="flex flex-wrap gap-2 mb-3">
                  {uploadedImages.map((image) => (
-                   <div key={image.id} className="relative">
+                   <div key={image.id} className="relative group">
                      <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-muted">
                        <img
                          src={image.url}
                          alt={image.name}
                          className="w-full h-full object-cover"
                        />
+                       <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                       <Button
+                         size="icon"
+                         variant="destructive"
+                         className="absolute top-1 right-1 w-5 h-5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                         onClick={(e) => {
+                           e.stopPropagation();
+                           setUploadedImages(prev => prev.filter(img => img.id !== image.id));
+                         }}
+                       >
+                         <X className="h-3 w-3" />
+                       </Button>
                      </div>
                      <p className="text-xs text-muted-foreground mt-1 truncate w-16">
                        {image.name}
