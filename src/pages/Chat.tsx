@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import { ChatInterface } from "@/components/ChatInterface";
 import { ImagePreview } from "@/components/ImagePreview";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
@@ -27,9 +27,9 @@ const Chat = () => {
     () => !!currentPrompt
   ]);
 
-  const handleGenerateImage = async (prompt: string, images?: UploadedImage[]) => {
+  const handleGenerateImage = useCallback(async (prompt: string, images?: UploadedImage[]) => {
     await generateImage(prompt, images);
-  };
+  }, [generateImage]);
 
   // Restore image state when session changes
   useEffect(() => {
@@ -50,11 +50,11 @@ const Chat = () => {
     }
   }, [currentSessionId, sessions, setGeneratedImage, setCurrentPrompt, clearGenerated]);
 
-  const handleNewChat = () => {
+  const handleNewChat = useCallback(() => {
     startNewSession(() => {
       clearGenerated();
     });
-  };
+  }, [startNewSession, clearGenerated]);
 
   return (
     <div className="h-screen flex flex-col">
@@ -109,4 +109,4 @@ const Chat = () => {
   );
 };
 
-export default Chat;
+export default memo(Chat);

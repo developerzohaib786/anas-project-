@@ -104,9 +104,18 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
             },
           ]);
         }
-        // Clear uploaded images for new session
-        setUploadedImages([]);
-        setInputValue("");
+        // Restore session state to prevent loss on navigation
+        if (session.uploadedImages) {
+          setUploadedImages(session.uploadedImages);
+        } else {
+          setUploadedImages([]);
+        }
+        
+        if (session.inputValue) {
+          setInputValue(session.inputValue);
+        } else {
+          setInputValue("");
+        }
       } else {
         // Session not found, navigate to home using React Router
         // This will be handled by the parent component navigation
@@ -141,6 +150,16 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
       });
     }
   }, [messages, currentSessionId, updateSession]);
+
+  // Save input state to prevent loss on navigation
+  useEffect(() => {
+    if (currentSessionId) {
+      updateSession(currentSessionId, {
+        inputValue: inputValue,
+        uploadedImages: uploadedImages
+      });
+    }
+  }, [inputValue, uploadedImages, currentSessionId, updateSession]);
 
   const generateSessionTitle = (msgs: Message[]): string => {
     const userMessage = msgs.find(m => m.role === "user");
@@ -598,8 +617,8 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
                  ))}
                </div>
                
-               {/* Step 2 Indicator & Quick Actions - Only show for Chat to Create page */}
-               {!showImageUpload && !inputValue.trim() && (
+               {/* Step 2 Indicator & Quick Actions - Only show when there are uploaded images on Enhance Photo page */}
+               {showImageUpload && uploadedImages.length > 0 && !inputValue.trim() && (
                  <div className="bg-primary/5 rounded-lg p-3">
                    <div className="flex items-center gap-2 mb-2">
                      <span className="text-xs font-medium text-primary">Step 2: Choose your transformation</span>

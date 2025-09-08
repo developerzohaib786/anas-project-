@@ -10,6 +10,8 @@ export interface ChatSession {
   updatedAt: Date;
   generatedImage?: string;
   currentPrompt?: string;
+  uploadedImages?: any[];
+  inputValue?: string;
 }
 
 interface ChatContextType {
