@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChat } from "@/contexts/ChatContext";
 import { useParams } from "react-router-dom";
-import { ChatInputControls } from "@/components/ChatInputControls";
 import { PromptLibrary } from "@/components/PromptLibrary";
 import { ImageUpload } from "@/components/ImageUpload";
 import { handleError, withErrorHandling, ApiError, NetworkError } from "@/lib/error-handler";
@@ -733,20 +732,12 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
            <div className="flex items-end gap-3">
              <div className="flex-1">
                <div className="relative">
-                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10">
-                   <ChatInputControls
-                     images={uploadedImages}
-                     onImagesChange={setUploadedImages}
-                     onPromptSelect={handlePromptClick}
-                     maxImages={3}
-                   />
-                 </div>
                  <Input
                    value={inputValue}
                    onChange={handleInputChange}
                    onKeyPress={handleKeyPress}
                    placeholder="Describe your hotel marketing photo..."
-                   className="w-full h-12 bg-transparent border border-[hsl(var(--border))] rounded-full pl-12 pr-6 text-[15px] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[hsl(var(--border))] hover:border-[hsl(var(--border))] resize-none min-h-[48px] max-h-[48px]"
+                   className="w-full h-12 bg-transparent border border-[hsl(var(--border))] rounded-full pl-4 pr-6 text-[15px] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[hsl(var(--border))] hover:border-[hsl(var(--border))] resize-none min-h-[48px] max-h-[48px]"
                  />
                </div>
              </div>
