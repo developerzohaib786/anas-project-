@@ -30,6 +30,7 @@ const Auth = () => {
             emailRedirectTo: `${window.location.origin}/`
           }
         });
+<<<<<<< HEAD
         
         if (error) throw error;
         
@@ -44,6 +45,39 @@ const Auth = () => {
             description: "Welcome to Nino! You're now logged in.",
           });
           navigate("/");
+=======
+
+        if (error) {
+          if ((error as any).code === "user_already_exists") {
+            const { error: signInError } = await supabase.auth.signInWithPassword({
+              email,
+              password,
+            });
+            if (signInError) throw signInError;
+            toast({ title: "Welcome back!", description: "Signed in successfully." });
+            navigate("/");
+            return;
+          }
+          throw error;
+        }
+
+        if (data.session) {
+          toast({ title: "Account created", description: "Redirecting to dashboard..." });
+          navigate("/");
+          return;
+        }
+
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        if (!signInError) {
+          toast({ title: "Account created", description: "Signed in successfully." });
+          navigate("/");
+        } else {
+          toast({
+            title: "Confirm your email",
+            description: "We sent you a confirmation link. Click it to finish signing in.",
+            variant: "default",
+          });
+>>>>>>> cded5b677933cb227b85cb02b993b1316d298040
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -51,22 +85,32 @@ const Auth = () => {
           password,
         });
         if (error) throw error;
+<<<<<<< HEAD
         
         toast({
           title: "Welcome back!",
           description: "You've successfully signed in.",
         });
+=======
+        toast({ title: "Welcome!", description: "Signed in successfully." });
+>>>>>>> cded5b677933cb227b85cb02b993b1316d298040
         navigate("/");
       }
     } catch (error: any) {
       console.error("Auth error:", error);
       toast({
         title: "Authentication failed",
+<<<<<<< HEAD
         description: error.message || "Something went wrong. Please try again.",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
+=======
+        description: error?.message || "Please try again.",
+        variant: "destructive",
+      });
+>>>>>>> cded5b677933cb227b85cb02b993b1316d298040
     }
   };
 
@@ -74,20 +118,30 @@ const Auth = () => {
     setLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+        provider: "google",
         options: {
           redirectTo: `${window.location.origin}/`
         }
       });
       if (error) throw error;
+<<<<<<< HEAD
+=======
+      toast({ title: "Redirecting to Google...", description: "Continue in the popup/window." });
+>>>>>>> cded5b677933cb227b85cb02b993b1316d298040
     } catch (error: any) {
       console.error("Google auth error:", error);
       toast({
         title: "Google sign-in failed",
+<<<<<<< HEAD
         description: error.message || "Unable to sign in with Google. Please try again.",
         variant: "destructive",
       });
       setLoading(false);
+=======
+        description: error?.message || "Please try again.",
+        variant: "destructive",
+      });
+>>>>>>> cded5b677933cb227b85cb02b993b1316d298040
     }
   };
 
