@@ -6,6 +6,7 @@ import { useChat } from "@/contexts/ChatContext";
 import { UploadedImage } from "@/types/common";
 import { useImageGeneration } from "@/hooks/useImageGeneration";
 import { useSmartSession } from "@/hooks/useSmartSession";
+import { toast } from "sonner";
 
 const Chat = () => {
   const { currentSessionId, updateSession, sessions } = useChat();

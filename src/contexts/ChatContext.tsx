@@ -8,6 +8,8 @@ export interface ChatSession {
   isCompleted: boolean;
   createdAt: Date;
   updatedAt: Date;
+  generatedImage?: string;
+  currentPrompt?: string;
 }
 
 interface ChatContextType {
@@ -69,6 +71,29 @@ export function ChatProvider({ children }: { children: ReactNode }) {
               setSessions(validSessions);
             }
           }
+        } else {
+          // No user - fallback to old storage key for backwards compatibility
+          try {
+            const oldKey = 'nino-chat-sessions';
+            const saved = localStorage.getItem(oldKey);
+            if (saved) {
+              const parsed = JSON.parse(saved);
+              if (Array.isArray(parsed)) {
+                const validSessions = parsed
+                  .filter(session => session.id && session.title)
+                  .map((session: any) => ({
+                    ...session,
+                    createdAt: new Date(session.createdAt),
+                    updatedAt: new Date(session.updatedAt)
+                  }))
+                  .slice(0, MAX_SESSIONS);
+                
+                setSessions(validSessions);
+              }
+            }
+          } catch (error) {
+            console.error('Error loading fallback sessions:', error);
+          }
         }
       } catch (error) {
         console.error('Error loading chat sessions:', error);
@@ -81,14 +106,33 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     };
 
     initializeUser();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        setCurrentUserId(session.user.id);
+      } else if (event === 'SIGNED_OUT') {
+        setCurrentUserId(null);
+        setSessions([]);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   // Save sessions to localStorage when they change (but only after initial load)
   useEffect(() => {
-    if (isLoaded && currentUserId) {
+    if (isLoaded) {
       try {
-        const userStorageKey = getStorageKey(currentUserId);
-        localStorage.setItem(userStorageKey, JSON.stringify(sessions));
+        if (currentUserId) {
+          // Save to user-specific key
+          const userStorageKey = getStorageKey(currentUserId);
+          localStorage.setItem(userStorageKey, JSON.stringify(sessions));
+        } else {
+          // Fallback to old key for backwards compatibility
+          const oldKey = 'nino-chat-sessions';
+          localStorage.setItem(oldKey, JSON.stringify(sessions));
+        }
       } catch (error) {
         console.error('Error saving chat sessions:', error);
       }
@@ -161,6 +205,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     setCurrentSessionId(null);
     if (currentUserId) {
       localStorage.removeItem(getStorageKey(currentUserId));
+    } else {
+      // Also clear old key for backwards compatibility
+      localStorage.removeItem('nino-chat-sessions');
     }
   };
 
