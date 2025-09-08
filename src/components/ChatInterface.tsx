@@ -312,7 +312,39 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
     setUploadedImages([]);
 
     try {
-      // Call the real AI chat API
+      // For image uploads, directly trigger image generation without chat AI
+      if (currentImages.length > 0) {
+        // Add a generating message with shimmer effect
+        const generatingMessageId = (Date.now() + 1).toString();
+        const generatingMessage: Message = {
+          id: generatingMessageId,
+          content: "🎨 Generating your image now...",
+          role: "assistant",
+          timestamp: new Date(),
+          isGenerating: true,
+        };
+
+        setMessages((prev) => [...prev, generatingMessage]);
+
+        // Mark session as completed when generating image
+        if (currentSessionId) {
+          updateSession(currentSessionId, { isCompleted: true });
+        }
+        
+        // Trigger image generation directly
+        try {
+          await onGenerateImage(currentInput || "Make this image beautiful", currentImages);
+          // Remove the generating message after image generation completes
+          setMessages((prev) => prev.filter(msg => msg.id !== generatingMessageId));
+        } catch (error) {
+          // Remove generating message even if there's an error
+          setMessages((prev) => prev.filter(msg => msg.id !== generatingMessageId));
+          console.error("Image generation error:", error);
+        }
+        return; // Exit early, don't call chat AI
+      }
+
+      // Call the real AI chat API for text-only messages
       const { supabase } = await import("@/integrations/supabase/client");
 
       // Convert any attached images to base64
@@ -577,7 +609,7 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
                     images={uploadedImages}
                     onImagesChange={setUploadedImages}
                     maxImages={1}
-                    showPreview={false}
+                    showPreview={true}
                   />
                 </div>
                   </div>
