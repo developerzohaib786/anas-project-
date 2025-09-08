@@ -189,7 +189,7 @@ export function AppSidebar() {
           <SidebarGroupContent className="overflow-y-auto flex-1">
             {sessions.length === 0 ? (
               <div className="px-3 py-2 text-xs text-muted-foreground">
-                No projects yet. Click + to start!
+                Start chatting to create!
               </div>
             ) : (
               <SidebarMenu className="space-y-1">
