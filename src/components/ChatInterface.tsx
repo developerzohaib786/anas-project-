@@ -131,10 +131,10 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
         setInputValue("");
       }
     } else if (!currentSessionId && !sessionId) {
-      // Only create a new session if we're on the root path without a sessionId
+      // Only create a new session if we're on a chat path without a sessionId
       // This prevents creating sessions when we navigate to home after deleting
       const currentPath = window.location.pathname;
-      if (currentPath === '/') {
+      if (currentPath.startsWith('/chat') && currentPath === '/chat') {
         const newSessionId = createSession();
         window.history.replaceState(null, '', `/chat/${newSessionId}`);
       }
