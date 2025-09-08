@@ -292,11 +292,11 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
 
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim()) return;
+    if (!inputValue.trim() && uploadedImages.length === 0) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      content: inputValue,
+      content: inputValue || (uploadedImages.length > 0 ? "Uploaded image" : ""),
       role: "user",
       timestamp: new Date(),
       images: uploadedImages.length > 0 ? [...uploadedImages] : undefined,
