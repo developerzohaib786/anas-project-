@@ -3,8 +3,42 @@ import { useChat } from '@/contexts/ChatContext';
 import { FlowType, FLOW_SESSION_TITLES, FLOW_MESSAGES, ContentDetector } from '@/types/common';
 
 /**
- * Custom hook for smart session management across different flows
- * Handles session creation logic to avoid empty sessions in sidebar
+ * 🧠 Smart Session Management Hook
+ * 
+ * Intelligent session management that prevents empty sessions in the sidebar.
+ * Only creates new sessions when the current session has meaningful content.
+ * 
+ * **Key Features:**
+ * - Content detection to prevent empty sessions
+ * - Flow-specific session titles and messages
+ * - Automatic state clearing for empty sessions
+ * - User-friendly toast notifications
+ * 
+ * **How It Works:**
+ * 1. Checks if current session has content using provided detectors
+ * 2. If empty: Clears local state, shows "ready" message
+ * 3. If has content: Creates new session, saves old to sidebar
+ * 
+ * **Usage:**
+ * ```typescript
+ * const { startNewSession } = useSmartSession('enhance', [
+ *   () => uploadedImages.length > 0,
+ *   () => !!generatedImage,
+ *   () => !!currentPrompt
+ * ]);
+ * 
+ * const handleNewChat = () => {
+ *   startNewSession(() => {
+ *     // Clear component state
+ *     setUploadedImages([]);
+ *     setGeneratedImage(undefined);
+ *   });
+ * };
+ * ```
+ * 
+ * @param flowType - The workflow type for session naming
+ * @param contentDetectors - Array of functions that return true if content exists
+ * @returns Hook interface with session management functions
  */
 export const useSmartSession = (flowType: FlowType, contentDetectors: ContentDetector[]) => {
   const { createSession, setCurrentSession, getCurrentSession } = useChat();

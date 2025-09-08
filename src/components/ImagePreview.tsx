@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, RotateCcw, Check, ChevronDown, Crop } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -42,7 +42,7 @@ const aspectRatioClasses = {
  * @param {ImagePreviewProps} props - Component props
  * @returns {JSX.Element} The ImagePreview component
  */
-export function ImagePreview({ currentPrompt, isGenerating = false, generatedImage: generatedImageProp }: ImagePreviewProps) {
+export const ImagePreview = memo(function ImagePreview({ currentPrompt, isGenerating = false, generatedImage: generatedImageProp }: ImagePreviewProps) {
   const [selectedRatio, setSelectedRatio] = useState<AspectRatio>("1:1");
   const [showDone, setShowDone] = useState(false);
   const [imgError, setImgError] = useState(false);
@@ -333,18 +333,17 @@ export function ImagePreview({ currentPrompt, isGenerating = false, generatedIma
       {/* Actions */}
       <div className="px-4 md:px-6 pb-4 md:pb-6 space-y-3">
         {!showDone ? (
-          <Button
-            variant="default"
-            size="lg"
-            disabled={!displayedImage}
-            onClick={handleDone}
-            className="w-full h-12 rounded-2xl font-semibold bg-gradient-to-r from-primary via-primary to-primary/90 hover:from-primary/95 hover:via-primary/95 hover:to-primary/85 text-primary-foreground border-0 disabled:opacity-40 disabled:cursor-not-allowed shadow-xl disabled:shadow-none transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 relative overflow-hidden group"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-white/20 via-transparent to-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 -skew-x-12 group-hover:animate-pulse transition-opacity duration-500" />
-            <Check className="w-5 h-5 mr-2 relative z-10" />
-            <span className="relative z-10">Done</span>
-          </Button>
+          <div className="flex justify-center">
+            <Button
+              variant="default"
+              size="lg"
+              disabled={!displayedImage}
+              onClick={handleDone}
+              className="max-w-xs h-11 px-10 rounded-full font-medium text-sm bg-gradient-to-b from-gray-800 to-gray-900 hover:from-gray-700 hover:to-gray-800 text-white border-0 disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_4px_20px_rgba(0,0,0,0.25),0_1px_3px_rgba(0,0,0,0.1)] hover:shadow-[0_6px_25px_rgba(0,0,0,0.3),0_2px_5px_rgba(0,0,0,0.15)] disabled:shadow-none transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 ease-out backdrop-blur-sm"
+            >
+              Export
+            </Button>
+          </div>
         ) : (
           <>
             {/* Crop/Resize Controls */}
@@ -442,4 +441,4 @@ export function ImagePreview({ currentPrompt, isGenerating = false, generatedIma
       </div>
     </div>
   );
-}
+});

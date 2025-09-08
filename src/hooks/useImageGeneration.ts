@@ -7,8 +7,38 @@ import { useChat } from '@/contexts/ChatContext';
 import { UploadedImage, FlowType } from '@/types/common';
 
 /**
- * Custom hook for handling image generation across different flows
- * Consolidates the duplicate image generation logic from Enhance, Create, and Chat pages
+ * 🎨 Image Generation Hook
+ * 
+ * Consolidates AI image generation logic across all flows (Enhance, Create, Video).
+ * Handles rate limiting, base64 conversion, API calls, error handling, and session updates.
+ * 
+ * **Key Features:**
+ * - Unified image generation across all workflows
+ * - Automatic rate limiting with user feedback
+ * - Secure file handling with base64 conversion
+ * - Centralized error handling with user-friendly messages
+ * - Session state management integration
+ * 
+ * **Usage:**
+ * ```typescript
+ * const { generateImage, isGenerating, clearGenerated } = useImageGeneration('enhance');
+ * 
+ * // Generate image with prompt and optional reference images
+ * await generateImage("Transform this into luxury hotel marketing", uploadedImages);
+ * ```
+ * 
+ * @param flowType - The type of flow: 'enhance' | 'create' | 'video'
+ * @returns Hook interface with generation functions and state
+ * 
+ * @example
+ * ```typescript
+ * // In Enhance.tsx
+ * const { generateImage, isGenerating, currentPrompt } = useImageGeneration('enhance');
+ * 
+ * const handleEnhance = async () => {
+ *   await generateImage("Make this beautiful", images);
+ * };
+ * ```
  */
 export const useImageGeneration = (flowType: FlowType) => {
   const [isGenerating, setIsGenerating] = useState(false);

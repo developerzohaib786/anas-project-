@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface ChatSession {
   id: string;
@@ -23,51 +24,76 @@ interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'nino-chat-sessions';
 const MAX_SESSIONS = 50; // Limit to prevent storage bloat
 
 export function ChatProvider({ children }: { children: ReactNode }) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  // Load sessions from localStorage on mount
+  // Get user-specific storage key
+  const getStorageKey = (userId: string) => `nino-chat-sessions-${userId}`;
+
+  // Load user session and initialize theme for new users
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          const validSessions = parsed
-            .filter(session => session.id && session.title)
-            .map((session: any) => ({
-              ...session,
-              createdAt: new Date(session.createdAt),
-              updatedAt: new Date(session.updatedAt)
-            }))
-            .slice(0, MAX_SESSIONS); // Limit sessions
+    const initializeUser = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          setCurrentUserId(user.id);
           
-          setSessions(validSessions);
+          // For new users, ensure they start in light mode
+          const themeKey = 'nino-theme-preference';
+          const existingTheme = localStorage.getItem(themeKey);
+          if (!existingTheme) {
+            localStorage.setItem(themeKey, 'light');
+            document.documentElement.classList.remove('dark');
+          }
+          
+          // Load user-specific chat sessions
+          const userStorageKey = getStorageKey(user.id);
+          const saved = localStorage.getItem(userStorageKey);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed)) {
+              const validSessions = parsed
+                .filter(session => session.id && session.title)
+                .map((session: any) => ({
+                  ...session,
+                  createdAt: new Date(session.createdAt),
+                  updatedAt: new Date(session.updatedAt)
+                }))
+                .slice(0, MAX_SESSIONS);
+              
+              setSessions(validSessions);
+            }
+          }
         }
+      } catch (error) {
+        console.error('Error loading chat sessions:', error);
+        if (currentUserId) {
+          localStorage.removeItem(getStorageKey(currentUserId));
+        }
+      } finally {
+        setIsLoaded(true);
       }
-    } catch (error) {
-      console.error('Error loading chat sessions:', error);
-      localStorage.removeItem(STORAGE_KEY);
-    } finally {
-      setIsLoaded(true);
-    }
+    };
+
+    initializeUser();
   }, []);
 
   // Save sessions to localStorage when they change (but only after initial load)
   useEffect(() => {
-    if (isLoaded) {
+    if (isLoaded && currentUserId) {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+        const userStorageKey = getStorageKey(currentUserId);
+        localStorage.setItem(userStorageKey, JSON.stringify(sessions));
       } catch (error) {
         console.error('Error saving chat sessions:', error);
       }
     }
-  }, [sessions, isLoaded]);
+  }, [sessions, isLoaded, currentUserId]);
 
   const createSession = (title?: string): string => {
     const timestamp = Date.now();
@@ -133,7 +159,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const clearAllSessions = () => {
     setSessions([]);
     setCurrentSessionId(null);
-    localStorage.removeItem(STORAGE_KEY);
+    if (currentUserId) {
+      localStorage.removeItem(getStorageKey(currentUserId));
+    }
   };
 
   return (

@@ -2,13 +2,11 @@ import { useState } from "react";
 import { ImageUpload } from "@/components/ImageUpload";
 import { ImagePreview } from "@/components/ImagePreview";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
-import { handleError, withErrorHandling, ApiError } from "@/lib/error-handler";
-import { imageGenerationRateLimiter } from "@/lib/rate-limiter";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Video as VideoIcon, Play, Pause, Download, Plus, Film } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useChat } from "@/contexts/ChatContext";
 import { UploadedImage, VideoSize } from "@/types/common";
 import { useSmartSession } from "@/hooks/useSmartSession";
@@ -123,9 +121,9 @@ const Video = () => {
         <ResizablePanelGroup direction="horizontal" className="h-full">
           {/* Input Panel */}
           <ResizablePanel defaultSize={70} minSize={50}>
-            <div className="h-full flex flex-col p-6 relative">
+            <div className="h-full flex flex-col px-4 py-4 md:px-6 lg:px-8 xl:px-12 md:py-6 md:py-8 relative">
               {/* New Chat Button */}
-              <div className="absolute top-4 right-4 z-10">
+              <div className="absolute top-4 right-4 md:top-6 md:right-6 lg:right-8 xl:right-12 z-10">
                 <Button
                   onClick={handleNewChat}
                   variant="outline"
@@ -229,9 +227,9 @@ const Video = () => {
       </div>
       
       {/* Mobile Layout */}
-      <div className="md:hidden flex-1 min-h-0 p-4 relative">
+      <div className="md:hidden flex-1 min-h-0 px-4 py-4 md:px-6 lg:px-8 xl:px-12 md:py-6 md:py-8 relative">
         {/* New Chat Button - Mobile */}
-        <div className="absolute top-2 right-2 z-10">
+        <div className="absolute top-4 right-4 z-10">
           <Button
             onClick={handleNewChat}
             variant="outline"

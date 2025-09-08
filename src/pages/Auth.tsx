@@ -92,7 +92,43 @@ const Auth = () => {
   };
 
   return (
-    <div className="light min-h-screen bg-white flex items-center justify-center p-4">
+    <div className="light min-h-screen bg-white text-gray-900 flex items-center justify-center p-4" style={{colorScheme: 'light'}}>
+      <style>{`
+        /* Force light mode for auth page */
+        .light {
+          color-scheme: light !important;
+          background-color: white !important;
+        }
+        .light input {
+          background-color: white !important;
+          border: 1px solid #e5e7eb !important;
+          color: #111827 !important;
+        }
+        .light input:focus {
+          border-color: #3b82f6 !important;
+          outline: none !important;
+          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+        }
+        .light button[class*="bg-primary"] {
+          background-color: #111827 !important;
+          color: white !important;
+        }
+        .light button[class*="bg-primary"]:hover {
+          background-color: #374151 !important;
+        }
+        .light .text-muted-foreground {
+          color: #6b7280 !important;
+        }
+        .light h1, .light h2, .light h3, .light p, .light span, .light label {
+          color: #111827 !important;
+        }
+        .light a {
+          color: #3b82f6 !important;
+        }
+        .light a:hover {
+          color: #2563eb !important;
+        }
+      `}</style>
       <div className="w-full max-w-sm space-y-6">
         {/* Logo */}
         <div className="text-center">
