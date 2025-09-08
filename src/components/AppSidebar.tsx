@@ -42,7 +42,7 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const currentPath = location.pathname;
   
-  const { sessions, deleteSession, createSession, createNewProjectSession, renameSession, currentSessionId, setCurrentSession } = useChat();
+  const { sessions, deleteSession, createSession, renameSession, currentSessionId, setCurrentSession } = useChat();
 
   // Determine which page a session should open on based on its title
   const getSessionRoute = (session: any) => {
@@ -104,7 +104,8 @@ export function AppSidebar() {
     }
     
     // Only create new session if current one has content
-    const newSessionId = createNewProjectSession();
+    const newSessionId = createSession("New Chat");
+    setCurrentSession(newSessionId);
     navigate(`/chat/${newSessionId}`);
   };
 

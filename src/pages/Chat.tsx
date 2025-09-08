@@ -67,7 +67,7 @@ const Chat = () => {
               onGenerateImage={handleGenerateImage}
               showImageUpload={false}
               showPrompts={true}
-              onNewChat={handleNewChat}
+              flowType="create"
             />
           </ResizablePanel>
           
@@ -91,7 +91,7 @@ const Chat = () => {
             onGenerateImage={handleGenerateImage}
             showImageUpload={false}
             showPrompts={true}
-            onNewChat={handleNewChat}
+            flowType="create"
           />
         </div>
         

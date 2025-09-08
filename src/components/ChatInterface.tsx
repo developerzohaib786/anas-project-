@@ -9,8 +9,10 @@ import { ChatInputControls } from "@/components/ChatInputControls";
 import { PromptLibrary } from "@/components/PromptLibrary";
 import { ImageUpload } from "@/components/ImageUpload";
 import { handleError, withErrorHandling, ApiError, NetworkError } from "@/lib/error-handler";
+import { useSmartSession } from "@/hooks/useSmartSession";
+import { toast } from "sonner";
 
-import { Message, UploadedImage } from "@/types/common";
+import { Message, UploadedImage, FlowType } from "@/types/common";
 
 /**
  * Props for the ChatInterface component
@@ -20,6 +22,7 @@ import { Message, UploadedImage } from "@/types/common";
  * @property {boolean} showImageUpload - Show the 3-step upload process (for Enhance Photo page)
  * @property {string} initialMessage - Custom greeting message
  * @property {boolean} showPrompts - Show example prompt suggestions
+ * @property {FlowType} flowType - The workflow type for session management
  */
 interface ChatInterfaceProps {
   onGenerateImage: (prompt: string, images?: UploadedImage[]) => void;
@@ -27,7 +30,7 @@ interface ChatInterfaceProps {
   showImageUpload?: boolean;
   initialMessage?: string;
   showPrompts?: boolean;
-  onNewChat?: () => void;
+  flowType: FlowType;
 }
 
 /**
@@ -45,7 +48,7 @@ interface ChatInterfaceProps {
  * @param {ChatInterfaceProps} props - Component props
  * @returns {JSX.Element} The ChatInterface component
  */
-export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload = false, initialMessage, showPrompts = true, onNewChat }: ChatInterfaceProps) {
+export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload = false, initialMessage, showPrompts = true, flowType }: ChatInterfaceProps) {
   const { sessionId } = useParams();
   const { sessions, currentSessionId, createSession, updateSession, setCurrentSession, getCurrentSession } = useChat();
   const [messages, setMessages] = useState<Message[]>([
@@ -83,6 +86,42 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
   useEffect(() => {
     hasUserClearedText.current = false;
   }, [uploadedImages.length]);
+
+  // Smart session management for the new chat button
+  const { startNewSession } = useSmartSession(flowType, [
+    () => uploadedImages.length > 0,
+    () => inputValue.trim().length > 0,
+    () => messages.length > 1 // More than just the initial assistant message
+  ]);
+
+  // Handle new chat button click
+  const handleNewChat = () => {
+    const result = startNewSession(() => {
+      // Clear all component state for fresh start
+      setUploadedImages([]);
+      setInputValue("");
+      setMessages([
+        {
+          id: "1",
+          content: initialMessage || "What are we creating today?",
+          role: "assistant",
+          timestamp: new Date(),
+        }
+      ]);
+      hasUserClearedText.current = false;
+    });
+
+    // If new session was created, navigate to it
+    if (result.type === 'created' && result.sessionId) {
+      if (flowType === 'create') {
+        window.history.replaceState(null, '', `/create`);
+      } else if (flowType === 'enhance') {
+        window.history.replaceState(null, '', `/`);
+      } else if (flowType === 'video') {
+        window.history.replaceState(null, '', `/video`);
+      }
+    }
+  };
 
   // Load session data when sessionId changes
   useEffect(() => {
@@ -409,19 +448,17 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
   return (
     <div className="flex flex-col h-full relative">
       {/* New Chat Button - Top Right */}
-      {onNewChat && (
-        <div className="absolute top-4 right-4 z-10">
-          <Button
-            onClick={onNewChat}
-            variant="outline"
-            size="sm"
-            className="h-9 w-9 rounded-full p-0 bg-background/80 backdrop-blur-sm border-border/50 hover:bg-accent"
-            title="New Chat"
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
+      <div className="absolute top-4 right-4 z-10">
+        <Button
+          onClick={handleNewChat}
+          variant="outline"
+          size="sm"
+          className="h-9 w-9 rounded-full p-0 bg-background/80 backdrop-blur-sm border-border/50 hover:bg-accent"
+          title="New Chat"
+        >
+          <Plus className="h-4 w-4" />
+        </Button>
+      </div>
       {/* Messages */}
       <div className="flex-1 overflow-hidden">
         <ScrollArea className="h-full minimal-scroll" ref={scrollAreaRef}>

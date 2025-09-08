@@ -90,7 +90,7 @@ const Enhance = () => {
                   showImageUpload={true}
                   showPrompts={false}
                   initialMessage="Upload a simple iPhone snap, or any photo and watch it transform into a cinematic masterpiece."
-                  onNewChat={handleNewChat}
+                  flowType="enhance"
                 />
               </div>
             </div>
@@ -120,7 +120,7 @@ const Enhance = () => {
           showImageUpload={true}
           showPrompts={false}
           initialMessage="Upload a simple iPhone snap, or any photo and watch it transform into a cinematic masterpiece."
-          onNewChat={handleNewChat}
+          flowType="enhance"
         />
       </div>
     </div>
