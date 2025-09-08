@@ -12,13 +12,14 @@ import { PageLoadingState } from "@/components/ui/loading-state";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { analytics } from "@/lib/analytics";
 
-// Lazy load pages for better performance
-const Create = lazy(() => import("./pages/Create"));
-const Enhance = lazy(() => import("./pages/Enhance"));
-const Video = lazy(() => import("./pages/Video"));
-const BrandKit = lazy(() => import("./pages/BrandKit"));
-const Settings = lazy(() => import("./pages/Settings"));
-const Chat = lazy(() => import("./pages/Chat"));
+// Import core pages directly for smooth navigation
+import Create from "./pages/Create";
+import Enhance from "./pages/Enhance";
+import Video from "./pages/Video";
+import BrandKit from "./pages/BrandKit";
+import Settings from "./pages/Settings";
+import Chat from "./pages/Chat";
+// Keep Auth and NotFound lazy since they're accessed less frequently
 const Auth = lazy(() => import("./pages/Auth"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
