@@ -10,10 +10,15 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
     hmr: {
       overlay: false, // Disable error overlay that can cause white flashes
+      clientPort: 8080, // Ensure consistent HMR port
     },
     fs: {
       strict: false, // Allow serving files from outside root
     },
+    watch: {
+      usePolling: false, // Disable polling to reduce resource usage
+    },
+    middlewareMode: false, // Ensure full dev server mode
   },
   plugins: [
     react(),
