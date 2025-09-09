@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -11,6 +11,7 @@ import ProtectedAppLayout from "@/components/ProtectedAppLayout";
 import { PageLoadingState } from "@/components/ui/loading-state";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { analytics } from "@/lib/analytics";
+import { useStatePersistence } from "@/hooks/useStatePersistence";
 
 // Import core pages directly for smooth navigation
 import Create from "./pages/Create";
@@ -25,6 +26,39 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
 
+// Component to handle state persistence
+const AppWithPersistence = () => {
+  const statePersistence = useStatePersistence();
+  
+  useEffect(() => {
+    // Log state restoration info
+    const info = statePersistence.getRestorationInfo();
+    if (info.hasState) {
+      console.log('🔄 App loaded with saved state:', info);
+    }
+  }, [statePersistence]);
+
+  return (
+    <div className="min-h-screen bg-background transition-colors duration-0">
+      <Suspense fallback={<PageLoadingState message="Loading application..." />}>
+        <Routes>
+          <Route path="/auth" element={<Auth />} />
+          <Route element={<ProtectedAppLayout />}>
+            <Route path="/" element={<Enhance />} />
+            <Route path="/create" element={<Create />} />
+            <Route path="/video" element={<Video />} />
+            <Route path="/chat" element={<Chat />} />
+            <Route path="/chat/:sessionId" element={<Chat />} />
+            <Route path="/brand-kit" element={<BrandKit />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="*" element={<NotFound />} />
+          </Route>
+        </Routes>
+      </Suspense>
+    </div>
+  );
+};
+
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
@@ -35,23 +69,7 @@ const App = () => (
               <Toaster />
               <Sonner />
               <BrowserRouter>
-                <div className="min-h-screen bg-background transition-colors duration-0">
-                  <Suspense fallback={<PageLoadingState message="Loading application..." />}>
-                    <Routes>
-                      <Route path="/auth" element={<Auth />} />
-                      <Route element={<ProtectedAppLayout />}>
-                        <Route path="/" element={<Enhance />} />
-                        <Route path="/create" element={<Create />} />
-                        <Route path="/video" element={<Video />} />
-                        <Route path="/chat" element={<Chat />} />
-                        <Route path="/chat/:sessionId" element={<Chat />} />
-                        <Route path="/brand-kit" element={<BrandKit />} />
-                        <Route path="/settings" element={<Settings />} />
-                        <Route path="*" element={<NotFound />} />
-                      </Route>
-                    </Routes>
-                  </Suspense>
-                </div>
+                <AppWithPersistence />
               </BrowserRouter>
             </TooltipProvider>
           </BrandProvider>

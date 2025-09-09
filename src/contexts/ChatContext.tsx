@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { saveAppStateDebounced, getAppState, recordUserActivity } from '@/lib/state-persistence';
 
 export interface ChatSession {
   id: string;
@@ -135,11 +136,19 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           const oldKey = 'nino-chat-sessions';
           localStorage.setItem(oldKey, JSON.stringify(sessions));
         }
+
+        // Also save to our perfect state persistence system
+        saveAppStateDebounced({
+          chatSessions: sessions,
+          currentSessionId: currentSessionId,
+        });
+        
+        recordUserActivity('sessions_updated');
       } catch (error) {
         console.error('Error saving chat sessions:', error);
       }
     }
-  }, [sessions, isLoaded, currentUserId]);
+  }, [sessions, isLoaded, currentUserId, currentSessionId]);
 
   const createSession = (title?: string): string => {
     const timestamp = Date.now();
