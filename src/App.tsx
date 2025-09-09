@@ -26,7 +26,27 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
 
-// Component to handle state persistence
+const App = () => (
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <BrowserRouter>
+          <ChatProvider>
+            <BrandProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <AppWithPersistence />
+              </TooltipProvider>
+            </BrandProvider>
+          </ChatProvider>
+        </BrowserRouter>
+      </ThemeProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
+);
+
+// Component to handle state persistence (now inside all providers)
 const AppWithPersistence = () => {
   const statePersistence = useStatePersistence();
   
@@ -58,25 +78,5 @@ const AppWithPersistence = () => {
     </div>
   );
 };
-
-const App = () => (
-  <ErrorBoundary>
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <ChatProvider>
-          <BrandProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <AppWithPersistence />
-              </BrowserRouter>
-            </TooltipProvider>
-          </BrandProvider>
-        </ChatProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
-  </ErrorBoundary>
-);
 
 export default App;
