@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { saveAppStateDebounced, getAppState, recordUserActivity } from '@/lib/state-persistence';
 
 export interface ChatSession {
   id: string;
@@ -137,13 +136,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           localStorage.setItem(oldKey, JSON.stringify(sessions));
         }
 
-        // Also save to our perfect state persistence system
-        saveAppStateDebounced({
-          chatSessions: sessions,
-          currentSessionId: currentSessionId,
-        });
-        
-        recordUserActivity('sessions_updated');
       } catch (error) {
         console.error('Error saving chat sessions:', error);
       }
