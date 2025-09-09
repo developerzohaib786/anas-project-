@@ -34,22 +34,39 @@ const Enhance = () => {
     await generateImage(prompt, images, uploadedImages);
   };
 
-  // Restore image state when session changes
+  // Restore complete state when session changes
   useEffect(() => {
     if (currentSessionId) {
       const session = sessions.find(s => s.id === currentSessionId);
-      if (session && session.generatedImage) {
-        setGeneratedImage(session.generatedImage);
-        setCurrentPrompt(session.currentPrompt);
-        console.log("✅ Restored image from session:", session.id);
+      if (session) {
+        // Restore generated image and prompt
+        if (session.generatedImage) {
+          setGeneratedImage(session.generatedImage);
+          setCurrentPrompt(session.currentPrompt);
+          console.log("✅ Restored generated image from session:", session.id);
+        } else {
+          clearGenerated();
+        }
+        
+        // Restore uploaded images
+        if (session.uploadedImages && session.uploadedImages.length > 0) {
+          setUploadedImages(session.uploadedImages);
+          console.log("✅ Restored uploaded images from session:", session.uploadedImages.length);
+        } else {
+          setUploadedImages([]);
+        }
+        
+        console.log("✅ Full session state restored:", session.id);
       } else {
         // Clear state for new sessions
         clearGenerated();
-        console.log("🆕 New session - cleared image state");
+        setUploadedImages([]);
+        console.log("🆕 New session - cleared all state");
       }
     } else {
       // No session - clear state
       clearGenerated();
+      setUploadedImages([]);
     }
   }, [currentSessionId, sessions, setGeneratedImage, setCurrentPrompt, clearGenerated]);
 
@@ -65,6 +82,16 @@ const Enhance = () => {
       setHasAutoPrompted(false);
     }
   }, [uploadedImages, hasAutoPrompted]);
+
+  // Save uploaded images to session when they change
+  useEffect(() => {
+    if (currentSessionId && uploadedImages.length > 0) {
+      updateSession(currentSessionId, {
+        uploadedImages: uploadedImages
+      });
+      console.log("💾 Saved uploaded images to session:", uploadedImages.length);
+    }
+  }, [uploadedImages, currentSessionId, updateSession]);
 
   const handleNewChat = () => {
     startNewSession(() => {
