@@ -5,8 +5,8 @@ import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff } from "lucide-react";
-
 import { supabase } from "@/integrations/supabase/client";
+import { AuthError } from "@supabase/supabase-js";
 
 const Auth = () => {
   const [email, setEmail] = useState("");
@@ -30,25 +30,9 @@ const Auth = () => {
             emailRedirectTo: `${window.location.origin}/`
           }
         });
-<<<<<<< HEAD
-        
-        if (error) throw error;
-        
-        if (data.user && !data.user.email_confirmed_at) {
-          toast({
-            title: "Check your email",
-            description: "We've sent you a confirmation link to complete your account setup.",
-          });
-        } else {
-          toast({
-            title: "Account created successfully",
-            description: "Welcome to Nino! You're now logged in.",
-          });
-          navigate("/");
-=======
 
         if (error) {
-          if ((error as any).code === "user_already_exists") {
+          if ((error as AuthError).message?.includes("User already registered")) {
             const { error: signInError } = await supabase.auth.signInWithPassword({
               email,
               password,
@@ -67,6 +51,7 @@ const Auth = () => {
           return;
         }
 
+        // Try to sign in if no session but no error
         const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
         if (!signInError) {
           toast({ title: "Account created", description: "Signed in successfully." });
@@ -77,7 +62,6 @@ const Auth = () => {
             description: "We sent you a confirmation link. Click it to finish signing in.",
             variant: "default",
           });
->>>>>>> cded5b677933cb227b85cb02b993b1316d298040
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -85,32 +69,19 @@ const Auth = () => {
           password,
         });
         if (error) throw error;
-<<<<<<< HEAD
-        
-        toast({
-          title: "Welcome back!",
-          description: "You've successfully signed in.",
-        });
-=======
         toast({ title: "Welcome!", description: "Signed in successfully." });
->>>>>>> cded5b677933cb227b85cb02b993b1316d298040
         navigate("/");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Auth error:", error);
+      const authError = error as AuthError;
       toast({
         title: "Authentication failed",
-<<<<<<< HEAD
-        description: error.message || "Something went wrong. Please try again.",
+        description: authError?.message || "Please try again.",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
-=======
-        description: error?.message || "Please try again.",
-        variant: "destructive",
-      });
->>>>>>> cded5b677933cb227b85cb02b993b1316d298040
     }
   };
 
@@ -124,24 +95,17 @@ const Auth = () => {
         }
       });
       if (error) throw error;
-<<<<<<< HEAD
-=======
       toast({ title: "Redirecting to Google...", description: "Continue in the popup/window." });
->>>>>>> cded5b677933cb227b85cb02b993b1316d298040
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Google auth error:", error);
+      const authError = error as AuthError;
       toast({
         title: "Google sign-in failed",
-<<<<<<< HEAD
-        description: error.message || "Unable to sign in with Google. Please try again.",
+        description: authError?.message || "Please try again.",
         variant: "destructive",
       });
+    } finally {
       setLoading(false);
-=======
-        description: error?.message || "Please try again.",
-        variant: "destructive",
-      });
->>>>>>> cded5b677933cb227b85cb02b993b1316d298040
     }
   };
 
@@ -206,6 +170,7 @@ const Auth = () => {
             className="w-full h-10 text-sm font-medium"
             onClick={handleGoogleSignIn}
             disabled={loading}
+            type="button"
           >
             <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
               <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -241,6 +206,7 @@ const Auth = () => {
               onChange={(e) => setEmail(e.target.value)}
               className="h-9"
               required
+              disabled={loading}
             />
           </div>
           
@@ -250,7 +216,7 @@ const Auth = () => {
                 Password
               </Label>
               {!isSignUp && (
-                <Button variant="link" className="h-auto p-0 text-xs text-gray-500">
+                <Button variant="link" className="h-auto p-0 text-xs text-gray-500" type="button">
                   Forgot your password?
                 </Button>
               )}
@@ -264,6 +230,7 @@ const Auth = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 className="h-9 pr-10"
                 required
+                disabled={loading}
               />
               <Button
                 type="button"
@@ -271,6 +238,7 @@ const Auth = () => {
                 size="sm"
                 className="absolute right-0 top-0 h-9 w-9 px-0"
                 onClick={() => setShowPassword(!showPassword)}
+                disabled={loading}
               >
                 {showPassword ? (
                   <EyeOff className="h-4 w-4" />
@@ -298,6 +266,8 @@ const Auth = () => {
             variant="link" 
             className="h-auto p-0 text-sm font-medium"
             onClick={() => setIsSignUp(!isSignUp)}
+            disabled={loading}
+            type="button"
           >
             {isSignUp ? "Sign in" : "Sign up"}
           </Button>
@@ -306,11 +276,11 @@ const Auth = () => {
         {/* Terms and Privacy */}
         <div className="text-center text-xs text-gray-500">
           By clicking continue, you agree to our{" "}
-          <Button variant="link" className="h-auto p-0 text-xs underline">
+          <Button variant="link" className="h-auto p-0 text-xs underline" type="button">
             Terms of Service
           </Button>{" "}
           and{" "}
-          <Button variant="link" className="h-auto p-0 text-xs underline">
+          <Button variant="link" className="h-auto p-0 text-xs underline" type="button">
             Privacy Policy
           </Button>
           .
