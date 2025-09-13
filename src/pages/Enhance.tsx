@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { ChatInterface } from "@/components/ChatInterface";
 import { ImagePreview } from "@/components/ImagePreview";
-import { ImageUpload } from "@/components/ImageUpload";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { useChat } from "@/contexts/ChatContext";
 import { UploadedImage } from "@/types/common";
@@ -44,7 +43,6 @@ const Enhance = () => {
   useEffect(() => {
     // Don't clear state if we're in the middle of generating
     if (isInGenerationFlow) {
-      console.log("🔄 Skipping session clear - generation in progress");
       return;
     }
     
@@ -55,24 +53,16 @@ const Enhance = () => {
         if (session.generatedImage) {
           setGeneratedImage(session.generatedImage);
           setCurrentPrompt(session.currentPrompt);
-          console.log("✅ Restored generated image from session:", session.id);
         }
         
         // Restore uploaded images
         if (session.uploadedImages && session.uploadedImages.length > 0) {
           setUploadedImages(session.uploadedImages);
-          console.log("✅ Restored uploaded images from session:", session.uploadedImages.length);
         } else {
           setUploadedImages([]);
         }
-
-        console.log("✅ Session state restored:", session.id);
-      } else {
-        // Only clear for completely new sessions, not for existing ones without data
-        console.log("🆕 New session - keeping current state until generation");
       }
     }
-    // Don't clear when no session - this happens during generation
   }, [currentSessionId, sessions, isInGenerationFlow, setGeneratedImage, setCurrentPrompt]);
 
   // Auto-trigger "make this beautiful" when image is uploaded
@@ -94,7 +84,6 @@ const Enhance = () => {
       updateSession(currentSessionId, {
         uploadedImages: uploadedImages
       });
-      console.log("💾 Saved uploaded images to session:", uploadedImages.length);
     }
   }, [uploadedImages, currentSessionId, updateSession]);
 
@@ -133,44 +122,12 @@ const Enhance = () => {
 
           {/* Image Preview Panel */}
           <ResizablePanel defaultSize={30} minSize={25} maxSize={50}>
-            <div className="bg-card h-full overflow-auto">
-              {/* Debug Panel */}
-              <div className="p-4 border-b bg-yellow-50 text-xs">
-                <h3 className="font-bold mb-2">Debug Info:</h3>
-                <div>Has generatedImage: {generatedImage ? "✅ YES" : "❌ NO"}</div>
-                <div>IsGenerating: {isGenerating ? "🔄 YES" : "❌ NO"}</div>
-                <div>CurrentPrompt: {currentPrompt || "None"}</div>
-                {generatedImage && (
-                  <>
-                    <div>Image URL length: {generatedImage.length}</div>
-                    <div>Is data URL: {generatedImage.startsWith('data:') ? "✅ YES" : "❌ NO"}</div>
-                    <div>Image format: {generatedImage.split(';')[0] || "Unknown"}</div>
-                  </>
-                )}
-              </div>
-
-              {/* Test Image Display */}
-              {generatedImage && (
-                <div className="p-4 border-b">
-                  <h4 className="font-bold mb-2">Direct Image Test:</h4>
-                  <img
-                    src={generatedImage}
-                    alt="Direct test"
-                    className="max-w-full h-auto border border-gray-300"
-                    onLoad={() => console.log("✅ Direct image test: SUCCESS")}
-                    onError={(e) => console.error("❌ Direct image test: FAILED", e)}
-                  />
-                </div>
-              )}
-
-              {/* Original ImagePreview Component */}
-              <div className="flex-1">
-                <ImagePreview
-                  currentPrompt={currentPrompt}
-                  isGenerating={isGenerating}
-                  generatedImage={generatedImage}
-                />
-              </div>
+            <div className="bg-card h-full">
+              <ImagePreview
+                currentPrompt={currentPrompt}
+                isGenerating={isGenerating}
+                generatedImage={generatedImage}
+              />
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>
