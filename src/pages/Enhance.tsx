@@ -11,19 +11,20 @@ import { useSmartSession } from "@/hooks/useSmartSession";
 const Enhance = () => {
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
   const [hasAutoPrompted, setHasAutoPrompted] = useState(false);
+  const [isInGenerationFlow, setIsInGenerationFlow] = useState(false);
   const { currentSessionId, updateSession, sessions } = useChat();
-  
+
   // Use consolidated hooks
-  const { 
-    isGenerating, 
-    currentPrompt, 
-    generatedImage, 
+  const {
+    isGenerating,
+    currentPrompt,
+    generatedImage,
     generateImage,
     clearGenerated,
     setGeneratedImage,
     setCurrentPrompt
   } = useImageGeneration('enhance');
-  
+
   const { startNewSession } = useSmartSession('enhance', [
     () => uploadedImages.length > 0,
     () => !!generatedImage,
@@ -31,21 +32,30 @@ const Enhance = () => {
   ]);
 
   const handleGenerateImage = async (prompt: string, images?: UploadedImage[]) => {
-    await generateImage(prompt, images, uploadedImages);
+    setIsInGenerationFlow(true);
+    try {
+      await generateImage(prompt, images, uploadedImages);
+    } finally {
+      setIsInGenerationFlow(false);
+    }
   };
 
   // Restore complete state when session changes
   useEffect(() => {
+    // Don't clear state if we're in the middle of generating
+    if (isInGenerationFlow) {
+      console.log("🔄 Skipping session clear - generation in progress");
+      return;
+    }
+    
     if (currentSessionId) {
       const session = sessions.find(s => s.id === currentSessionId);
       if (session) {
-        // Restore generated image and prompt
+        // Restore state from session
         if (session.generatedImage) {
           setGeneratedImage(session.generatedImage);
           setCurrentPrompt(session.currentPrompt);
           console.log("✅ Restored generated image from session:", session.id);
-        } else {
-          clearGenerated();
         }
         
         // Restore uploaded images
@@ -55,20 +65,15 @@ const Enhance = () => {
         } else {
           setUploadedImages([]);
         }
-        
-        console.log("✅ Full session state restored:", session.id);
+
+        console.log("✅ Session state restored:", session.id);
       } else {
-        // Clear state for new sessions
-        clearGenerated();
-        setUploadedImages([]);
-        console.log("🆕 New session - cleared all state");
+        // Only clear for completely new sessions, not for existing ones without data
+        console.log("🆕 New session - keeping current state until generation");
       }
-    } else {
-      // No session - clear state
-      clearGenerated();
-      setUploadedImages([]);
     }
-  }, [currentSessionId, sessions, setGeneratedImage, setCurrentPrompt, clearGenerated]);
+    // Don't clear when no session - this happens during generation
+  }, [currentSessionId, sessions, isInGenerationFlow, setGeneratedImage, setCurrentPrompt]);
 
   // Auto-trigger "make this beautiful" when image is uploaded
   useEffect(() => {
@@ -111,7 +116,7 @@ const Enhance = () => {
             <div className="h-full flex flex-col">
               {/* Chat Interface */}
               <div className="flex-1">
-                <ChatInterface 
+                <ChatInterface
                   onGenerateImage={handleGenerateImage}
                   initialPrompt={uploadedImages.length > 0 ? "Make this image beautiful with luxury hotel marketing aesthetic" : undefined}
                   showImageUpload={true}
@@ -122,26 +127,58 @@ const Enhance = () => {
               </div>
             </div>
           </ResizablePanel>
-          
+
           {/* Resizable Handle */}
           <ResizableHandle className="w-1 bg-border hover:bg-border/80 transition-colors duration-200" />
-          
+
           {/* Image Preview Panel */}
           <ResizablePanel defaultSize={30} minSize={25} maxSize={50}>
-            <div className="bg-card h-full">
-              <ImagePreview 
-                currentPrompt={currentPrompt}
-                isGenerating={isGenerating}
-                generatedImage={generatedImage}
-              />
+            <div className="bg-card h-full overflow-auto">
+              {/* Debug Panel */}
+              <div className="p-4 border-b bg-yellow-50 text-xs">
+                <h3 className="font-bold mb-2">Debug Info:</h3>
+                <div>Has generatedImage: {generatedImage ? "✅ YES" : "❌ NO"}</div>
+                <div>IsGenerating: {isGenerating ? "🔄 YES" : "❌ NO"}</div>
+                <div>CurrentPrompt: {currentPrompt || "None"}</div>
+                {generatedImage && (
+                  <>
+                    <div>Image URL length: {generatedImage.length}</div>
+                    <div>Is data URL: {generatedImage.startsWith('data:') ? "✅ YES" : "❌ NO"}</div>
+                    <div>Image format: {generatedImage.split(';')[0] || "Unknown"}</div>
+                  </>
+                )}
+              </div>
+
+              {/* Test Image Display */}
+              {generatedImage && (
+                <div className="p-4 border-b">
+                  <h4 className="font-bold mb-2">Direct Image Test:</h4>
+                  <img
+                    src={generatedImage}
+                    alt="Direct test"
+                    className="max-w-full h-auto border border-gray-300"
+                    onLoad={() => console.log("✅ Direct image test: SUCCESS")}
+                    onError={(e) => console.error("❌ Direct image test: FAILED", e)}
+                  />
+                </div>
+              )}
+
+              {/* Original ImagePreview Component */}
+              <div className="flex-1">
+                <ImagePreview
+                  currentPrompt={currentPrompt}
+                  isGenerating={isGenerating}
+                  generatedImage={generatedImage}
+                />
+              </div>
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
-      
+
       {/* Mobile Layout */}
       <div className="md:hidden flex-1 min-h-0">
-        <ChatInterface 
+        <ChatInterface
           onGenerateImage={handleGenerateImage}
           initialPrompt={uploadedImages.length > 0 ? "Make this image beautiful with luxury hotel marketing aesthetic" : undefined}
           showImageUpload={true}
