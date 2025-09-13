@@ -8,6 +8,7 @@ import { useImageGeneration } from "@/hooks/useImageGeneration";
 import { useSmartSession } from "@/hooks/useSmartSession";
 
 const Create = () => {
+  const [isInGenerationFlow, setIsInGenerationFlow] = useState(false);
   const { currentSessionId, updateSession, sessions } = useChat();
   
   // Use consolidated hooks
@@ -27,27 +28,37 @@ const Create = () => {
   ]);
 
   const handleGenerateImage = async (prompt: string, images?: UploadedImage[]) => {
-    await generateImage(prompt, images);
+    setIsInGenerationFlow(true);
+    try {
+      await generateImage(prompt, images);
+    } finally {
+      setIsInGenerationFlow(false);
+    }
   };
 
   // Restore image state when session changes
   useEffect(() => {
+    // Don't clear state if we're in the middle of generating
+    if (isInGenerationFlow) {
+      console.log("🔄 Skipping session clear - generation in progress");
+      return;
+    }
+    
     if (currentSessionId) {
       const session = sessions.find(s => s.id === currentSessionId);
-      if (session && session.generatedImage) {
-        setGeneratedImage(session.generatedImage);
-        setCurrentPrompt(session.currentPrompt);
-        console.log("✅ Restored image from session:", session.id);
+      if (session) {
+        // Only restore if session has saved data
+        if (session.generatedImage) {
+          setGeneratedImage(session.generatedImage);
+          setCurrentPrompt(session.currentPrompt);
+          console.log("✅ Restored image from session:", session.id);
+        }
+        console.log("🔄 Session found - keeping current state");
       } else {
-        // Clear state for new sessions
-        clearGenerated();
-        console.log("🆕 New session - cleared image state");
+        console.log("🆕 New session - keeping current state");
       }
-    } else {
-      // No session - clear state
-      clearGenerated();
     }
-  }, [currentSessionId, sessions, setGeneratedImage, setCurrentPrompt, clearGenerated]);
+  }, [currentSessionId, sessions, isInGenerationFlow, setGeneratedImage, setCurrentPrompt]);
 
   const handleNewChat = () => {
     startNewSession(() => {

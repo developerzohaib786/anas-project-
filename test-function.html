@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Supabase Function Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .warning { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
+        .info { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+        button { padding: 10px 20px; margin: 10px 5px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        textarea { width: 100%; height: 100px; margin: 10px 0; }
+        img { max-width: 300px; margin: 10px 0; border: 1px solid #ddd; }
+        pre { background: #f8f9fa; padding: 15px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🎯 Nino Image Generation Test</h1>
+    
+    <div class="info">
+        <strong>Test Environment:</strong><br>
+        Project: pbndydilyqxqmcxwadvy.supabase.co<br>
+        Function: generate-image<br>
+        Auth: Required ✅
+    </div>
+
+    <h2>1. Authentication Test</h2>
+    <button onclick="testAuth()">Test Authentication</button>
+    <div id="auth-status"></div>
+
+    <h2>2. Function Connectivity Test</h2>
+    <button onclick="testFunction()">Test Function</button>
+    <div id="function-status"></div>
+
+    <h2>3. Full Image Generation Test</h2>
+    <label>
+        <strong>Prompt:</strong><br>
+        <textarea id="prompt-input" placeholder="Enter your image prompt here...">Luxury hotel lobby with golden hour lighting, rich shadows, and editorial luxury aesthetic</textarea>
+    </label>
+    <br>
+    <button onclick="generateImage()">Generate Image</button>
+    <div id="generation-status"></div>
+    <div id="generated-image"></div>
+
+    <h2>4. Network Debug Info</h2>
+    <pre id="debug-info">Ready for testing...</pre>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js@2'
+
+        const supabaseUrl = 'https://pbndydilyqxqmcxwadvy.supabase.co'
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBibmR5ZGlseXF4cW1jeHdhZHZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjQ3MzAxODAsImV4cCI6MjA0MDMwNjE4MH0.y4vgioNV8Ou8ErDJ_vbj7QR2mGmJwy5BdnQF_bfvKug'
+        
+        window.supabase = createClient(supabaseUrl, supabaseKey)
+        
+        window.testAuth = async function() {
+            const statusEl = document.getElementById('auth-status')
+            statusEl.innerHTML = '<div class="info">Testing authentication...</div>'
+            
+            try {
+                const { data: { user }, error } = await window.supabase.auth.getUser()
+                
+                if (error) {
+                    statusEl.innerHTML = `<div class="error">Auth Error: ${error.message}</div>`
+                    return
+                }
+                
+                if (user) {
+                    statusEl.innerHTML = `<div class="success">✅ Authenticated as: ${user.email}</div>`
+                } else {
+                    statusEl.innerHTML = `
+                        <div class="warning">⚠️ Not authenticated. Please log in first.</div>
+                        <button onclick="loginPrompt()">Login</button>
+                    `
+                }
+            } catch (err) {
+                statusEl.innerHTML = `<div class="error">❌ Auth test failed: ${err.message}</div>`
+            }
+        }
+        
+        window.loginPrompt = async function() {
+            const email = prompt('Enter email:')
+            const password = prompt('Enter password:')
+            
+            if (email && password) {
+                const { error } = await window.supabase.auth.signInWithPassword({
+                    email,
+                    password
+                })
+                
+                if (error) {
+                    alert('Login failed: ' + error.message)
+                } else {
+                    alert('Login successful!')
+                    testAuth()
+                }
+            }
+        }
+        
+        window.testFunction = async function() {
+            const statusEl = document.getElementById('function-status')
+            statusEl.innerHTML = '<div class="info">Testing function connectivity...</div>'
+            
+            try {
+                const { data, error } = await window.supabase.functions.invoke('generate-image', {
+                    body: { prompt: 'test' }
+                })
+                
+                if (error) {
+                    let message = `Function Error: ${error.message}`
+                    let className = 'error'
+                    
+                    if (error.message.includes('401')) {
+                        message += '<br><strong>Solution:</strong> Please authenticate first (use Test Authentication button)'
+                        className = 'warning'
+                    } else if (error.message.includes('503')) {
+                        message += '<br><strong>Solution:</strong> Function needs to be deployed. Check deployment guide.'
+                    }
+                    
+                    statusEl.innerHTML = `<div class="${className}">❌ ${message}</div>`
+                    return
+                }
+                
+                statusEl.innerHTML = `<div class="success">✅ Function is accessible and responding</div>`
+                
+            } catch (err) {
+                statusEl.innerHTML = `<div class="error">❌ Function test failed: ${err.message}</div>`
+            }
+        }
+        
+        window.generateImage = async function() {
+            const prompt = document.getElementById('prompt-input').value
+            const statusEl = document.getElementById('generation-status')
+            const imageEl = document.getElementById('generated-image')
+            const debugEl = document.getElementById('debug-info')
+            
+            if (!prompt.trim()) {
+                statusEl.innerHTML = '<div class="error">Please enter a prompt</div>'
+                return
+            }
+            
+            statusEl.innerHTML = '<div class="info">🎨 Generating image...</div>'
+            imageEl.innerHTML = ''
+            
+            const startTime = Date.now()
+            
+            try {
+                const { data, error } = await window.supabase.functions.invoke('generate-image', {
+                    body: { 
+                        prompt: prompt.trim(),
+                        images: []
+                    }
+                })
+                
+                const duration = Date.now() - startTime
+                
+                debugEl.innerHTML = `
+Request sent: ${new Date().toISOString()}
+Duration: ${duration}ms
+Prompt: "${prompt.trim()}"
+Response: ${JSON.stringify(data, null, 2)}
+Error: ${error ? JSON.stringify(error, null, 2) : 'None'}
+                `
+                
+                if (error) {
+                    statusEl.innerHTML = `<div class="error">❌ Generation failed: ${error.message}</div>`
+                    return
+                }
+                
+                if (data && (data.image || data.imageUrl)) {
+                    const imageUrl = data.image || data.imageUrl
+                    statusEl.innerHTML = `<div class="success">✅ Image generated successfully in ${duration}ms</div>`
+                    imageEl.innerHTML = `
+                        <h3>Generated Image:</h3>
+                        <img src="${imageUrl}" alt="Generated image" />
+                        <p><strong>Style:</strong> ${data.style || 'N/A'}</p>
+                        <p><strong>Enhanced Prompt:</strong> ${data.enhancedPrompt?.substring(0, 200) || 'N/A'}...</p>
+                    `
+                } else {
+                    statusEl.innerHTML = '<div class="warning">⚠️ Function responded but no image URL found</div>'
+                }
+                
+            } catch (err) {
+                const duration = Date.now() - startTime
+                statusEl.innerHTML = `<div class="error">❌ Generation failed after ${duration}ms: ${err.message}</div>`
+                debugEl.innerHTML = `Error: ${JSON.stringify(err, null, 2)}`
+            }
+        }
+        
+        // Auto-test on load
+        setTimeout(() => {
+            testAuth()
+            testFunction()
+        }, 1000)
+    </script>
+</body>
+</html>

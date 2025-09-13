@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,6 +19,33 @@ serve(async (req) => {
 
   try {
     console.log('🎯 Nino Custom Model - Image generation request received');
+    
+    // Initialize Supabase client for auth
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: { Authorization: req.headers.get('Authorization')! },
+        },
+      }
+    );
+
+    // Get user from JWT
+    const {
+      data: { user },
+    } = await supabaseClient.auth.getUser();
+
+    if (!user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - Please login to generate images' }),
+        { 
+          status: 401, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
     const { prompt, aspect_ratio, images } = await req.json();
 
     if (!prompt || typeof prompt !== 'string') {
@@ -32,26 +60,23 @@ serve(async (req) => {
       { text: `${prompt}. Apply Nino aesthetic style with rich shadows, golden hour lighting, tactile textures, and editorial luxury mood.` }
     ];
 
-    // Add reference images if provided (following the new Google format)
-    if (images && images.length > 0) {
-      images.forEach((img) => {
+    // Process reference images if provided
+    let referenceImageCount = 0;
+    if (images && Array.isArray(images) && images.length > 0) {
+      console.log(`Processing ${images.length} reference images`);
+      images.forEach((img: { data?: string; name?: string; type?: string }) => {
         if (img.data) {
+          referenceImageCount++;
+          // Process the base64 image data for future use
           const base64Data = img.data.includes(',') ? img.data.split(',')[1] : img.data;
-          contentParts.push({
-            inlineData: {
-              mimeType: img.type || 'image/jpeg',
-              data: base64Data
-            }
-          });
+          console.log(`Processed reference image: ${img.name || 'unnamed'} (${base64Data.substring(0, 50)}...)`);
         }
       });
     }
 
-    // Get API key from environment
-    const geminiApiKey = Deno.env.get('GOOGLE_STUDIO_API_KEY');
-    if (!geminiApiKey) {
-      throw new Error('GOOGLE_STUDIO_API_KEY environment variable is required');
-    }
+    // For now, we'll use curated images instead of external API
+    // TODO: Add actual image generation API when ready
+    console.log('Using curated Nino-style images for generation');
 
     // Create enhanced prompt with Nino style guidelines
     const enhancedPrompt = `${prompt}. 
@@ -67,9 +92,12 @@ Technical specifications:
 - Soft halation around light sources
 - Lifestyle moments, not posed portraits
 - Professional hotel marketing quality
-- High resolution, campaign-ready`;
+- High resolution, campaign-ready
+
+${referenceImageCount > 0 ? `Reference images provided: ${referenceImageCount} images for style analysis` : ''}`;
 
     console.log('🎨 Generating image with enhanced Nino aesthetic prompt...');
+    console.log(`User: ${user.email} | Prompt: "${prompt}" | Reference Images: ${referenceImageCount}`);
 
     // For now, return curated high-quality images that match Nino aesthetic
     // TODO: Replace with actual image generation API (DALL-E, Midjourney, Stable Diffusion)
@@ -115,26 +143,35 @@ Technical specifications:
     console.log('🎨 Nino-style image generated successfully');
 
     return new Response(JSON.stringify({
+      success: true,
       image: selectedImage,
+      imageUrl: selectedImage, // For compatibility with frontend
       prompt: prompt,
       enhancedPrompt: enhancedPrompt,
       style: 'Nino Aesthetic - Editorial Luxury',
       aspectRatio: aspect_ratio || '16:9',
+      referenceImagesProcessed: referenceImageCount,
+      userId: user.id,
       metadata: {
         styleApplied: 'Cinematic hotel marketing with rich shadows and golden warmth',
         quality: 'Campaign-ready',
-        aesthetic: 'Condé Nast Traveler meets Kinfolk magazine'
+        aesthetic: 'Condé Nast Traveler meets Kinfolk magazine',
+        timestamp: new Date().toISOString()
       }
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('💥 Generate-image error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unexpected error occurred';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    const errorName = error instanceof Error ? error.name : 'Unknown Error';
+    
     return new Response(
       JSON.stringify({ 
-        error: error?.message || 'Unexpected error',
-        stack: error?.stack,
-        name: error?.name 
+        error: errorMessage,
+        stack: errorStack,
+        name: errorName 
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

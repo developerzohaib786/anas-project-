@@ -21,7 +21,7 @@ type AspectRatio = "1:1" | "4:5" | "9:16" | "16:9";
 
 const aspectRatioClasses = {
   "1:1": "aspect-square",
-  "4:5": "aspect-[4/5]", 
+  "4:5": "aspect-[4/5]",
   "9:16": "aspect-[9/16]",
   "16:9": "aspect-[16/9]",
 };
@@ -50,16 +50,26 @@ export const ImagePreview = memo(function ImagePreview({ currentPrompt, isGenera
   const [cropArea, setCropArea] = useState({ x: 0, y: 0, width: 100, height: 100 });
   const displayedImage = generatedImageProp;
 
+  // ADD THESE DEBUG LOGS:
+  console.log("🖼️ ImagePreview Debug:");
+  console.log("  - generatedImageProp:", generatedImageProp ? `${generatedImageProp.substring(0, 50)}...` : "null");
+  console.log("  - displayedImage:", displayedImage ? `${displayedImage.substring(0, 50)}...` : "null");
+  console.log("  - imgError:", imgError);
+  console.log("  - isGenerating:", isGenerating);
+
   useEffect(() => {
     setImgError(false);
+    console.log("🔄 ImagePreview: imgError reset, new image prop:", generatedImageProp ? "exists" : "null");
   }, [generatedImageProp]);
+
+
   const handleDone = () => {
     setShowDone(true);
   };
 
   const handleDownload = (format: string) => {
     if (!displayedImage) return;
-    
+
     // Save to projects by storing in localStorage (you can replace with actual backend later)
     const projectData = {
       id: Date.now().toString(),
@@ -71,11 +81,11 @@ export const ImagePreview = memo(function ImagePreview({ currentPrompt, isGenera
       format: format,
       createdAt: new Date().toISOString()
     };
-    
+
     const existingProjects = JSON.parse(localStorage.getItem('user-projects') || '[]');
     existingProjects.push(projectData);
     localStorage.setItem('user-projects', JSON.stringify(existingProjects));
-    
+
     // Create a temporary anchor element and trigger download
     const link = document.createElement('a');
     link.href = displayedImage;
@@ -88,7 +98,7 @@ export const ImagePreview = memo(function ImagePreview({ currentPrompt, isGenera
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     toast.success('Image saved to Projects and downloaded!');
   };
 
@@ -226,7 +236,7 @@ export const ImagePreview = memo(function ImagePreview({ currentPrompt, isGenera
       {/* Aspect Ratio Controls */}
       <div className="p-4 md:p-6">
         <div className="flex justify-center">
-          <div 
+          <div
             className="apple-toggle bg-[hsl(var(--toggle-bg))] p-1 rounded-full inline-flex gap-1 w-full max-w-xs"
             style={{
               boxShadow: 'var(--shadow-minimal)'
@@ -236,11 +246,10 @@ export const ImagePreview = memo(function ImagePreview({ currentPrompt, isGenera
               <button
                 key={ratio}
                 onClick={() => setSelectedRatio(ratio)}
-                className={`apple-button flex-1 px-3 py-2 rounded-full text-xs md:text-sm font-medium transition-all duration-200 ${
-                  selectedRatio === ratio 
-                    ? "bg-[hsl(var(--toggle-active-bg))] text-[hsl(var(--toggle-active-text))] shadow-sm" 
+                className={`apple-button flex-1 px-3 py-2 rounded-full text-xs md:text-sm font-medium transition-all duration-200 ${selectedRatio === ratio
+                    ? "bg-[hsl(var(--toggle-active-bg))] text-[hsl(var(--toggle-active-text))] shadow-sm"
                     : "text-[hsl(var(--toggle-inactive-text))] hover:text-foreground"
-                }`}
+                  }`}
               >
                 {ratio}
               </button>
@@ -261,62 +270,94 @@ export const ImagePreview = memo(function ImagePreview({ currentPrompt, isGenera
             {isGenerating ? (
               <div className="text-center animate-fade-in">
                 <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
+                <p className="text-sm text-muted-foreground mt-4">Generating image...</p>
               </div>
-            ) : displayedImage && !imgError ? (
+            ) : displayedImage ? (
               <div className="relative w-full h-full">
-                <img
-                  src={displayedImage}
-                  alt="Generated"
-                  className="w-full h-full object-cover rounded-3xl animate-scale-in"
-                  onError={() => setImgError(true)}
-                />
-                {isCropping && (
-                  <>
-                    {/* Crop overlay */}
-                    <div className="absolute inset-0 rounded-3xl">
-                      {/* Dark overlay */}
-                      <div className="absolute inset-0 bg-black/50 rounded-3xl" />
-
-                      {/* Crop area (lighter overlay) */}
-                      <div
-                        className="absolute border-2 border-white rounded-lg"
-                        style={{
-                          left: `${cropArea.x}%`,
-                          top: `${cropArea.y}%`,
-                          width: `${cropArea.width}%`,
-                          height: `${cropArea.height}%`,
-                          boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5)',
-                        }}
-                      >
-                        {/* Crop handles */}
-                        <div
-                          className="absolute -top-1 -left-1 w-3 h-3 bg-white border border-gray-400 rounded-full cursor-nw-resize"
-                          onMouseDown={(e) => handleMouseDown(e, 'nw')}
-                        />
-                        <div
-                          className="absolute -top-1 -right-1 w-3 h-3 bg-white border border-gray-400 rounded-full cursor-ne-resize"
-                          onMouseDown={(e) => handleMouseDown(e, 'ne')}
-                        />
-                        <div
-                          className="absolute -bottom-1 -left-1 w-3 h-3 bg-white border border-gray-400 rounded-full cursor-sw-resize"
-                          onMouseDown={(e) => handleMouseDown(e, 'sw')}
-                        />
-                        <div
-                          className="absolute -bottom-1 -right-1 w-3 h-3 bg-white border border-gray-400 rounded-full cursor-se-resize"
-                          onMouseDown={(e) => handleMouseDown(e, 'se')}
-                        />
-
-                        {/* Grid lines */}
-                        <div className="absolute top-1/3 left-0 right-0 h-px bg-white/50" />
-                        <div className="absolute top-2/3 left-0 right-0 h-px bg-white/50" />
-                        <div className="absolute left-1/3 top-0 bottom-0 w-px bg-white/50" />
-                        <div className="absolute left-2/3 top-0 bottom-0 w-px bg-white/50" />
+                {imgError ? (
+                  // Show error state
+                  <div className="flex items-center justify-center h-full bg-muted/20 rounded-2xl">
+                    <div className="text-center">
+                      <div className="w-16 h-16 bg-red-100 rounded-full mx-auto mb-4 flex items-center justify-center">
+                        <span className="text-red-500 text-2xl">⚠️</span>
                       </div>
+                      <p className="text-sm text-red-600">Failed to load image</p>
+                      <button
+                        onClick={() => setImgError(false)}
+                        className="text-xs text-blue-600 underline mt-2"
+                      >
+                        Try again
+                      </button>
                     </div>
+                  </div>
+                ) : (
+                  // Show the actual image
+                  <>
+                    <img
+                      src={displayedImage}
+                      alt="Generated"
+                      className="w-full h-full object-cover rounded-3xl animate-scale-in"
+                      onLoad={() => {
+                        console.log("✅ Image loaded successfully");
+                        setImgError(false);
+                      }}
+                      onError={(e) => {
+                        console.error("❌ Image failed to load:", e);
+                        console.error("❌ Image URL:", displayedImage);
+                        setImgError(true);
+                      }}
+                    />
+                    {isCropping && (
+                      // ...existing crop overlay code remains the same...
+                      <>
+                        {/* Crop overlay */}
+                        <div className="absolute inset-0 rounded-3xl">
+                          {/* Dark overlay */}
+                          <div className="absolute inset-0 bg-black/50 rounded-3xl" />
+
+                          {/* Crop area (lighter overlay) */}
+                          <div
+                            className="absolute border-2 border-white rounded-lg"
+                            style={{
+                              left: `${cropArea.x}%`,
+                              top: `${cropArea.y}%`,
+                              width: `${cropArea.width}%`,
+                              height: `${cropArea.height}%`,
+                              boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5)',
+                            }}
+                          >
+                            {/* Crop handles */}
+                            <div
+                              className="absolute -top-1 -left-1 w-3 h-3 bg-white border border-gray-400 rounded-full cursor-nw-resize"
+                              onMouseDown={(e) => handleMouseDown(e, 'nw')}
+                            />
+                            <div
+                              className="absolute -top-1 -right-1 w-3 h-3 bg-white border border-gray-400 rounded-full cursor-ne-resize"
+                              onMouseDown={(e) => handleMouseDown(e, 'ne')}
+                            />
+                            <div
+                              className="absolute -bottom-1 -left-1 w-3 h-3 bg-white border border-gray-400 rounded-full cursor-sw-resize"
+                              onMouseDown={(e) => handleMouseDown(e, 'sw')}
+                            />
+                            <div
+                              className="absolute -bottom-1 -right-1 w-3 h-3 bg-white border border-gray-400 rounded-full cursor-se-resize"
+                              onMouseDown={(e) => handleMouseDown(e, 'se')}
+                            />
+
+                            {/* Grid lines */}
+                            <div className="absolute top-1/3 left-0 right-0 h-px bg-white/50" />
+                            <div className="absolute top-2/3 left-0 right-0 h-px bg-white/50" />
+                            <div className="absolute left-1/3 top-0 bottom-0 w-px bg-white/50" />
+                            <div className="absolute left-2/3 top-0 bottom-0 w-px bg-white/50" />
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </>
                 )}
               </div>
             ) : (
+              // No image state
               <div className="flex items-center justify-center h-full bg-muted/20 rounded-2xl">
                 <div className="text-center">
                   <div className="w-16 h-16 bg-muted/40 rounded-full mx-auto mb-4"></div>
@@ -386,11 +427,10 @@ export const ImagePreview = memo(function ImagePreview({ currentPrompt, isGenera
                     size="lg"
                     disabled={!displayedImage}
                     onClick={handleCrop}
-                    className={`flex-1 h-12 rounded-2xl font-semibold border-2 transition-all duration-200 transform hover:scale-[1.02] ${
-                      isCropping
+                    className={`flex-1 h-12 rounded-2xl font-semibold border-2 transition-all duration-200 transform hover:scale-[1.02] ${isCropping
                         ? 'border-primary bg-primary/10 text-primary hover:bg-primary/20'
                         : 'border-border/50 bg-background/50 text-foreground hover:border-border'
-                    }`}
+                      }`}
                   >
                     <Crop className="w-5 h-5 mr-2" />
                     {isCropping ? 'Exit Crop' : 'Crop'}
