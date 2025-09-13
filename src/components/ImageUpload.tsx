@@ -41,9 +41,14 @@ const ImageUpload = memo(function ImageUpload({ images, onImagesChange, maxImage
   const [isDragging, setIsDragging] = useState(false);
 
   const handleFileSelect = useCallback(async (files: FileList | null) => {
-    if (!files) return;
+    console.log('🎯 ImageUpload: handleFileSelect called with:', files?.length, 'files');
+    if (!files) {
+      console.log('❌ No files provided');
+      return;
+    }
 
     const fileArray = Array.from(files);
+    console.log('📁 Files to process:', fileArray.map(f => ({ name: f.name, type: f.type, size: f.size })));
     
     // Validate files first
     const validation = validateFiles(fileArray, {
@@ -52,27 +57,38 @@ const ImageUpload = memo(function ImageUpload({ images, onImagesChange, maxImage
       allowedTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
     });
 
+    console.log('🔍 Validation result:', validation);
+
     if (!validation.isValid) {
+      console.error('❌ Validation failed:', validation.error);
       toast.error(validation.error || 'Invalid file selection');
       return;
     }
 
     // Show warnings if any
     if (validation.warnings) {
-      validation.warnings.forEach(warning => toast.warning(warning));
+      validation.warnings.forEach(warning => {
+        console.warn('⚠️ Validation warning:', warning);
+        toast.warning(warning);
+      });
     }
 
     const remainingSlots = maxImages - images.length;
     const filesToAdd = fileArray.slice(0, remainingSlots);
+    console.log('✅ Files to add:', filesToAdd.length, 'remaining slots:', remainingSlots);
 
     // Process files with enhanced security
     const newImages: UploadedImage[] = [];
     
     for (const file of filesToAdd) {
       try {
+        console.log('🔄 Processing file:', file.name);
         // Validate file content
         const contentValidation = await validateFileContent(file);
+        console.log('🔍 Content validation for', file.name, ':', contentValidation);
+        
         if (!contentValidation.isValid) {
+          console.error('❌ Content validation failed for', file.name, ':', contentValidation.error);
           toast.error(`${file.name}: ${contentValidation.error}`);
           continue;
         }
@@ -85,15 +101,22 @@ const ImageUpload = memo(function ImageUpload({ images, onImagesChange, maxImage
           name: file.name
         };
 
+        console.log('✅ Created image object:', newImage);
         newImages.push(newImage);
       } catch (error) {
+        console.error('💥 Error processing file', file.name, ':', error);
         handleError(error, 'File Upload');
       }
     }
 
+    console.log('📤 Final images to add:', newImages.length);
     if (newImages.length > 0) {
-      onImagesChange([...images, ...newImages]);
+      const updatedImages = [...images, ...newImages];
+      console.log('🔄 Calling onImagesChange with:', updatedImages);
+      onImagesChange(updatedImages);
       toast.success(`Added ${newImages.length} image(s)`);
+    } else {
+      console.warn('⚠️ No images were successfully processed');
     }
   }, [images, maxImages, onImagesChange]);
 

@@ -9,9 +9,15 @@ export interface ChatSession {
   createdAt: Date;
   updatedAt: Date;
   generatedImage?: string;
+  generatedVideo?: string;
   currentPrompt?: string;
   uploadedImages?: any[];
   inputValue?: string;
+  videoMetadata?: {
+    movement: string;
+    sfx: string;
+    size: string;
+  };
 }
 
 interface ChatContextType {
