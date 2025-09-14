@@ -17,6 +17,8 @@ export interface ChatSession {
     movement: string;
     sfx: string;
     size: string;
+    isDemoVideo?: boolean;
+    demoMessage?: string;
   };
 }
 

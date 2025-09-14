@@ -20,15 +20,14 @@ port = 54324
 
 [storage]
 enabled = true
-port = 54325
+# port = 54325
 
 [auth]
 enabled = true
-port = 54326
+# port = 54326
 
-[edge_functions]
+[functions]
 enabled = true
-port = 54327
 
 [functions.start-training]
 verify_jwt = true
