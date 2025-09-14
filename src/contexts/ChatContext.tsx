@@ -19,6 +19,7 @@ export interface ChatSession {
     size: string;
     isDemoVideo?: boolean;
     demoMessage?: string;
+    generationId?: string;
   };
 }
 
