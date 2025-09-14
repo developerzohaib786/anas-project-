@@ -386,10 +386,58 @@ const Video = () => {
     }
   }, [currentSessionId, sessions, isInGenerationFlow]);
 
+  // Handle tab visibility changes to prevent form reset
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && currentSessionId) {
+        // Tab became visible again - ensure we don't restore again
+        console.log('🖥️ Tab became active - preserving form state');
+        hasRestoredFromSession.current = true;
+        
+        // Restore from localStorage backup if form is empty
+        const backupKey = `video-form-backup-${currentSessionId}`;
+        const backup = localStorage.getItem(backupKey);
+        if (backup && (!movementDescription && !sfxDescription)) {
+          try {
+            const parsed = JSON.parse(backup);
+            console.log('🔄 Restoring form from localStorage backup');
+            setMovementDescription(parsed.movement || '');
+            setSfxDescription(parsed.sfx || '');
+            setVideoSize(parsed.size || 'horizontal');
+          } catch (e) {
+            console.warn('Failed to restore form backup:', e);
+          }
+        }
+      } else if (document.hidden && currentSessionId) {
+        // Tab became hidden - save backup to localStorage
+        const backupKey = `video-form-backup-${currentSessionId}`;
+        const backup = {
+          movement: movementDescription,
+          sfx: sfxDescription,
+          size: videoSize
+        };
+        localStorage.setItem(backupKey, JSON.stringify(backup));
+        console.log('💾 Saved form backup to localStorage');
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [currentSessionId, movementDescription, sfxDescription, videoSize]);
+
   // Save form fields to session as user types (but not during restoration)
   useEffect(() => {
-    if (currentSessionId && !isRestoringFromSession.current && hasRestoredFromSession.current) {
+    if (currentSessionId && !isRestoringFromSession.current && !isInGenerationFlow) {
       const timeoutId = setTimeout(() => {
+        console.log('💾 Saving form state to session:', {
+          movement: movementDescription,
+          sfx: sfxDescription,
+          size: videoSize
+        });
+        
         updateSession(currentSessionId, {
           videoMetadata: {
             movement: movementDescription,
@@ -403,7 +451,7 @@ const Video = () => {
 
       return () => clearTimeout(timeoutId);
     }
-  }, [movementDescription, sfxDescription, videoSize, currentSessionId, updateSession]);
+  }, [movementDescription, sfxDescription, videoSize, currentSessionId, updateSession, isInGenerationFlow]);
 
   // Save uploaded images to session when they change
   useEffect(() => {
@@ -415,6 +463,12 @@ const Video = () => {
   }, [uploadedImages, currentSessionId, updateSession]);
 
   const handleNewChat = () => {
+    // Clear localStorage backup for old session
+    if (currentSessionId) {
+      const backupKey = `video-form-backup-${currentSessionId}`;
+      localStorage.removeItem(backupKey);
+    }
+    
     startNewSession(() => {
       setGeneratedVideo(undefined);
       setCurrentPrompt(undefined);

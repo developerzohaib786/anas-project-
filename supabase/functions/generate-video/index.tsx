@@ -116,20 +116,80 @@ async function generateWithLuma(apiKey: string, image: string, instructions: str
   console.log('🚀 Starting Luma AI Dream Machine video generation...');
   
   try {
-    // Try with the most basic configuration that should work with free tier
-    console.log('📝 Using simple text-to-video generation');
+    // Create a focused prompt that combines user movement with basic style guidance
+    const simplifiedPrompt = `${movement || 'smooth cinematic movement'}. Professional cinematography with luxury aesthetic, smooth camera work, high quality lighting.`;
     
-    // Try the simplest possible request first - matching Luma docs exactly
-    const basicRequest = {
-      model: 'ray-2', // Using ray-2 as shown in docs (more recent than ray-1-6)
-      prompt: instructions.substring(0, 500), // Keep it shorter to avoid issues
-      resolution: '720p', // Adding resolution as shown in docs
-      duration: '5s', // Adding duration as shown in docs
-      aspect_ratio: format.includes('16:9') ? '16:9' : format.includes('9:16') ? '9:16' : '1:1',
-      loop: false
+    console.log('📝 Simplified prompt for Luma:', simplifiedPrompt);
+    
+    // Prepare image for Luma AI (they expect base64 without data URL prefix)
+    let imageData = null;
+    if (image && image.includes(',')) {
+      imageData = image.split(',')[1]; // Remove data URL prefix
+      console.log('🖼️ Image data prepared for Luma AI');
+    }
+    
+    // Build proper Luma AI request structure
+    const lumaRequest: { [key: string]: any } = {
+      model: "ray-2",  // Required field for Luma AI API
+      prompt: simplifiedPrompt,
+      aspect_ratio: format.includes('16:9') ? '16:9' : 
+                   format.includes('9:16') ? '9:16' : 
+                   format.includes('4:5') ? '4:5' : '1:1'
     };
     
-    console.log('� Luma request:', JSON.stringify(basicRequest, null, 2));
+    // Add image if provided (for image-to-video generation)
+    if (imageData) {
+      try {
+        console.log('🖼️ Uploading image to Luma AI for image-to-video generation...');
+        
+        // Convert base64 to blob for upload
+        const binaryString = atob(imageData);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        
+        // Upload image to Luma AI
+        const uploadResponse = await fetch('https://api.lumalabs.ai/dream-machine/v1/generations/file_upload', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: bytes
+        });
+        
+        if (uploadResponse.ok) {
+          const uploadResult = await uploadResponse.json();
+          console.log('✅ Image uploaded successfully:', uploadResult);
+          
+          lumaRequest.keyframes = {
+            frame0: {
+              type: "image",
+              url: uploadResult.url || uploadResult.presigned_url || uploadResult.file_url
+            }
+          };
+          console.log('🖼️ Using image-to-video mode with uploaded image');
+        } else {
+          console.warn('⚠️ Image upload failed, falling back to text-to-video mode');
+          lumaRequest.prompt = `Based on uploaded image: ${simplifiedPrompt}`;
+        }
+      } catch (uploadError) {
+        console.warn('⚠️ Image upload error, using text-to-video mode:', uploadError);
+        lumaRequest.prompt = `Based on uploaded image: ${simplifiedPrompt}`;
+      }
+    } else {
+      console.log('📝 Using text-to-video mode');
+    }
+    
+    console.log('📋 Luma request structure:', {
+      model: lumaRequest.model,
+      prompt: lumaRequest.prompt,
+      aspect_ratio: lumaRequest.aspect_ratio,
+      hasKeyframes: !!lumaRequest.keyframes,
+      prompt_length: lumaRequest.prompt.length
+    });
+    
+    console.log('🔑 Using API key:', apiKey?.substring(0, 10) + '...');
     
     const response = await fetch('https://api.lumalabs.ai/dream-machine/v1/generations', {
       method: 'POST',
@@ -137,7 +197,7 @@ async function generateWithLuma(apiKey: string, image: string, instructions: str
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(basicRequest)
+      body: JSON.stringify(lumaRequest)
     });
 
     console.log('📡 Luma API response status:', response.status);
@@ -146,6 +206,7 @@ async function generateWithLuma(apiKey: string, image: string, instructions: str
     if (!response.ok) {
       const errorText = await response.text();
       console.error('❌ Luma AI API error:', response.status, errorText);
+      console.error('❌ Request that failed:', JSON.stringify(lumaRequest, null, 2));
       
       // Try to parse error details
       let errorDetail = 'Unknown error';
@@ -157,24 +218,27 @@ async function generateWithLuma(apiKey: string, image: string, instructions: str
       }
       
       const errorResponse = {
-        video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
         error: `Luma AI API error: ${response.status}`,
         details: errorText,
         message: `API Error: ${errorDetail}. This might be an API key or account limitation issue.`,
-        isDemoVideo: true,
-        demoMessage: 'Luma AI API failed, falling back to demo video',
+        generationId: null,
         metadata: {
           generationType: "luma-error-fallback",
-          requestSent: basicRequest,
-          responseStatus: response.status
+          requestSent: lumaRequest,
+          responseStatus: response.status,
+          userPrompt: movement,
+          processedPrompt: simplifiedPrompt
         }
       };
       
       console.log('🔄 Returning error response:', JSON.stringify(errorResponse, null, 2));
       
       return new Response(JSON.stringify(errorResponse), {
-        status: 200, // Return 200 to avoid frontend error handling
-        headers: corsHeaders
+        status: 200, // Return 200 so frontend doesn't treat as fatal error
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
       });
     }
 
@@ -186,18 +250,15 @@ async function generateWithLuma(apiKey: string, image: string, instructions: str
     console.log(`⏳ Luma AI generation started: ${generationId}`);
     
     return new Response(JSON.stringify({
-      video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4", // Temporary demo video
       generationId: generationId,
-      instructions: instructions,
-      prompt: prompt,
-      isDemoVideo: true, 
-      demoMessage: `✅ REAL video generation started with Luma AI! (ID: ${generationId}). Due to processing time (2-4 minutes), showing demo video. Check your Luma AI dashboard for the actual result.`,
+      status: 'started',
+      message: 'Video generation started successfully',
       metadata: {
         duration: "5 seconds",
         format: format,
         movement: movement,
         sfx: sfx || "Generated by Luma AI",
-        generationType: "luma-dream-machine-success",
+        generationType: "luma-dream-machine",
         provider: "Luma AI Dream Machine",
         status: "processing",
         lumaJobId: generationId,
