@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download, Play, Pause, Volume2, VolumeX, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -16,6 +16,37 @@ export const VideoPreview = ({ currentPrompt, isGenerating = false, generatedVid
   const [videoError, setVideoError] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const previousVideoUrl = useRef<string | undefined>();
+
+  // Reset video state when video URL changes
+  useEffect(() => {
+    if (generatedVideo !== previousVideoUrl.current) {
+      setVideoError(false);
+      setIsPlaying(false);
+      previousVideoUrl.current = generatedVideo;
+      
+      // Reset video element state when new video loads
+      if (videoRef.current && generatedVideo) {
+        videoRef.current.currentTime = 0;
+        videoRef.current.pause();
+      }
+    }
+  }, [generatedVideo]);
+
+  // Handle visibility change to maintain video state
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && videoRef.current && isPlaying) {
+        // Pause video when tab becomes hidden
+        videoRef.current.pause();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isPlaying]);
 
   const togglePlayPause = () => {
     const video = videoRef.current;
@@ -23,7 +54,10 @@ export const VideoPreview = ({ currentPrompt, isGenerating = false, generatedVid
       if (isPlaying) {
         video.pause();
       } else {
-        video.play();
+        video.play().catch((error) => {
+          console.error('Error playing video:', error);
+          setVideoError(true);
+        });
       }
       setIsPlaying(!isPlaying);
     }
@@ -161,10 +195,21 @@ export const VideoPreview = ({ currentPrompt, isGenerating = false, generatedVid
                       src={generatedVideo}
                       className="w-full h-full object-cover rounded-3xl"
                       loop
+                      playsInline
+                      preload="metadata"
                       onPlay={() => setIsPlaying(true)}
                       onPause={() => setIsPlaying(false)}
-                      onError={() => setVideoError(true)}
-                      onLoadedData={() => setVideoError(false)}
+                      onError={(e) => {
+                        console.error('Video error:', e);
+                        setVideoError(true);
+                      }}
+                      onLoadedData={() => {
+                        setVideoError(false);
+                        console.log('Video loaded successfully:', generatedVideo);
+                      }}
+                      onCanPlay={() => {
+                        console.log('Video can play');
+                      }}
                     />
                     
                     {/* Video Controls Overlay */}

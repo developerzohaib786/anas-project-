@@ -26,6 +26,7 @@ const Video = () => {
   const [isPollingForVideo, setIsPollingForVideo] = useState(false);
   const { currentSessionId, updateSession, sessions, createSession } = useChat();
   const isRestoringFromSession = useRef(false);
+  const hasRestoredFromSession = useRef(false);
 
   // Debug uploaded images state
   console.log('🖼️ Video page - uploadedImages:', uploadedImages.length, uploadedImages);
@@ -74,9 +75,9 @@ const Video = () => {
 
   // Expose to window for manual testing
   useEffect(() => {
-    (window as any).checkJobStatus = checkJobStatus;
+    (window as any).checkJobStatus = checkJobStatus; // eslint-disable-line @typescript-eslint/no-explicit-any
     return () => {
-      delete (window as any).checkJobStatus;
+      delete (window as any).checkJobStatus; // eslint-disable-line @typescript-eslint/no-explicit-any
     };
   }, [checkJobStatus]);
 
@@ -356,7 +357,10 @@ const Video = () => {
     
     if (currentSessionId) {
       const session = sessions.find(s => s.id === currentSessionId);
-      if (session) {
+      if (session && !hasRestoredFromSession.current) {
+        console.log('🔄 Restoring session state:', session.id);
+        isRestoringFromSession.current = true;
+        
         // Restore state from session
         if (session.generatedVideo) {
           setGeneratedVideo(session.generatedVideo);
@@ -365,8 +369,6 @@ const Video = () => {
         
         if (session.uploadedImages && session.uploadedImages.length > 0) {
           setUploadedImages(session.uploadedImages);
-        } else {
-          setUploadedImages([]);
         }
 
         // Restore video metadata if available
@@ -376,13 +378,36 @@ const Video = () => {
           const videoSizeValue = session.videoMetadata.size as VideoSize;
           setVideoSize(videoSizeValue || 'horizontal');
         }
+        
+        hasRestoredFromSession.current = true;
+        isRestoringFromSession.current = false;
+        console.log('✅ Session restoration complete');
       }
     }
   }, [currentSessionId, sessions, isInGenerationFlow]);
 
+  // Save form fields to session as user types (but not during restoration)
+  useEffect(() => {
+    if (currentSessionId && !isRestoringFromSession.current && hasRestoredFromSession.current) {
+      const timeoutId = setTimeout(() => {
+        updateSession(currentSessionId, {
+          videoMetadata: {
+            movement: movementDescription,
+            sfx: sfxDescription,
+            size: videoSize,
+            isDemoVideo: false,
+            demoMessage: null
+          }
+        });
+      }, 500); // Debounce to avoid too many updates
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [movementDescription, sfxDescription, videoSize, currentSessionId, updateSession]);
+
   // Save uploaded images to session when they change
   useEffect(() => {
-    if (currentSessionId && uploadedImages.length > 0) {
+    if (currentSessionId && uploadedImages.length > 0 && !isRestoringFromSession.current) {
       updateSession(currentSessionId, {
         uploadedImages: uploadedImages
       });
@@ -396,6 +421,8 @@ const Video = () => {
       setUploadedImages([]);
       setMovementDescription("");
       setSfxDescription("");
+      // Reset restoration flag for new session
+      hasRestoredFromSession.current = false;
     });
   };
 
@@ -539,6 +566,7 @@ const Video = () => {
           <ResizablePanel defaultSize={30} minSize={25} maxSize={50}>
             <div className="bg-card h-full">
               <VideoPreview 
+                key={generatedVideo || 'no-video'}
                 currentPrompt={currentPrompt}
                 isGenerating={isGenerating}
                 generatedVideo={generatedVideo}
@@ -660,6 +688,7 @@ const Video = () => {
         {(isGenerating || generatedVideo || isPollingForVideo) && (
           <div className="mt-6">
             <VideoPreview 
+              key={generatedVideo || 'no-video'}
               currentPrompt={currentPrompt}
               isGenerating={isGenerating}
               generatedVideo={generatedVideo}
