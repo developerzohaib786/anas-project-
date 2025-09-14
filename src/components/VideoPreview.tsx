@@ -7,9 +7,10 @@ interface VideoPreviewProps {
   currentPrompt?: string;
   isGenerating?: boolean;
   generatedVideo?: string;
+  isPollingForVideo?: boolean;
 }
 
-export const VideoPreview = ({ currentPrompt, isGenerating = false, generatedVideo }: VideoPreviewProps) => {
+export const VideoPreview = ({ currentPrompt, isGenerating = false, generatedVideo, isPollingForVideo = false }: VideoPreviewProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [videoError, setVideoError] = useState(false);
@@ -127,6 +128,14 @@ export const VideoPreview = ({ currentPrompt, isGenerating = false, generatedVid
                 <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
                 <p className="text-sm text-muted-foreground mt-4">Generating video...</p>
                 <p className="text-xs text-muted-foreground mt-2">This may take 30-60 seconds</p>
+              </div>
+            ) : isPollingForVideo ? (
+              <div className="text-center animate-fade-in">
+                <div className="animate-pulse w-12 h-12 bg-blue-500 rounded-full mx-auto flex items-center justify-center">
+                  <div className="w-6 h-6 bg-white rounded-full animate-bounce"></div>
+                </div>
+                <p className="text-sm text-muted-foreground mt-4">Waiting for your video...</p>
+                <p className="text-xs text-muted-foreground mt-2">Usually takes 2-4 minutes</p>
               </div>
             ) : generatedVideo ? (
               <div className="relative w-full h-full">

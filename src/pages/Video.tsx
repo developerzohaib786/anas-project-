@@ -299,54 +299,42 @@ const Video = () => {
         }
       }
       
-      const videoUrl = parsedData?.video;
+      const generationId = parsedData?.generationId;
       const isDemoVideo = parsedData?.isDemoVideo;
-      const demoMessage = parsedData?.demoMessage;
       
-      console.log('🎥 Video URL:', videoUrl);
+      console.log('🎥 Generation started with ID:', generationId);
       
-      if (isDemoVideo) {
-        console.log('⚠️ Demo video detected:', demoMessage);
-        toast.warning('Demo Video', {
-          description: demoMessage || 'This is a sample video. Real video generation is not implemented yet.',
-          duration: 8000
+      // Only show loading state, no fallback video
+      if (generationId) {
+        console.log('🔄 Starting polling for real video, job:', generationId);
+        toast.info('Video Generation Started', {
+          description: 'Your video is being generated. This usually takes 2-4 minutes.',
+          duration: 5000
         });
         
-        // Start polling for the real video if we have a generation ID
-        const generationId = parsedData?.generationId;
-        if (generationId) {
-          console.log('🔄 Starting polling for job:', generationId);
-          startVideoPolling(generationId);
-        }
-      }
-      
-      if (videoUrl) {
-        setGeneratedVideo(videoUrl);
-        console.log('✅ Video state updated');
+        // Start polling for the real video - don't set any video until it's ready
+        startVideoPolling(generationId);
         
-        // Update session with generated video
+        // Update session with generation state but no video yet
         if (currentSessionId) {
           updateSession(currentSessionId, {
-            generatedVideo: videoUrl,
+            generatedVideo: undefined, // No video until real one is ready
             currentPrompt: prompt,
             uploadedImages: uploadedImages,
             videoMetadata: {
               movement: movementDescription,
               sfx: sfxDescription,
               size: videoSize,
-              isDemoVideo: isDemoVideo,
-              demoMessage: demoMessage
+              isDemoVideo: false,
+              demoMessage: null,
+              generationId: generationId
             }
           });
-          console.log('💾 Session updated with video data');
+          console.log('💾 Session updated with generation state');
         }
-
-        toast.success('Video generated successfully!', {
-          description: parsedData?.metadata?.duration || 'Your video is ready'
-        });
       } else {
-        console.error('❌ No video URL in response:', parsedData);
-        throw new Error('Generated video URL not found in response');
+        console.error('❌ No generation ID in response:', parsedData);
+        throw new Error('Video generation ID not found in response');
       }
     } catch (err) {
       const appError = handleError(err, 'Video Generation');
@@ -418,7 +406,7 @@ const Video = () => {
         <ResizablePanelGroup direction="horizontal" className="h-full">
           {/* Input Panel */}
           <ResizablePanel defaultSize={70} minSize={50}>
-            <div className="h-full flex flex-col px-4 py-4 md:px-6 lg:px-8 xl:px-12 md:py-8 relative">
+            <div className="h-full flex flex-col px-4 py-4 md:px-6 lg:px-8 xl:px-12 md:py-8 relative overflow-hidden">
               {/* New Chat Button */}
               <div className="absolute top-4 right-4 md:top-6 md:right-6 lg:right-8 xl:right-12 z-10">
                 <Button
@@ -432,7 +420,7 @@ const Video = () => {
                 </Button>
               </div>
               
-              <div className="flex-1 flex flex-col space-y-6">
+              <div className="flex-1 flex flex-col space-y-6 overflow-y-auto min-h-0 pr-2">
                 <div>
                   <h3 className="text-lg font-medium mb-2">Upload Image</h3>
                   <p className="text-sm text-muted-foreground mb-4">
@@ -506,7 +494,7 @@ const Video = () => {
                 )}
                 
                 {/* Generate Button Section */}
-                <div className="pt-4 border-t">
+                <div className="pt-4 border-t pb-6">
                   {uploadedImages.length > 0 && movementDescription.trim() ? (
                     <Button 
                       onClick={handleGenerateVideo}
@@ -554,6 +542,7 @@ const Video = () => {
                 currentPrompt={currentPrompt}
                 isGenerating={isGenerating}
                 generatedVideo={generatedVideo}
+                isPollingForVideo={isPollingForVideo}
               />
             </div>
           </ResizablePanel>
@@ -561,7 +550,7 @@ const Video = () => {
       </div>
       
       {/* Mobile Layout */}
-      <div className="md:hidden flex-1 min-h-0 px-4 py-4 space-y-6">
+      <div className="md:hidden flex-1 min-h-0 px-4 py-4 space-y-6 overflow-y-auto relative">
         {/* New Chat Button - Mobile */}
         <div className="absolute top-4 right-4 z-10">
           <Button
@@ -633,45 +622,48 @@ const Video = () => {
         </div>
         
         {/* Generate Button Section - Mobile */}
-        {uploadedImages.length > 0 && movementDescription.trim() ? (
-          <Button 
-            onClick={handleGenerateVideo}
-            className="w-full"
-            size="lg"
-            disabled={isGenerating || isPollingForVideo}
-          >
-            <VideoIcon className="w-5 h-5 mr-2" />
-            {isGenerating 
-              ? "Generating Video..." 
-              : isPollingForVideo 
-              ? "Waiting for Video..." 
-              : "Generate 7-Second Video"}
-          </Button>
-        ) : (
-          <div className="text-center">
+        <div className="pb-6">
+          {uploadedImages.length > 0 && movementDescription.trim() ? (
             <Button 
+              onClick={handleGenerateVideo}
               className="w-full"
               size="lg"
-              disabled
-              variant="outline"
+              disabled={isGenerating || isPollingForVideo}
             >
               <VideoIcon className="w-5 h-5 mr-2" />
-              Generate 7-Second Video
+              {isGenerating 
+                ? "Generating Video..." 
+                : isPollingForVideo 
+                ? "Waiting for Video..." 
+                : "Generate 7-Second Video"}
             </Button>
-            <p className="text-xs text-muted-foreground mt-2">
-              {uploadedImages.length === 0 && "Upload an image first"}
-              {uploadedImages.length > 0 && !movementDescription.trim() && "Describe the movement you want"}
-              {uploadedImages.length === 0 && !movementDescription.trim() && "Upload an image and describe movement"}
-            </p>
-          </div>
-        )}
+          ) : (
+            <div className="text-center">
+              <Button 
+                className="w-full"
+                size="lg"
+                disabled
+                variant="outline"
+              >
+                <VideoIcon className="w-5 h-5 mr-2" />
+                Generate 7-Second Video
+              </Button>
+              <p className="text-xs text-muted-foreground mt-2">
+                {uploadedImages.length === 0 && "Upload an image first"}
+                {uploadedImages.length > 0 && !movementDescription.trim() && "Describe the movement you want"}
+                {uploadedImages.length === 0 && !movementDescription.trim() && "Upload an image and describe movement"}
+              </p>
+            </div>
+          )}
+        </div>
         
-        {(isGenerating || generatedVideo) && (
+        {(isGenerating || generatedVideo || isPollingForVideo) && (
           <div className="mt-6">
             <VideoPreview 
               currentPrompt={currentPrompt}
               isGenerating={isGenerating}
               generatedVideo={generatedVideo}
+              isPollingForVideo={isPollingForVideo}
             />
           </div>
         )}
