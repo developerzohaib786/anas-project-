@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { ImageUpload } from "@/components/ImageUpload";
 import { VideoPreview } from "@/components/VideoPreview";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
@@ -23,16 +23,67 @@ const Video = () => {
   const [generatedVideo, setGeneratedVideo] = useState<string | undefined>();
   const [currentPrompt, setCurrentPrompt] = useState<string>();
   const [isInGenerationFlow, setIsInGenerationFlow] = useState(false);
-  const { currentSessionId, updateSession, sessions } = useChat();
+  const [isPollingForVideo, setIsPollingForVideo] = useState(false);
+  const { currentSessionId, updateSession, sessions, createSession } = useChat();
+  const isRestoringFromSession = useRef(false);
 
   // Debug uploaded images state
   console.log('🖼️ Video page - uploadedImages:', uploadedImages.length, uploadedImages);
   
   // Debug handler for image changes
-  const handleImagesChange = (newImages: UploadedImage[]) => {
+    // Debug function to manually check job status
+  const checkJobStatus = useCallback(async () => {
+    // For testing - you can call this manually from console
+    const jobId = '50b1c748-364b-4a95-b688-ac53d9b115f6'; // Your current job ID
+    console.log('🔍 Manual status check for job:', jobId);
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error('❌ No auth session');
+        return;
+      }
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const url = new URL(`${supabaseUrl}/functions/v1/generate-video`);
+      url.searchParams.set('jobId', jobId);
+      
+      console.log('📡 Manual check URL:', url.toString());
+      
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('📊 Manual check response:', response.status);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📊 Manual check data:', data);
+      } else {
+        const errorText = await response.text();
+        console.error('❌ Manual check error:', errorText);
+      }
+    } catch (error) {
+      console.error('💥 Manual check failed:', error);
+    }
+  }, []);
+
+  // Expose to window for manual testing
+  useEffect(() => {
+    (window as any).checkJobStatus = checkJobStatus;
+    return () => {
+      delete (window as any).checkJobStatus;
+    };
+  }, [checkJobStatus]);
+
+  const handleImagesChange = useCallback((newImages: UploadedImage[]) => {
     console.log('📸 Images changed:', newImages.length, newImages);
     setUploadedImages(newImages);
-  };
+  }, []);
   
   const { startNewSession } = useSmartSession('video', [
     () => uploadedImages.length > 0,
@@ -51,6 +102,111 @@ const Video = () => {
       reader.readAsDataURL(image.file);
     });
   };
+
+  // Poll for video completion
+  const startVideoPolling = useCallback(async (jobId: string) => {
+    console.log('🔄 Starting video polling for job:', jobId);
+    setIsPollingForVideo(true);
+    const maxAttempts = 30; // 5 minutes max (10 seconds * 30)
+    let attempts = 0;
+
+    const pollStatus = async (): Promise<void> => {
+      try {
+        attempts++;
+        console.log(`🔍 Polling attempt ${attempts}/${maxAttempts} for job:`, jobId);
+        
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          console.error('❌ No auth session for polling');
+          setIsPollingForVideo(false);
+          return;
+        }
+
+        // Use URL parameters for GET request
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        console.log('🌐 Using Supabase URL for polling:', supabaseUrl);
+        const url = new URL(`${supabaseUrl}/functions/v1/generate-video`);
+        url.searchParams.set('jobId', jobId);
+        
+        console.log('📡 Making status request to:', url.toString());
+        
+        const statusResponse = await fetch(url.toString(), {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        console.log('📊 Status response:', statusResponse.status, statusResponse.statusText);
+
+        if (!statusResponse.ok) {
+          console.error('❌ Status check failed:', statusResponse.status);
+          const errorText = await statusResponse.text();
+          console.error('❌ Error details:', errorText);
+          return;
+        }
+
+        const statusData = await statusResponse.json();
+        console.log('📊 Job status:', statusData);
+
+        if (statusData.status === 'completed' && statusData.videoUrl) {
+          console.log('✅ Video generation completed!', statusData.videoUrl);
+          
+          // Update with the real video
+          setGeneratedVideo(statusData.videoUrl);
+          setIsPollingForVideo(false);
+          
+          // Update session with the real video
+          if (currentSessionId) {
+            updateSession(currentSessionId, {
+              generatedVideo: statusData.videoUrl,
+              videoMetadata: {
+                movement: movementDescription,
+                sfx: sfxDescription,
+                size: videoSize,
+                isDemoVideo: false,
+                demoMessage: null
+              }
+            });
+          }
+
+          toast.success('Real video ready!', {
+            description: 'Your AI-generated video is now available'
+          });
+          
+          return; // Stop polling
+        } else if (statusData.status === 'failed') {
+          console.error('❌ Video generation failed');
+          setIsPollingForVideo(false);
+          toast.error('Video generation failed', {
+            description: 'Please try again with different settings'
+          });
+          return; // Stop polling
+        } else if (attempts < maxAttempts) {
+          // Continue polling
+          console.log('⏳ Video still processing, checking again in 10 seconds...');
+          setTimeout(pollStatus, 10000);
+        } else {
+          console.warn('⏰ Polling timeout reached');
+          setIsPollingForVideo(false);
+          toast.warning('Polling timeout', {
+            description: 'Video may still be processing. Check your Luma AI dashboard.'
+          });
+        }
+      } catch (error) {
+        console.error('💥 Error during polling:', error);
+        if (attempts < maxAttempts) {
+          setTimeout(pollStatus, 15000); // Retry with longer delay
+        } else {
+          setIsPollingForVideo(false);
+        }
+      }
+    };
+
+    // Start polling after 10 seconds (shorter for testing)
+    setTimeout(pollStatus, 10000);
+  }, [currentSessionId, updateSession, movementDescription, sfxDescription, videoSize]);
 
   const handleGenerateVideo = async () => {
     if (!uploadedImages || uploadedImages.length === 0) {
@@ -155,6 +311,13 @@ const Video = () => {
           description: demoMessage || 'This is a sample video. Real video generation is not implemented yet.',
           duration: 8000
         });
+        
+        // Start polling for the real video if we have a generation ID
+        const generationId = parsedData?.generationId;
+        if (generationId) {
+          console.log('🔄 Starting polling for job:', generationId);
+          startVideoPolling(generationId);
+        }
       }
       
       if (videoUrl) {
@@ -327,6 +490,21 @@ const Video = () => {
                   />
                 </div>
                 
+                {/* Status Message */}
+                {isPollingForVideo && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                      <span className="text-sm font-medium text-blue-700">
+                        Waiting for your real video to be ready...
+                      </span>
+                    </div>
+                    <p className="text-xs text-blue-600 mt-1">
+                      This usually takes 2-4 minutes. We'll update automatically when ready!
+                    </p>
+                  </div>
+                )}
+                
                 {/* Generate Button Section */}
                 <div className="pt-4 border-t">
                   {uploadedImages.length > 0 && movementDescription.trim() ? (
@@ -334,10 +512,14 @@ const Video = () => {
                       onClick={handleGenerateVideo}
                       className="w-full"
                       size="lg"
-                      disabled={isGenerating}
+                      disabled={isGenerating || isPollingForVideo}
                     >
                       <VideoIcon className="w-5 h-5 mr-2" />
-                      {isGenerating ? "Generating Video..." : "Generate 7-Second Video"}
+                      {isGenerating 
+                        ? "Generating Video..." 
+                        : isPollingForVideo 
+                        ? "Waiting for Video..." 
+                        : "Generate 7-Second Video"}
                     </Button>
                   ) : (
                     <div className="text-center py-4">
@@ -456,10 +638,14 @@ const Video = () => {
             onClick={handleGenerateVideo}
             className="w-full"
             size="lg"
-            disabled={isGenerating}
+            disabled={isGenerating || isPollingForVideo}
           >
             <VideoIcon className="w-5 h-5 mr-2" />
-            {isGenerating ? "Generating Video..." : "Generate 7-Second Video"}
+            {isGenerating 
+              ? "Generating Video..." 
+              : isPollingForVideo 
+              ? "Waiting for Video..." 
+              : "Generate 7-Second Video"}
           </Button>
         ) : (
           <div className="text-center">

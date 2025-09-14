@@ -233,6 +233,107 @@ serve(async (req: Request) => {
     });
   }
 
+  // Handle GET request for status checking
+  if (req.method === 'GET') {
+    const url = new URL(req.url);
+    const jobId = url.searchParams.get('jobId');
+    
+    if (!jobId) {
+      return new Response(JSON.stringify({
+        error: 'Missing jobId parameter'
+      }), {
+        status: 400,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
+
+    console.log('🔍 Checking status for job:', jobId);
+    
+    // Check Luma AI job status
+    const lumaApiKey = Deno.env.get('LUMA_API_KEY');
+    if (!lumaApiKey) {
+      return new Response(JSON.stringify({
+        error: 'Missing LUMA_API_KEY secret'
+      }), {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
+
+    try {
+      const statusResponse = await fetch(`https://api.lumalabs.ai/dream-machine/v1/generations/${jobId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${lumaApiKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!statusResponse.ok) {
+        console.error('❌ Luma status check failed:', statusResponse.status);
+        return new Response(JSON.stringify({
+          error: 'Failed to check job status',
+          status: 'unknown'
+        }), {
+          status: 500,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+
+      const statusData = await statusResponse.json();
+      console.log('📊 Job status data:', JSON.stringify(statusData, null, 2));
+
+      // Extract video URL properly from Luma AI response
+      let videoUrl = null;
+      if (statusData.video?.url) {
+        videoUrl = statusData.video.url;
+      } else if (statusData.video?.download_url) {
+        videoUrl = statusData.video.download_url;
+      } else if (statusData.assets?.video) {
+        videoUrl = statusData.assets.video;
+      }
+
+      console.log('🎥 Extracted video URL:', videoUrl);
+
+      return new Response(JSON.stringify({
+        jobId: jobId,
+        status: statusData.state || 'unknown',
+        videoUrl: videoUrl,
+        progress: statusData.progress || null,
+        metadata: statusData
+      }), {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      });
+
+    } catch (error) {
+      console.error('💥 Error checking job status:', error);
+      return new Response(JSON.stringify({
+        error: 'Failed to check job status',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }), {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
+  }
+
+  // Handle POST request for video generation (existing logic)
   try {
     console.log('🎬 Generate video request received');
     const { image, movement_description, sfx_description, video_size, prompt } = await req.json();
