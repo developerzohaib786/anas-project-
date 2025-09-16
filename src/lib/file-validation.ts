@@ -15,7 +15,20 @@ export interface ValidationResult {
 // Default validation settings
 const DEFAULT_OPTIONS: Required<FileValidationOptions> = {
   maxSize: 10 * 1024 * 1024, // 10MB
-  allowedTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
+  allowedTypes: [
+    'image/jpeg', 
+    'image/jpg', 
+    'image/png', 
+    'image/webp', 
+    'image/gif',
+    'image/heic',
+    'image/heif',
+    'image/avif',
+    'image/tiff',
+    'image/tif',
+    'image/bmp',
+    'image/svg+xml'
+  ],
   maxFiles: 5,
 };
 
@@ -34,19 +47,33 @@ export function validateFile(file: File, options: FileValidationOptions = {}): V
     };
   }
 
-  // Check file type
-  if (!opts.allowedTypes.includes(file.type)) {
+  // Check file type - also handle cases where browser doesn't detect HEIC MIME type correctly
+  const fileExtension = getFileExtension(file.name);
+  const isAcceptableByExtension = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic', 'heif', 'avif', 'tiff', 'tif', 'bmp', 'svg'].includes(fileExtension);
+  
+  if (!opts.allowedTypes.includes(file.type) && !isAcceptableByExtension) {
     return {
       isValid: false,
       error: `File type "${file.type}" is not supported. Allowed types: ${opts.allowedTypes.join(', ')}.`,
     };
   }
 
+  // Special handling for HEIC files which might not be detected correctly by browsers
+  if (fileExtension === 'heic' || fileExtension === 'heif') {
+    // Allow HEIC files even if MIME type is not detected correctly
+    return {
+      isValid: true,
+      warnings: ['HEIC/HEIF files may require conversion for display in some browsers.']
+    };
+  }
+
   // Security checks - file extension validation
-  const fileExtension = getFileExtension(file.name);
   const allowedExtensions = opts.allowedTypes.map(type => getExtensionFromMimeType(type));
+  // Add common image extensions that might not be in MIME type list
+  const additionalExtensions = ['heic', 'heif', 'jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'tiff', 'tif', 'bmp', 'svg'];
+  const allAllowedExtensions = [...allowedExtensions, ...additionalExtensions];
   
-  if (!allowedExtensions.includes(fileExtension)) {
+  if (!allAllowedExtensions.includes(fileExtension)) {
     return {
       isValid: false,
       error: `File extension "${fileExtension}" doesn't match the file type. This could be a security risk.`,
@@ -214,6 +241,13 @@ function getExtensionFromMimeType(mimeType: string): string {
     'image/png': 'png',
     'image/webp': 'webp',
     'image/gif': 'gif',
+    'image/heic': 'heic',
+    'image/heif': 'heif',
+    'image/avif': 'avif',
+    'image/tiff': 'tiff',
+    'image/tif': 'tif',
+    'image/bmp': 'bmp',
+    'image/svg+xml': 'svg',
   };
   return mimeToExt[mimeType] || '';
 }
@@ -237,6 +271,13 @@ function validateImageMagicBytes(bytes: Uint8Array, expectedType: string): boole
     'image/png': [[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]],
     'image/webp': [[0x52, 0x49, 0x46, 0x46]], // Note: WebP also has "WEBP" at bytes 8-11
     'image/gif': [[0x47, 0x49, 0x46, 0x38]], // GIF87a or GIF89a
+    'image/heic': [[0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70], [0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70]], // HEIC containers
+    'image/heif': [[0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70], [0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70]], // HEIF containers
+    'image/avif': [[0x00, 0x00, 0x00, 0x1C, 0x66, 0x74, 0x79, 0x70]], // AVIF container
+    'image/tiff': [[0x49, 0x49, 0x2A, 0x00], [0x4D, 0x4D, 0x00, 0x2A]], // TIFF little-endian and big-endian
+    'image/tif': [[0x49, 0x49, 0x2A, 0x00], [0x4D, 0x4D, 0x00, 0x2A]], // Same as TIFF
+    'image/bmp': [[0x42, 0x4D]], // BMP
+    'image/svg+xml': [[0x3C, 0x3F, 0x78, 0x6D, 0x6C], [0x3C, 0x73, 0x76, 0x67]], // XML declaration or <svg
   };
 
   const expectedSignatures = magicNumbers[expectedType];

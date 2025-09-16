@@ -54,7 +54,20 @@ const ImageUpload = memo(function ImageUpload({ images, onImagesChange, maxImage
     const validation = validateFiles(fileArray, {
       maxFiles: maxImages - images.length,
       maxSize: 10 * 1024 * 1024, // 10MB
-      allowedTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+      allowedTypes: [
+        'image/jpeg', 
+        'image/jpg', 
+        'image/png', 
+        'image/webp', 
+        'image/gif',
+        'image/heic',
+        'image/heif',
+        'image/avif',
+        'image/tiff',
+        'image/tif',
+        'image/bmp',
+        'image/svg+xml'
+      ]
     });
 
     console.log('🔍 Validation result:', validation);
@@ -171,7 +184,7 @@ const ImageUpload = memo(function ImageUpload({ images, onImagesChange, maxImage
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept="image/*,.heic,.heif"
             multiple
             onChange={handleFileInputChange}
             className="hidden"

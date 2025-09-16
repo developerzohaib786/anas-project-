@@ -22,6 +22,8 @@ import { Message, UploadedImage, FlowType } from "@/types/common";
  * @property {string} initialMessage - Custom greeting message
  * @property {boolean} showPrompts - Show example prompt suggestions
  * @property {FlowType} flowType - The workflow type for session management
+ * @property {UploadedImage[]} uploadedImages - External uploaded images state
+ * @property {function} onImagesChange - Callback when images change (external state management)
  */
 interface ChatInterfaceProps {
   onGenerateImage: (prompt: string, images?: UploadedImage[]) => void;
@@ -30,6 +32,8 @@ interface ChatInterfaceProps {
   initialMessage?: string;
   showPrompts?: boolean;
   flowType: FlowType;
+  uploadedImages?: UploadedImage[];
+  onImagesChange?: (images: UploadedImage[]) => void;
 }
 
 /**
@@ -47,7 +51,7 @@ interface ChatInterfaceProps {
  * @param {ChatInterfaceProps} props - Component props
  * @returns {JSX.Element} The ChatInterface component
  */
-export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload = false, initialMessage, showPrompts = true, flowType }: ChatInterfaceProps) {
+export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload = false, initialMessage, showPrompts = true, flowType, uploadedImages: externalUploadedImages, onImagesChange: externalOnImagesChange }: ChatInterfaceProps) {
   const { sessionId } = useParams();
   const { sessions, currentSessionId, createSession, updateSession, setCurrentSession, getCurrentSession } = useChat();
   const [messages, setMessages] = useState<Message[]>([
@@ -59,7 +63,10 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
     },
   ]);
   const [inputValue, setInputValue] = useState("");
-  const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
+  // Use external image state if provided, otherwise use local state
+  const [localUploadedImages, setLocalUploadedImages] = useState<UploadedImage[]>([]);
+  const uploadedImages = externalUploadedImages || localUploadedImages;
+  const setUploadedImages = externalOnImagesChange || setLocalUploadedImages;
   const [promptLibraryOpen, setPromptLibraryOpen] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -79,7 +86,7 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
     if (showImageUpload && uploadedImages.length > 0 && !inputValue.trim() && !hasUserClearedText.current) {
       setInputValue("Make this image beautiful");
     }
-  }, [uploadedImages.length, showImageUpload]);
+  }, [uploadedImages.length, showImageUpload, inputValue]);
 
   // Reset the user cleared flag when images change (new upload session)
   useEffect(() => {
@@ -97,7 +104,7 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
   const handleNewChat = () => {
     const result = startNewSession(() => {
       // Clear all component state for fresh start
-      setUploadedImages([]);
+      setLocalUploadedImages([]);
       setInputValue("");
       setMessages([
         {
@@ -143,10 +150,10 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
           ]);
         }
         // Restore session state to prevent loss on navigation
-        if (session.uploadedImages) {
-          setUploadedImages(session.uploadedImages);
-        } else {
-          setUploadedImages([]);
+        if (session.uploadedImages && !externalUploadedImages) {
+          setLocalUploadedImages(session.uploadedImages);
+        } else if (!externalUploadedImages) {
+          setLocalUploadedImages([]);
         }
         
         if (session.inputValue) {
@@ -165,7 +172,9 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
             timestamp: new Date(),
           },
         ]);
-        setUploadedImages([]);
+        if (!externalUploadedImages) {
+          setLocalUploadedImages([]);
+        }
         setInputValue("");
       }
     } else if (!currentSessionId && !sessionId) {
@@ -177,7 +186,7 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
         window.history.replaceState(null, '', `/chat/${newSessionId}`);
       }
     }
-  }, [sessionId, sessions, currentSessionId, createSession, setCurrentSession]);
+  }, [sessionId, sessions, currentSessionId, createSession, setCurrentSession, externalUploadedImages]);
 
   // Save messages to session when they change
   useEffect(() => {
@@ -194,10 +203,10 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
     if (currentSessionId) {
       updateSession(currentSessionId, {
         inputValue: inputValue,
-        uploadedImages: uploadedImages
+        uploadedImages: externalUploadedImages || localUploadedImages
       });
     }
-  }, [inputValue, uploadedImages, currentSessionId, updateSession]);
+  }, [inputValue, localUploadedImages, externalUploadedImages, currentSessionId, updateSession]);
 
   const generateSessionTitle = (msgs: Message[]): string => {
     const userMessage = msgs.find(m => m.role === "user");
@@ -684,7 +693,8 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
                          className="absolute top-1 right-1 w-5 h-5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                          onClick={(e) => {
                            e.stopPropagation();
-                           setUploadedImages(prev => prev.filter(img => img.id !== image.id));
+                           const newImages = uploadedImages.filter(img => img.id !== image.id);
+                           setUploadedImages(newImages);
                          }}
                        >
                          <X className="h-3 w-3" />

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ChatInterface } from "@/components/ChatInterface";
 import { ImagePreview } from "@/components/ImagePreview";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
@@ -11,6 +11,7 @@ const Enhance = () => {
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
   const [hasAutoPrompted, setHasAutoPrompted] = useState(false);
   const [isInGenerationFlow, setIsInGenerationFlow] = useState(false);
+  const [stateRestored, setStateRestored] = useState(false);
   const { currentSessionId, updateSession, sessions } = useChat();
 
   // Use consolidated hooks
@@ -30,25 +31,27 @@ const Enhance = () => {
     () => !!currentPrompt
   ]);
 
-  const handleGenerateImage = async (prompt: string, images?: UploadedImage[]) => {
+  const handleGenerateImage = useCallback(async (prompt: string, images?: UploadedImage[]) => {
     setIsInGenerationFlow(true);
     try {
       await generateImage(prompt, images, uploadedImages);
     } finally {
       setIsInGenerationFlow(false);
     }
-  };
+  }, [generateImage, uploadedImages]);
 
-  // Restore complete state when session changes
+  // Restore complete state when session changes - only once per session
   useEffect(() => {
     // Don't clear state if we're in the middle of generating
     if (isInGenerationFlow) {
       return;
     }
     
-    if (currentSessionId) {
+    if (currentSessionId && !stateRestored) {
       const session = sessions.find(s => s.id === currentSessionId);
       if (session) {
+        console.log('🔄 Restoring state from session:', session.id);
+        
         // Restore state from session
         if (session.generatedImage) {
           setGeneratedImage(session.generatedImage);
@@ -58,40 +61,122 @@ const Enhance = () => {
         // Restore uploaded images
         if (session.uploadedImages && session.uploadedImages.length > 0) {
           setUploadedImages(session.uploadedImages);
+          setHasAutoPrompted(true); // If images were uploaded before, we've already prompted
         } else {
           setUploadedImages([]);
+          setHasAutoPrompted(false);
         }
+        
+        setStateRestored(true);
+        console.log('✅ State restoration complete');
       }
+    } else if (!currentSessionId) {
+      // Reset restoration flag when no session
+      setStateRestored(false);
     }
-  }, [currentSessionId, sessions, isInGenerationFlow, setGeneratedImage, setCurrentPrompt]);
+  }, [currentSessionId, sessions, isInGenerationFlow, stateRestored, setGeneratedImage, setCurrentPrompt]);
 
-  // Auto-trigger "make this beautiful" when image is uploaded
+  // Reset restoration flag when session changes
   useEffect(() => {
-    if (uploadedImages.length > 0 && !hasAutoPrompted) {
+    setStateRestored(false);
+  }, [currentSessionId]);
+
+  // Auto-trigger "make this beautiful" when image is uploaded - but only if not restored from session
+  useEffect(() => {
+    if (uploadedImages.length > 0 && !hasAutoPrompted && stateRestored) {
       // Auto-generate with "make this beautiful" prompt
       setTimeout(() => {
         handleGenerateImage("Make this image beautiful with luxury hotel marketing aesthetic - add cinematic lighting, rich shadows, golden warmth, and editorial composition");
         setHasAutoPrompted(true);
       }, 500);
-    } else if (uploadedImages.length === 0) {
+    } else if (uploadedImages.length === 0 && stateRestored) {
       setHasAutoPrompted(false);
     }
-  }, [uploadedImages, hasAutoPrompted]);
+  }, [uploadedImages, hasAutoPrompted, handleGenerateImage, stateRestored]);
 
-  // Save uploaded images to session when they change
+  // Emergency backup to localStorage for extra persistence (tab changes, crashes, etc.)
   useEffect(() => {
-    if (currentSessionId && uploadedImages.length > 0) {
+    const handleBeforeUnload = () => {
+      if (currentSessionId && (uploadedImages.length > 0 || generatedImage)) {
+        const backupKey = `enhance-backup-${currentSessionId}`;
+        const backup = {
+          uploadedImages,
+          generatedImage,
+          currentPrompt,
+          hasAutoPrompted,
+          timestamp: Date.now()
+        };
+        localStorage.setItem(backupKey, JSON.stringify(backup));
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        handleBeforeUnload(); // Save when tab becomes hidden
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [currentSessionId, uploadedImages, generatedImage, currentPrompt, hasAutoPrompted]);
+
+  // Restore from emergency backup if session data is missing
+  useEffect(() => {
+    if (currentSessionId && stateRestored && uploadedImages.length === 0 && !generatedImage) {
+      const backupKey = `enhance-backup-${currentSessionId}`;
+      const backup = localStorage.getItem(backupKey);
+      if (backup) {
+        try {
+          const parsed = JSON.parse(backup);
+          const age = Date.now() - (parsed.timestamp || 0);
+          
+          // Only restore if backup is less than 1 hour old
+          if (age < 60 * 60 * 1000) {
+            console.log('🔄 Restoring from emergency backup');
+            if (parsed.uploadedImages?.length > 0) {
+              setUploadedImages(parsed.uploadedImages);
+            }
+            if (parsed.generatedImage) {
+              setGeneratedImage(parsed.generatedImage);
+            }
+            if (parsed.currentPrompt) {
+              setCurrentPrompt(parsed.currentPrompt);
+            }
+            if (parsed.hasAutoPrompted !== undefined) {
+              setHasAutoPrompted(parsed.hasAutoPrompted);
+            }
+          } else {
+            // Clean up old backup
+            localStorage.removeItem(backupKey);
+          }
+        } catch (e) {
+          console.warn('Failed to restore emergency backup:', e);
+          localStorage.removeItem(backupKey);
+        }
+      }
+    }
+  }, [currentSessionId, stateRestored, uploadedImages.length, generatedImage, setGeneratedImage, setCurrentPrompt]);
+
+  // Save uploaded images to session when they change - but only after state is restored
+  useEffect(() => {
+    if (currentSessionId && uploadedImages.length >= 0 && stateRestored) {
       updateSession(currentSessionId, {
         uploadedImages: uploadedImages
       });
     }
-  }, [uploadedImages, currentSessionId, updateSession]);
+  }, [uploadedImages, currentSessionId, updateSession, stateRestored]);
 
   const handleNewChat = () => {
     startNewSession(() => {
       clearGenerated();
       setUploadedImages([]);
       setHasAutoPrompted(false);
+      setStateRestored(false);
     });
   };
 
@@ -112,6 +197,8 @@ const Enhance = () => {
                   showPrompts={false}
                   initialMessage="Upload a simple iPhone snap, or any photo and watch it transform into a cinematic masterpiece."
                   flowType="enhance"
+                  uploadedImages={uploadedImages}
+                  onImagesChange={setUploadedImages}
                 />
               </div>
             </div>
@@ -142,6 +229,8 @@ const Enhance = () => {
           showPrompts={false}
           initialMessage="Upload a simple iPhone snap, or any photo and watch it transform into a cinematic masterpiece."
           flowType="enhance"
+          uploadedImages={uploadedImages}
+          onImagesChange={setUploadedImages}
         />
       </div>
     </div>
