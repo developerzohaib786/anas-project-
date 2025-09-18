@@ -81,18 +81,7 @@ const Enhance = () => {
     setStateRestored(false);
   }, [currentSessionId]);
 
-  // Auto-trigger "make this beautiful" when image is uploaded - but only if not restored from session
-  useEffect(() => {
-    if (uploadedImages.length > 0 && !hasAutoPrompted && stateRestored) {
-      // Auto-generate with "make this beautiful" prompt
-      setTimeout(() => {
-        handleGenerateImage("Make this image beautiful with luxury hotel marketing aesthetic - add cinematic lighting, rich shadows, golden warmth, and editorial composition");
-        setHasAutoPrompted(true);
-      }, 500);
-    } else if (uploadedImages.length === 0 && stateRestored) {
-      setHasAutoPrompted(false);
-    }
-  }, [uploadedImages, hasAutoPrompted, handleGenerateImage, stateRestored]);
+  // Removed auto-prompt functionality - user will provide their own prompts
 
   // Emergency backup to localStorage for extra persistence (tab changes, crashes, etc.)
   useEffect(() => {
@@ -192,10 +181,9 @@ const Enhance = () => {
               <div className="flex-1">
                 <ChatInterface
                   onGenerateImage={handleGenerateImage}
-                  initialPrompt={uploadedImages.length > 0 ? "Make this image beautiful with luxury hotel marketing aesthetic" : undefined}
                   showImageUpload={true}
                   showPrompts={false}
-                  initialMessage="Upload a simple iPhone snap, or any photo and watch it transform into a cinematic masterpiece."
+                  initialMessage="Upload an image and provide your own prompt to enhance it."
                   flowType="enhance"
                   uploadedImages={uploadedImages}
                   onImagesChange={setUploadedImages}
@@ -224,10 +212,9 @@ const Enhance = () => {
       <div className="md:hidden flex-1 min-h-0">
         <ChatInterface
           onGenerateImage={handleGenerateImage}
-          initialPrompt={uploadedImages.length > 0 ? "Make this image beautiful with luxury hotel marketing aesthetic" : undefined}
           showImageUpload={true}
           showPrompts={false}
-          initialMessage="Upload a simple iPhone snap, or any photo and watch it transform into a cinematic masterpiece."
+          initialMessage="Upload an image and provide your own prompt to enhance it."
           flowType="enhance"
           uploadedImages={uploadedImages}
           onImagesChange={setUploadedImages}

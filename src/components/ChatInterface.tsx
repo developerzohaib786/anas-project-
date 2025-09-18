@@ -80,13 +80,7 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
     }
   }, [initialPrompt, inputValue]);
 
-  // Auto-set prompt when images are uploaded (for Enhanced Photo workflow only)
-  // Only triggers if user hasn't manually cleared the text
-  useEffect(() => {
-    if (showImageUpload && uploadedImages.length > 0 && !inputValue.trim() && !hasUserClearedText.current) {
-      setInputValue("Make this image beautiful");
-    }
-  }, [uploadedImages.length, showImageUpload, inputValue]);
+  // Removed auto-prompt functionality - user will provide their own prompts
 
   // Reset the user cleared flag when images change (new upload session)
   useEffect(() => {
@@ -317,11 +311,12 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
     const currentInput = inputValue;
     const currentImages = [...uploadedImages];
     setInputValue("");
-    setUploadedImages([]);
+    // Keep images visible for subsequent prompts - don't clear them
+    // setUploadedImages([]);  // Removed: This was clearing images after first use
 
     try {
       // For image uploads, directly trigger image generation without chat AI
-      if (currentImages.length > 0) {
+      if (currentImages.length > 0 && showImageUpload) {
         // Add a generating message with shimmer effect
         const generatingMessageId = (Date.now() + 1).toString();
         const generatingMessage: Message = {
@@ -341,7 +336,10 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
         
         // Trigger image generation directly
         try {
-          await onGenerateImage(currentInput || "Make this image beautiful", currentImages);
+          // Only generate if user provided a prompt
+          if (currentInput.trim()) {
+            await onGenerateImage(currentInput, currentImages);
+          }
           // Remove the generating message after image generation completes
           setMessages((prev) => prev.filter(msg => msg.id !== generatingMessageId));
         } catch (error) {
@@ -577,42 +575,9 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
           <div className="max-w-3xl mx-auto">
             {/* Route Guide - Minimal and Modern */}
             <div className="mb-4 transition-all duration-300" style={{ height: messages.length <= 1 && !inputValue.trim() && (uploadedImages.length === 0 || showImageUpload) ? 'auto' : '0', overflow: 'hidden' }}>
-              {messages.length <= 1 && !inputValue.trim() && (uploadedImages.length === 0 || showImageUpload) && (
-               <div className="animate-fade-in space-y-3 relative">
-                  {/* Combined Photo Upload Section - Only show if enabled */}
-                  {showImageUpload && (
-                  <div className="border border-border rounded-lg p-4 hover:bg-muted/50 transition-colors relative">
-                    {/* Recommended Badge - Inside container, top right */}
-                    <div className="absolute top-3 right-3">
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-300 shadow-sm">
-                        Recommended
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 pr-20">
-                        <h3 className="font-medium text-foreground mb-2">Upload photo</h3>
-                        
-                        {/* 3-Step Process */}
-                        <div className="space-y-1.5 mb-4">
-                          <div className="text-xs text-muted-foreground flex items-center gap-2">
-                            <span className="text-primary font-medium">1.</span>
-                            Use your phone or upload existing image
-                          </div>
-                          <div className="text-xs text-muted-foreground flex items-center gap-2">
-                            <span className="text-primary font-medium">2.</span>
-                            Press "Make this beautiful" or describe what you want
-                          </div>
-                          <div className="text-xs text-muted-foreground flex items-center gap-2">
-                            <span className="text-primary font-medium">3.</span>
-                            Let us cook
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                {/* Upload Component - With proper padding */}
-                <div className="-mx-2 -mb-2 mt-2 px-2">
+              {/* Simple image upload for Enhance page - no extra UI */}
+              {showImageUpload && (
+                <div className="mb-3">
                   <ImageUpload
                     images={uploadedImages}
                     onImagesChange={setUploadedImages}
@@ -620,18 +585,11 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
                     showPreview={true}
                   />
                 </div>
-                  </div>
-                  )}
-                  
-              {/* Flow 2: Chat - Only show if image upload is disabled */}
-              {!showImageUpload && (
-                <div className="border border-border rounded-lg p-4 hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h3 className="font-medium text-foreground">Describe your vision</h3>
-                      <p className="text-sm text-muted-foreground">Tell us what you want to create, share a reference image or select one of our crafted prompts</p>
-                    </div>
-                  </div>
+              )}
+              
+              {/* Chat flow image upload */}
+              {!showImageUpload && messages.length <= 1 && !inputValue.trim() && uploadedImages.length === 0 && (
+                <div className="mb-3">
                   <ImageUpload
                     images={uploadedImages}
                     onImagesChange={setUploadedImages}
@@ -640,8 +598,6 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
                   />
                 </div>
               )}
-               </div>
-             )}
            </div>
 
            {/* Example Prompts - Flexible Fill */}
@@ -707,34 +663,7 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
                  ))}
                </div>
                
-               {/* Step 2 Indicator & Quick Actions - Only show when there are uploaded images on Enhance Photo page */}
-               {showImageUpload && uploadedImages.length > 0 && !inputValue.trim() && (
-                 <div className="bg-primary/5 rounded-lg p-3">
-                   <div className="flex items-center gap-2 mb-2">
-                     <span className="text-xs font-medium text-primary">Step 2: Choose your transformation</span>
-                   </div>
-                   <div className="flex flex-wrap gap-2">
-                     <button
-                       onClick={() => setInputValue("Make this photo beautiful and professional for luxury hotel marketing")}
-                       className="text-xs px-3 py-1.5 rounded-full bg-primary hover:bg-primary/90 text-white transition-colors font-medium"
-                     >
-                       ✨ Make this beautiful
-                     </button>
-                     <button
-                       onClick={() => setInputValue("Transform this into luxury hotel marketing content")}
-                       className="text-xs px-3 py-1.5 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground transition-colors"
-                     >
-                       Hotel style
-                     </button>
-                     <button
-                       onClick={() => setInputValue("Apply golden hour lighting and rich contrast to this image")}
-                       className="text-xs px-3 py-1.5 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground transition-colors"
-                     >
-                       Golden hour
-                     </button>
-                   </div>
-                 </div>
-               )}
+               {/* Removed Step 2 transformation suggestions - keeping interface minimal */}
              </div>
            )}
 
@@ -746,15 +675,15 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
                    value={inputValue}
                    onChange={handleInputChange}
                    onKeyPress={handleKeyPress}
-                   placeholder={showImageUpload && uploadedImages.length === 0 ? "Upload an image first to get started..." : "Describe your hotel marketing photo..."}
-                   disabled={showImageUpload && uploadedImages.length === 0}
-                   className={`w-full h-12 bg-transparent border border-[hsl(var(--border))] rounded-full pl-4 pr-6 text-[15px] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[hsl(var(--border))] hover:border-[hsl(var(--border))] resize-none min-h-[48px] max-h-[48px] ${showImageUpload && uploadedImages.length === 0 ? 'opacity-50 cursor-not-allowed bg-muted/30' : ''}`}
+                   placeholder="Type your prompt here..."
+                   disabled={showImageUpload && uploadedImages.length === 0 && messages.length <= 1}
+                   className={`w-full h-12 bg-transparent border border-[hsl(var(--border))] rounded-full pl-4 pr-6 text-[15px] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[hsl(var(--border))] hover:border-[hsl(var(--border))] resize-none min-h-[48px] max-h-[48px] ${showImageUpload && uploadedImages.length === 0 && messages.length <= 1 ? 'opacity-50 cursor-not-allowed bg-muted/30' : ''}`}
                  />
                </div>
              </div>
              <Button 
                onClick={handleSendMessage}
-               disabled={!inputValue.trim() && uploadedImages.length === 0 || (showImageUpload && uploadedImages.length === 0)}
+               disabled={!inputValue.trim() && uploadedImages.length === 0 || (showImageUpload && uploadedImages.length === 0 && messages.length <= 1)}
                size="icon"
                className="h-12 w-12 rounded-full bg-muted hover:bg-muted/80 disabled:bg-muted disabled:text-muted-foreground shrink-0 min-h-[48px] min-w-[48px]"
              >
