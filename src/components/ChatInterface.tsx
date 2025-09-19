@@ -274,7 +274,7 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
 
   // Save input state to prevent loss on navigation (debounced to prevent flickering)
   useEffect(() => {
-    if (currentSessionId && (inputValue.trim().length > 0 || (externalUploadedImages || localUploadedImages).length > 0)) {
+    if (currentSessionId && inputValue.trim().length > 0) {
       const timeoutId = setTimeout(() => {
         // Only update if there's meaningful content to save
         const currentSession = sessions.find(s => s.id === currentSessionId);
@@ -464,7 +464,20 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
     
     const currentInput = inputValue;
     const currentImages = [...uploadedImages];
+    
+    // Clear input immediately and update session synchronously
     setInputValue("");
+    
+    // Use setTimeout to ensure the state update happens before session update
+    setTimeout(() => {
+      if (currentSessionId) {
+        updateSession(currentSessionId, {
+          inputValue: "",
+          uploadedImages: externalUploadedImages || localUploadedImages
+        });
+      }
+    }, 0);
+    
     // Keep images visible for subsequent prompts - don't clear them
     // setUploadedImages([]);  // Removed: This was clearing images after first use
 
