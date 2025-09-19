@@ -37,6 +37,8 @@ export interface ChatSession {
   isCompleted: boolean;
   createdAt: Date;
   updatedAt: Date;
+  session_type?: 'chat' | 'enhance' | 'video';
+  session_metadata?: Record<string, any>;
   generatedImage?: string;
   generatedVideo?: string;
   currentPrompt?: string;
@@ -53,29 +55,56 @@ export interface ChatSession {
 }
 
 export class ChatHistoryService {
-  // Create a new chat session
-  static async createSession(title: string = 'New Chat', user?: any): Promise<ChatSession> {
+  // Create a new chat session with support for different session types
+  static async createSession(
+    title?: string, 
+    user?: any, 
+    sessionType: 'chat' | 'enhance' | 'video' = 'chat',
+    sessionMetadata?: Record<string, any>
+  ): Promise<ChatSession> {
     if (!user) throw new Error('User not authenticated');
 
-    const { data, error } = await supabase
-      .from('chat_sessions')
-      .insert({
-        user_id: user.id,
+    // Use the new create-session API function
+    const response = await supabase.functions.invoke('create-session', {
+      body: {
         title,
-      })
-      .select()
-      .single();
+        session_type: sessionType,
+        session_metadata: sessionMetadata
+      }
+    });
 
-    if (error) throw error;
+    if (response.error) {
+      console.error('Error creating session:', response.error);
+      throw new Error('Failed to create session');
+    }
 
+    const sessionData = response.data.session;
+    
     return {
-      id: data.id,
-      title: data.title,
+      id: sessionData.id,
+      title: sessionData.title,
       messages: [],
       isCompleted: false,
-      createdAt: new Date(data.created_at),
-      updatedAt: new Date(data.updated_at),
+      createdAt: new Date(sessionData.created_at),
+      updatedAt: new Date(sessionData.updated_at),
+      session_type: sessionData.session_type,
+      session_metadata: sessionData.session_metadata,
     };
+  }
+
+  // Legacy method for backward compatibility
+  static async createChatSession(title: string = 'New Chat', user?: any): Promise<ChatSession> {
+    return this.createSession(title, user, 'chat');
+  }
+
+  // Create enhance session
+  static async createEnhanceSession(title: string = 'New Enhancement Session', user?: any, metadata?: Record<string, any>): Promise<ChatSession> {
+    return this.createSession(title, user, 'enhance', metadata);
+  }
+
+  // Create video session
+  static async createVideoSession(title: string = 'New Video Session', user?: any, metadata?: Record<string, any>): Promise<ChatSession> {
+    return this.createSession(title, user, 'video', metadata);
   }
 
   // Get all chat sessions for the current user
@@ -128,10 +157,12 @@ export class ChatHistoryService {
       isCompleted: false,
       createdAt: new Date(session.created_at),
       updatedAt: new Date(session.updated_at),
+      session_type: session.session_type,
+      session_metadata: session.session_metadata,
     }));
   }
 
-  // Save a message to a session
+  // Save a message to a session using the new save-message Edge function
   static async saveMessage(
     sessionId: string,
     message: Omit<ChatMessage, 'id' | 'timestamp'>,
@@ -139,6 +170,105 @@ export class ChatHistoryService {
   ): Promise<ChatMessage> {
     if (!user) throw new Error('User not authenticated');
 
+    try {
+      // Prepare attachments data
+      const attachments = [];
+      
+      // Handle image attachments
+      if (message.images && message.images.length > 0) {
+        for (const image of message.images) {
+          if (image.file) {
+            const uploadedImage = await this.uploadFile(image.file, 'image', user.id);
+            attachments.push({
+              file_name: image.name,
+              file_type: image.file.type,
+              file_size: image.file.size,
+              storage_path: uploadedImage.url,
+              attachment_type: 'image'
+            });
+          }
+        }
+      }
+
+      // Handle video attachments
+      if (message.videos && message.videos.length > 0) {
+        for (const video of message.videos) {
+          if (video.file) {
+            const uploadedVideo = await this.uploadFile(video.file, 'video', user.id);
+            attachments.push({
+              file_name: video.name,
+              file_type: video.file.type,
+              file_size: video.file.size,
+              storage_path: uploadedVideo.url,
+              attachment_type: 'video'
+            });
+          }
+        }
+      }
+
+      // Use the save-message Edge function
+      const response = await supabase.functions.invoke('save-message', {
+        body: {
+          session_id: sessionId,
+          content: message.content,
+          message_type: message.role, // Use role directly as message_type
+          metadata: message.metadata || {},
+          attachments: attachments
+        }
+      });
+
+      if (response.error) {
+        console.error('Error saving message:', response.error);
+        throw new Error('Failed to save message');
+      }
+
+      const savedMessage = response.data.message;
+      const savedAttachments = response.data.attachments || [];
+
+      // Map attachments back to the expected format
+      const savedImages: UploadedImage[] = savedAttachments
+        .filter((att: any) => att.file_type.startsWith('image/'))
+        .map((att: any) => ({
+          id: att.id,
+          name: att.file_name,
+          url: att.storage_path,
+          size: att.file_size,
+          type: att.file_type,
+        }));
+
+      const savedVideos: UploadedVideo[] = savedAttachments
+        .filter((att: any) => att.file_type.startsWith('video/'))
+        .map((att: any) => ({
+          id: att.id,
+          name: att.file_name,
+          url: att.storage_path,
+          size: att.file_size,
+          type: att.file_type,
+        }));
+
+      return {
+        id: savedMessage.id,
+        content: savedMessage.content,
+        role: savedMessage.role,
+        timestamp: new Date(savedMessage.created_at),
+        images: savedImages,
+        videos: savedVideos,
+        metadata: savedMessage.metadata,
+      };
+    } catch (error) {
+      console.error('Failed to save message via API, falling back to direct database access:', error);
+      
+      // Fallback to direct database access if the Edge function fails
+      return this.saveMessageDirect(sessionId, message, user);
+    }
+  }
+
+  // Fallback method for direct database access
+  private static async saveMessageDirect(
+    sessionId: string,
+    message: Omit<ChatMessage, 'id' | 'timestamp'>,
+    user: any
+  ): Promise<ChatMessage> {
     // Insert the message
     const { data: messageData, error: messageError } = await supabase
       .from('chat_messages')
@@ -334,10 +464,59 @@ export class ChatHistoryService {
     };
   }
 
-  // Load messages for a specific session
+  // Load messages for a specific session using the new get-session-messages Edge function
   static async getSessionMessages(sessionId: string, user?: any): Promise<ChatMessage[]> {
     if (!user) return [];
 
+    try {
+      // Use the get-session-messages Edge function with URL parameters
+      const url = `get-session-messages?session_id=${encodeURIComponent(sessionId)}&limit=100&offset=0`;
+      const response = await supabase.functions.invoke(url, {
+        method: 'GET'
+      });
+
+      if (response.error) {
+        console.error('Error loading session messages via API:', response.error);
+        throw new Error('Failed to load messages via API');
+      }
+
+      const messages = response.data.messages || [];
+      
+      return messages.map((msg: any) => ({
+        id: msg.id,
+        content: msg.content,
+        role: msg.role,
+        timestamp: new Date(msg.created_at),
+        images: msg.attachments
+          ?.filter((att: any) => att.file_type.startsWith('image/'))
+          ?.map((att: any) => ({
+            id: att.id,
+            name: att.file_name,
+            url: att.storage_path,
+            size: att.file_size,
+            type: att.file_type,
+          })) || [],
+        videos: msg.attachments
+          ?.filter((att: any) => att.file_type.startsWith('video/'))
+          ?.map((att: any) => ({
+            id: att.id,
+            name: att.file_name,
+            url: att.storage_path,
+            size: att.file_size,
+            type: att.file_type,
+          })) || [],
+        metadata: msg.metadata,
+      }));
+    } catch (error) {
+      console.error('Failed to load messages via API, falling back to direct database access:', error);
+      
+      // Fallback to direct database access
+      return this.getSessionMessagesDirect(sessionId, user);
+    }
+  }
+
+  // Fallback method for direct database access
+  private static async getSessionMessagesDirect(sessionId: string, user: any): Promise<ChatMessage[]> {
     const { data, error } = await supabase
       .from('chat_messages')
       .select(`
