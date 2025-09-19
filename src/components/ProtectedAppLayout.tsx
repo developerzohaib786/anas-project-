@@ -1,30 +1,13 @@
-import { useEffect, useState } from "react";
 import { Navigate, Outlet } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { useBrand } from "@/contexts/BrandContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function ProtectedAppLayout() {
-  const [loading, setLoading] = useState(true);
-  const [hasSession, setHasSession] = useState(false);
+  const { user, loading, hasSession } = useAuth();
   const { profile, loading: brandLoading, refreshData } = useBrand();
-
-  useEffect(() => {
-    // Subscribe first
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      setHasSession(!!session);
-    });
-
-    // Then check existing session
-    supabase.auth.getSession().then(({ data }) => {
-      setHasSession(!!data.session);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   if (loading || brandLoading) {
     return <div className="min-h-screen bg-background" />;

@@ -42,7 +42,7 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const currentPath = location.pathname;
   
-  const { sessions, deleteSession, createSession, renameSession, currentSessionId, setCurrentSession } = useChat();
+  const { sessions, deleteSession, createSession, renameSession, currentSessionId, setCurrentSession, isLoading } = useChat();
 
   // Determine which page a session should open on based on its title
   const getSessionRoute = (session: any) => {
@@ -162,6 +162,11 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
+                      onClick={async () => {
+                        // Create a new session when navigating to main pages
+                        const newSessionId = await createSession(item.title);
+                        setCurrentSession(newSessionId);
+                      }}
                       className={({ isActive }) =>
                         `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 font-medium text-sm mb-1 md:justify-start justify-center w-full text-left ${
                           isActive
@@ -187,39 +192,64 @@ export function AppSidebar() {
             Recent Projects
           </SidebarGroupLabel>
           <SidebarGroupContent className="overflow-y-auto flex-1">
-            {sessions.length === 0 ? (
+            {isLoading ? (
+              <div className="px-3 py-2 text-xs text-muted-foreground">
+                Loading chat history...
+              </div>
+            ) : sessions.length === 0 ? (
               <div className="px-3 py-2 text-xs text-muted-foreground">
                 Start chatting to create!
               </div>
             ) : (
               <SidebarMenu className="space-y-1">
-                {sessions.map((session) => (
-                  <SidebarMenuItem key={session.id}>
-                    <div className="group relative">
-                      <NavLink
-                        to={getSessionRoute(session)}
-                        onClick={() => setCurrentSession(session.id)}
-                        className={() => {
-                          const isCurrentSession = currentSessionId === session.id;
-                          return `flex items-center px-3 py-2 rounded-lg transition-all duration-200 text-sm w-full text-foreground hover:bg-accent hover:text-accent-foreground ${
-                            isCurrentSession ? "bg-accent text-accent-foreground" : ""
-                          }`;
-                        }}
-                        title={session.title}
-                      >
-                        <div className="flex items-center min-w-0 flex-1">
-                          <span className="truncate flex-1 pr-8">{session.title}</span>
-                        </div>
-                      </NavLink>
-                      <ChatActionsMenu
-                        sessionId={session.id}
-                        sessionTitle={session.title}
-                        onDelete={deleteSession}
-                        onRename={renameSession}
-                      />
-                    </div>
-                  </SidebarMenuItem>
-                ))}
+                {sessions.map((session) => {
+                  // Get the first user message with images for thumbnail
+                  const firstImageMessage = session.messages?.find(msg => 
+                    msg.role === 'user' && msg.images && msg.images.length > 0
+                  );
+                  const thumbnailImage = firstImageMessage?.images?.[0];
+
+                  return (
+                    <SidebarMenuItem key={session.id}>
+                      <div className="group relative">
+                        <NavLink
+                          to={`${getSessionRoute(session)}?session=${session.id}`}
+                          onClick={() => setCurrentSession(session.id)}
+                          className={() => {
+                            const isCurrentSession = currentSessionId === session.id;
+                            return `flex items-center px-3 py-2 rounded-lg transition-all duration-200 text-sm w-full text-foreground hover:bg-accent hover:text-accent-foreground ${
+                              isCurrentSession ? "bg-accent text-accent-foreground" : ""
+                            }`;
+                          }}
+                          title={session.title}
+                        >
+                          <div className="flex items-center min-w-0 flex-1 gap-3">
+                            {thumbnailImage && (
+                              <div className="w-8 h-8 rounded-md overflow-hidden flex-shrink-0 bg-muted">
+                                <img 
+                                  src={thumbnailImage.url} 
+                                  alt="Chat thumbnail"
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    // Hide image if it fails to load
+                                    e.currentTarget.style.display = 'none';
+                                  }}
+                                />
+                              </div>
+                            )}
+                            <span className="truncate flex-1 pr-8">{session.title}</span>
+                          </div>
+                        </NavLink>
+                        <ChatActionsMenu
+                          sessionId={session.id}
+                          sessionTitle={session.title}
+                          onDelete={deleteSession}
+                          onRename={renameSession}
+                        />
+                      </div>
+                    </SidebarMenuItem>
+                  );
+                })}
               </SidebarMenu>
             )}
           </SidebarGroupContent>

@@ -9,7 +9,7 @@ import { useSmartSession } from "@/hooks/useSmartSession";
 
 const Create = () => {
   const [isInGenerationFlow, setIsInGenerationFlow] = useState(false);
-  const { currentSessionId, updateSession, sessions } = useChat();
+  const { currentSessionId, updateSession, sessions, createSession, setCurrentSession } = useChat();
   
   // Use consolidated hooks
   const { 
@@ -35,6 +35,15 @@ const Create = () => {
       setIsInGenerationFlow(false);
     }
   };
+
+  // Create session if none exists
+  useEffect(() => {
+    if (!currentSessionId) {
+      console.log("🆕 No current session, creating new one for Create");
+      const newSessionId = createSession("Chat to Create");
+      setCurrentSession(newSessionId);
+    }
+  }, [currentSessionId, createSession, setCurrentSession]);
 
   // Restore image state when session changes
   useEffect(() => {

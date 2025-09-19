@@ -10,7 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 import { useBrand } from "@/contexts/BrandContext";
-import { Loader2, LogOut, Upload, User } from "lucide-react";
+import { useChat } from "@/contexts/ChatContext";
+import { Loader2, LogOut, Upload, User, Trash2 } from "lucide-react";
 
 interface Team {
   id: string;
@@ -37,6 +38,7 @@ export default function Settings() {
   const [confirmPassword, setConfirmPassword] = useState('');
   
   const { profile, brandProfile, updateProfile, updateBrandProfile, uploadAvatar } = useBrand();
+  const { clearAllSessions } = useChat();
 
   // Initialize local state when profile/brandProfile loads
   useEffect(() => {
@@ -261,6 +263,54 @@ export default function Settings() {
                   Save Changes
                 </Button>
               </form>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Data Management */}
+            <div>
+              <h3 className="text-lg font-medium mb-2">Data Management</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Manage your chat history and data
+              </p>
+              <Card>
+                <CardContent className="space-y-4 pt-6">
+                  <div className="space-y-4">
+                    <div className="flex items-start justify-between p-4 border border-destructive/20 rounded-lg bg-destructive/5">
+                      <div className="space-y-1">
+                        <h4 className="font-medium text-destructive">Clear All Chat Sessions</h4>
+                        <p className="text-sm text-muted-foreground">
+                          This will permanently delete all your chat sessions and messages. This action cannot be undone.
+                        </p>
+                      </div>
+                      <Button 
+                        variant="destructive" 
+                        size="sm"
+                        onClick={async () => {
+                          if (window.confirm('Are you sure you want to delete all chat sessions? This action cannot be undone.')) {
+                            try {
+                              setIsLoading(true);
+                              await clearAllSessions();
+                              toast.success('All chat sessions cleared successfully');
+                            } catch (error) {
+                              console.error('Failed to clear sessions:', error);
+                              toast.error('Failed to clear sessions. Please try again.');
+                            } finally {
+                              setIsLoading(false);
+                            }
+                          }
+                        }}
+                        disabled={isLoading}
+                      >
+                        {isLoading ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="mr-2 h-4 w-4" />
+                        )}
+                        Clear All Sessions
+                      </Button>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>

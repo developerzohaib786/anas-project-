@@ -10,6 +10,7 @@ import { ImageUpload } from "@/components/ImageUpload";
 import { handleError, withErrorHandling, ApiError, NetworkError } from "@/lib/error-handler";
 import { useSmartSession } from "@/hooks/useSmartSession";
 import { toast } from "sonner";
+import { MediaUploadService } from '@/services/mediaUploadService';
 
 import { Message, UploadedImage, FlowType } from "@/types/common";
 
@@ -34,6 +35,8 @@ interface ChatInterfaceProps {
   flowType: FlowType;
   uploadedImages?: UploadedImage[];
   onImagesChange?: (images: UploadedImage[]) => void;
+  generatedImage?: string; // Add generated image prop
+  currentPrompt?: string; // Add current prompt prop
 }
 
 /**
@@ -51,9 +54,12 @@ interface ChatInterfaceProps {
  * @param {ChatInterfaceProps} props - Component props
  * @returns {JSX.Element} The ChatInterface component
  */
-export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload = false, initialMessage, showPrompts = true, flowType, uploadedImages: externalUploadedImages, onImagesChange: externalOnImagesChange }: ChatInterfaceProps) {
-  const { sessionId } = useParams();
-  const { sessions, currentSessionId, createSession, updateSession, setCurrentSession, getCurrentSession } = useChat();
+export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload = false, initialMessage, showPrompts = true, flowType, uploadedImages: externalUploadedImages, onImagesChange: externalOnImagesChange, generatedImage, currentPrompt }: ChatInterfaceProps) {
+  const { sessionId: urlSessionId } = useParams();
+  const { sessions, currentSessionId, createSession, updateSession, setCurrentSession, getCurrentSession, saveMessage, loadSessionMessages } = useChat();
+  
+  // Get session ID from URL params or use current session
+  const sessionId = urlSessionId || currentSessionId;
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -78,15 +84,9 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
     if (initialPrompt && !inputValue) {
       setInputValue(initialPrompt);
     }
-  }, [initialPrompt, inputValue]);
+  }, [initialPrompt]); // Removed inputValue dependency to prevent re-runs
 
-  // Auto-set prompt when images are uploaded (for Enhanced Photo workflow only)
-  // Only triggers if user hasn't manually cleared the text
-  useEffect(() => {
-    if (showImageUpload && uploadedImages.length > 0 && !inputValue.trim() && !hasUserClearedText.current) {
-      setInputValue("Make this image beautiful");
-    }
-  }, [uploadedImages.length, showImageUpload, inputValue]);
+  // Removed auto-prompt functionality - user will provide their own prompts
 
   // Reset the user cleared flag when images change (new upload session)
   useEffect(() => {
@@ -129,17 +129,103 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
     }
   };
 
+  // Track if we've already loaded messages for this session
+  const [loadedSessions, setLoadedSessions] = useState<Set<string>>(new Set());
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+
   // Load session data when sessionId changes
   useEffect(() => {
-    if (sessionId) {
-      const session = sessions.find(s => s.id === sessionId);
-      if (session) {
-        setCurrentSession(sessionId);
-        // Always load session messages, even if empty (start fresh)
-        if (session.messages.length > 0) {
-          setMessages(session.messages);
+    const loadSessionData = async () => {
+      console.log("🔄 ChatInterface loading session data:", { sessionId, currentSessionId, sessionsCount: sessions.length });
+      
+      if (sessionId && !loadedSessions.has(sessionId) && !isLoadingMessages) {
+        const session = sessions.find(s => s.id === sessionId);
+        console.log("📋 Found session:", session ? "Yes" : "No", session?.title);
+        
+        if (session) {
+          setCurrentSession(sessionId);
+          
+          // Load messages from Supabase if session exists but has no local messages
+          if (session.messages.length === 0) {
+            console.log("📡 Loading messages from Supabase for session:", sessionId);
+            setIsLoadingMessages(true);
+            try {
+              const supabaseMessages = await loadSessionMessages(sessionId);
+              console.log("📨 Received messages from API:", supabaseMessages.length, supabaseMessages);
+              if (supabaseMessages.length > 0) {
+                // Convert Supabase messages to local Message format
+                const convertedMessages = supabaseMessages.map(msg => ({
+                  id: msg.id,
+                  content: msg.content,
+                  role: msg.role,
+                  timestamp: new Date(msg.created_at || msg.timestamp),
+                  images: msg.chat_attachments?.filter(att => att.file_type?.startsWith('image/'))?.map(att => ({
+                    id: att.id,
+                    name: att.file_name,
+                    url: att.storage_path, // This will be converted to public URL by the API
+                    size: att.file_size,
+                    type: att.file_type,
+                  })) || [],
+                  videos: msg.chat_attachments?.filter(att => att.file_type?.startsWith('video/'))?.map(att => ({
+                    id: att.id,
+                    name: att.file_name,
+                    url: att.storage_path,
+                    size: att.file_size,
+                    type: att.file_type,
+                  })) || [],
+                  isGenerating: false,
+                  metadata: msg.metadata || {}
+                }));
+                console.log("🔄 Converted messages:", convertedMessages);
+                setMessages(convertedMessages);
+              } else {
+                // Fresh session - reset to default message
+                setMessages([
+                  {
+                    id: "1",
+                    content: "What are we creating today?",
+                    role: "assistant",
+                    timestamp: new Date(),
+                  },
+                ]);
+              }
+            } catch (error) {
+              console.error('Failed to load session messages:', error);
+              // Fallback to default message
+              setMessages([
+                {
+                  id: "1",
+                  content: "What are we creating today?",
+                  role: "assistant",
+                  timestamp: new Date(),
+                },
+              ]);
+            } finally {
+              setIsLoadingMessages(false);
+            }
+          } else {
+            // Use existing session messages
+            setMessages(session.messages);
+          }
+          
+          // Mark this session as loaded
+          setLoadedSessions(prev => new Set([...prev, sessionId]));
+        
+          // Restore session state to prevent loss on navigation
+          if (session.uploadedImages && !externalUploadedImages) {
+            setLocalUploadedImages(session.uploadedImages);
+          } else if (!externalUploadedImages) {
+            setLocalUploadedImages([]);
+          }
+          
+          if (session.inputValue) {
+            setInputValue(session.inputValue);
+          } else {
+            setInputValue("");
+          }
         } else {
-          // Fresh session - reset to default message
+          // Session not found, navigate to home using React Router
+          // This will be handled by the parent component navigation
           setMessages([
             {
               id: "1",
@@ -148,65 +234,58 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
               timestamp: new Date(),
             },
           ]);
-        }
-        // Restore session state to prevent loss on navigation
-        if (session.uploadedImages && !externalUploadedImages) {
-          setLocalUploadedImages(session.uploadedImages);
-        } else if (!externalUploadedImages) {
-          setLocalUploadedImages([]);
-        }
-        
-        if (session.inputValue) {
-          setInputValue(session.inputValue);
-        } else {
+          if (!externalUploadedImages) {
+            setLocalUploadedImages([]);
+          }
           setInputValue("");
         }
-      } else {
-        // Session not found, navigate to home using React Router
-        // This will be handled by the parent component navigation
-        setMessages([
-          {
-            id: "1",
-            content: "What are we creating today?",
-            role: "assistant",
-            timestamp: new Date(),
-          },
-        ]);
-        if (!externalUploadedImages) {
-          setLocalUploadedImages([]);
+      } else if (!currentSessionId && !sessionId) {
+        // Only create a new session if we're on a chat path without a sessionId
+        // This prevents creating sessions when we navigate to home after deleting
+        const currentPath = window.location.pathname;
+        if (currentPath.startsWith('/chat') && currentPath === '/chat') {
+          const newSessionId = await createSession();
+          window.history.replaceState(null, '', `/chat/${newSessionId}`);
         }
-        setInputValue("");
       }
-    } else if (!currentSessionId && !sessionId) {
-      // Only create a new session if we're on a chat path without a sessionId
-      // This prevents creating sessions when we navigate to home after deleting
-      const currentPath = window.location.pathname;
-      if (currentPath.startsWith('/chat') && currentPath === '/chat') {
-        const newSessionId = createSession();
-        window.history.replaceState(null, '', `/chat/${newSessionId}`);
-      }
-    }
-  }, [sessionId, sessions, currentSessionId, createSession, setCurrentSession, externalUploadedImages]);
+    };
+
+    loadSessionData();
+  }, [sessionId, sessions]); // Removed loadedSessions and isLoadingMessages to prevent unnecessary re-runs
 
   // Save messages to session when they change
   useEffect(() => {
-    if (currentSessionId && messages.length > 1) {
-      updateSession(currentSessionId, { 
-        messages,
-        title: generateSessionTitle(messages)
-      });
+    if (sessionId && messages.length > 1) {
+      console.log("💾 Updating session with messages:", { sessionId, messageCount: messages.length });
+      
+      // Only update title if this is a new session (no existing title or default title)
+      const currentSession = sessions.find(s => s.id === sessionId);
+      const shouldUpdateTitle = !currentSession?.title || 
+                               currentSession.title === 'New Chat' || 
+                               currentSession.title.startsWith('Chat ');
+      
+      const updates: any = { messages };
+      if (shouldUpdateTitle) {
+        updates.title = generateSessionTitle(messages);
+      }
+      
+      updateSession(sessionId, updates);
     }
-  }, [messages, currentSessionId, updateSession]);
+  }, [messages, sessionId, sessions]); // Add sessions to dependencies to check current title
 
-  // Save input state to prevent loss on navigation
+  // Save input state to prevent loss on navigation (debounced to prevent flickering)
   useEffect(() => {
     if (currentSessionId) {
-      updateSession(currentSessionId, {
-        inputValue: inputValue,
-        uploadedImages: externalUploadedImages || localUploadedImages
-      });
+      const timeoutId = setTimeout(() => {
+        updateSession(currentSessionId, {
+          inputValue: inputValue,
+          uploadedImages: externalUploadedImages || localUploadedImages
+        });
+      }, 500); // Debounce for 500ms
+
+      return () => clearTimeout(timeoutId);
     }
-  }, [inputValue, localUploadedImages, externalUploadedImages, currentSessionId, updateSession]);
+  }, [inputValue, localUploadedImages, externalUploadedImages, currentSessionId]); // Remove updateSession from dependencies
 
   const generateSessionTitle = (msgs: Message[]): string => {
     const userMessage = msgs.find(m => m.role === "user");
@@ -268,7 +347,7 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
 
   // Get 4 rotating prompts based on session ID or current time
   const getRotatingPrompts = () => {
-    const seed = sessionId ? sessionId.split('').reduce((a, b) => a + b.charCodeAt(0), 0) : Date.now();
+    const seed = sessionId && typeof sessionId === 'string' ? sessionId.split('').reduce((a, b) => a + b.charCodeAt(0), 0) : Date.now();
     const shuffled = [...allPrompts].sort(() => 0.5 - Math.random());
     return shuffled.slice(0, 4);
   };
@@ -314,14 +393,78 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     
+    // Save user message to Supabase if we have a session
+    if (sessionId && saveMessage) {
+      try {
+        console.log("💾 Saving user message to session:", sessionId);
+        
+        // Process and upload images to Supabase storage first
+        const processedImages = [];
+        if (uploadedImages.length > 0) {
+          for (const img of uploadedImages) {
+            try {
+              let supabaseUrl = img.url;
+              
+              // If it's a blob URL, upload it to Supabase storage
+              if (img.url.startsWith('blob:') || img.url.startsWith('data:')) {
+                console.log("📤 Uploading image to Supabase storage:", img.name);
+                
+                const uploadedMedia = img.url.startsWith('blob:') 
+                  ? await MediaUploadService.uploadFromBlobUrl(img.url, img.name, user)
+                  : await MediaUploadService.uploadFromDataUrl(img.url, img.name, user);
+                
+                supabaseUrl = uploadedMedia.publicUrl;
+                console.log("✅ Image uploaded to Supabase:", supabaseUrl);
+              }
+              
+              processedImages.push({
+                id: img.id,
+                name: img.name,
+                url: supabaseUrl,
+                size: img.size,
+                type: img.type,
+                is_generated: false, // User uploaded images are not AI generated
+              });
+            } catch (uploadError) {
+              console.error("❌ Failed to upload image:", uploadError);
+              // Use original URL as fallback
+              processedImages.push({
+                id: img.id,
+                name: img.name,
+                url: img.url,
+                size: img.size,
+                type: img.type,
+                is_generated: false,
+              });
+            }
+          }
+        }
+        
+        // Enhanced user message with processed image information
+        const enhancedUserMessage = {
+          ...userMessage,
+          images: processedImages.length > 0 ? processedImages : undefined
+        };
+        
+        await saveMessage(sessionId, enhancedUserMessage);
+        console.log("✅ User message saved successfully");
+      } catch (error) {
+        console.error("❌ Failed to save user message:", error);
+        // Continue with the flow even if saving fails
+      }
+    } else {
+      console.log("⚠️ No session ID or saveMessage function available", { sessionId, hasSaveMessage: !!saveMessage });
+    }
+    
     const currentInput = inputValue;
     const currentImages = [...uploadedImages];
     setInputValue("");
-    setUploadedImages([]);
+    // Keep images visible for subsequent prompts - don't clear them
+    // setUploadedImages([]);  // Removed: This was clearing images after first use
 
     try {
       // For image uploads, directly trigger image generation without chat AI
-      if (currentImages.length > 0) {
+      if (currentImages.length > 0 && showImageUpload) {
         // Add a generating message with shimmer effect
         const generatingMessageId = (Date.now() + 1).toString();
         const generatingMessage: Message = {
@@ -341,7 +484,10 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
         
         // Trigger image generation directly
         try {
-          await onGenerateImage(currentInput || "Make this image beautiful", currentImages);
+          // Only generate if user provided a prompt
+          if (currentInput.trim()) {
+            await onGenerateImage(currentInput, currentImages);
+          }
           // Remove the generating message after image generation completes
           setMessages((prev) => prev.filter(msg => msg.id !== generatingMessageId));
         } catch (error) {
@@ -417,6 +563,36 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
 
       setMessages((prev) => [...prev, assistantMessage]);
 
+      // Save assistant message to Supabase if we have a session
+      if (sessionId && saveMessage) {
+        try {
+          console.log("💾 Saving assistant message to session:", sessionId);
+          
+          // Find the corresponding user message to link as parent
+          const lastUserMessage = newMessages.filter(msg => msg.role === 'user').pop();
+          
+          // Enhanced assistant message with conversation context
+          const enhancedAssistantMessage = {
+            ...assistantMessage,
+            conversation_context: {
+              prompt: currentInput,
+              intent: intent,
+              image_prompt: imagePrompt,
+              model_used: 'gemini-1.5-flash',
+            },
+            parent_message_id: lastUserMessage?.id
+          };
+          
+          await saveMessage(sessionId, enhancedAssistantMessage);
+          console.log("✅ Assistant message saved successfully");
+        } catch (error) {
+          console.error("❌ Failed to save assistant message:", error);
+          // Continue with the flow even if saving fails
+        }
+      } else {
+        console.log("⚠️ No session ID or saveMessage function available for assistant message", { sessionId, hasSaveMessage: !!saveMessage });
+      }
+
       // Check if we should generate an image
       if (intent === 'generate' || 
           (typeof aiResponse === 'string' && (
@@ -446,8 +622,65 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
         // Trigger image generation and remove generating message when done
         try {
           await onGenerateImage(imagePrompt || currentInput, currentImages);
-          // Remove the generating message after image generation completes
-          setMessages((prev) => prev.filter(msg => msg.id !== generatingMessageId));
+          
+          // Wait a moment for the generated image to be available in props
+          setTimeout(async () => {
+            // After image generation, check if we have a generated image to add to messages
+            if (generatedImage) {
+              let finalImageUrl = generatedImage;
+              
+              // If the generated image is a data URL, upload it to Supabase storage
+              if (generatedImage.startsWith('data:') && user) {
+                try {
+                  console.log("📤 Uploading generated image to Supabase storage");
+                  const fileName = `generated-image-${Date.now()}.png`;
+                  const uploadedMedia = await MediaUploadService.uploadFromDataUrl(
+                    generatedImage, 
+                    fileName, 
+                    user,
+                    { is_generated: true, prompt_used: imagePrompt || currentInput }
+                  );
+                  finalImageUrl = uploadedMedia.publicUrl;
+                  console.log("✅ Generated image uploaded to Supabase:", finalImageUrl);
+                } catch (uploadError) {
+                  console.error("❌ Failed to upload generated image to Supabase:", uploadError);
+                  // Continue with data URL as fallback
+                }
+              }
+              
+              const imageMessage: Message = {
+                id: (Date.now() + 2).toString(),
+                content: "Here's your generated image:",
+                role: "assistant",
+                timestamp: new Date(),
+                images: [{
+                  id: `generated-${Date.now()}`,
+                  name: `generated-image-${Date.now()}.png`,
+                  url: finalImageUrl,
+                  size: 0,
+                  type: 'image/png',
+                  is_generated: true
+                }]
+              };
+              
+              // Remove the generating message and add the image message
+              setMessages((prev) => [...prev.filter(msg => msg.id !== generatingMessageId), imageMessage]);
+              
+              // Save the image message to database if we have a session
+              if (sessionId && saveMessage) {
+                try {
+                  console.log("💾 Saving generated image message to session:", sessionId);
+                  await saveMessage(sessionId, imageMessage);
+                  console.log("✅ Generated image message saved successfully");
+                } catch (error) {
+                  console.error("❌ Failed to save generated image message:", error);
+                }
+              }
+            } else {
+              // Just remove the generating message if no image was generated
+              setMessages((prev) => prev.filter(msg => msg.id !== generatingMessageId));
+            }
+          }, 1000); // Wait 1 second for the image to be available
         } catch (error) {
           // Remove generating message even if there's an error
           setMessages((prev) => prev.filter(msg => msg.id !== generatingMessageId));
@@ -577,42 +810,9 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
           <div className="max-w-3xl mx-auto">
             {/* Route Guide - Minimal and Modern */}
             <div className="mb-4 transition-all duration-300" style={{ height: messages.length <= 1 && !inputValue.trim() && (uploadedImages.length === 0 || showImageUpload) ? 'auto' : '0', overflow: 'hidden' }}>
-              {messages.length <= 1 && !inputValue.trim() && (uploadedImages.length === 0 || showImageUpload) && (
-               <div className="animate-fade-in space-y-3 relative">
-                  {/* Combined Photo Upload Section - Only show if enabled */}
-                  {showImageUpload && (
-                  <div className="border border-border rounded-lg p-4 hover:bg-muted/50 transition-colors relative">
-                    {/* Recommended Badge - Inside container, top right */}
-                    <div className="absolute top-3 right-3">
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-300 shadow-sm">
-                        Recommended
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 pr-20">
-                        <h3 className="font-medium text-foreground mb-2">Upload photo</h3>
-                        
-                        {/* 3-Step Process */}
-                        <div className="space-y-1.5 mb-4">
-                          <div className="text-xs text-muted-foreground flex items-center gap-2">
-                            <span className="text-primary font-medium">1.</span>
-                            Use your phone or upload existing image
-                          </div>
-                          <div className="text-xs text-muted-foreground flex items-center gap-2">
-                            <span className="text-primary font-medium">2.</span>
-                            Press "Make this beautiful" or describe what you want
-                          </div>
-                          <div className="text-xs text-muted-foreground flex items-center gap-2">
-                            <span className="text-primary font-medium">3.</span>
-                            Let us cook
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                {/* Upload Component - With proper padding */}
-                <div className="-mx-2 -mb-2 mt-2 px-2">
+              {/* Simple image upload for Enhance page - no extra UI */}
+              {showImageUpload && (
+                <div className="mb-3">
                   <ImageUpload
                     images={uploadedImages}
                     onImagesChange={setUploadedImages}
@@ -620,18 +820,11 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
                     showPreview={true}
                   />
                 </div>
-                  </div>
-                  )}
-                  
-              {/* Flow 2: Chat - Only show if image upload is disabled */}
-              {!showImageUpload && (
-                <div className="border border-border rounded-lg p-4 hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h3 className="font-medium text-foreground">Describe your vision</h3>
-                      <p className="text-sm text-muted-foreground">Tell us what you want to create, share a reference image or select one of our crafted prompts</p>
-                    </div>
-                  </div>
+              )}
+              
+              {/* Chat flow image upload */}
+              {!showImageUpload && messages.length <= 1 && !inputValue.trim() && uploadedImages.length === 0 && (
+                <div className="mb-3">
                   <ImageUpload
                     images={uploadedImages}
                     onImagesChange={setUploadedImages}
@@ -640,8 +833,6 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
                   />
                 </div>
               )}
-               </div>
-             )}
            </div>
 
            {/* Example Prompts - Flexible Fill */}
@@ -707,34 +898,7 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
                  ))}
                </div>
                
-               {/* Step 2 Indicator & Quick Actions - Only show when there are uploaded images on Enhance Photo page */}
-               {showImageUpload && uploadedImages.length > 0 && !inputValue.trim() && (
-                 <div className="bg-primary/5 rounded-lg p-3">
-                   <div className="flex items-center gap-2 mb-2">
-                     <span className="text-xs font-medium text-primary">Step 2: Choose your transformation</span>
-                   </div>
-                   <div className="flex flex-wrap gap-2">
-                     <button
-                       onClick={() => setInputValue("Make this photo beautiful and professional for luxury hotel marketing")}
-                       className="text-xs px-3 py-1.5 rounded-full bg-primary hover:bg-primary/90 text-white transition-colors font-medium"
-                     >
-                       ✨ Make this beautiful
-                     </button>
-                     <button
-                       onClick={() => setInputValue("Transform this into luxury hotel marketing content")}
-                       className="text-xs px-3 py-1.5 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground transition-colors"
-                     >
-                       Hotel style
-                     </button>
-                     <button
-                       onClick={() => setInputValue("Apply golden hour lighting and rich contrast to this image")}
-                       className="text-xs px-3 py-1.5 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground transition-colors"
-                     >
-                       Golden hour
-                     </button>
-                   </div>
-                 </div>
-               )}
+               {/* Removed Step 2 transformation suggestions - keeping interface minimal */}
              </div>
            )}
 
@@ -746,15 +910,15 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
                    value={inputValue}
                    onChange={handleInputChange}
                    onKeyPress={handleKeyPress}
-                   placeholder={showImageUpload && uploadedImages.length === 0 ? "Upload an image first to get started..." : "Describe your hotel marketing photo..."}
-                   disabled={showImageUpload && uploadedImages.length === 0}
-                   className={`w-full h-12 bg-transparent border border-[hsl(var(--border))] rounded-full pl-4 pr-6 text-[15px] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[hsl(var(--border))] hover:border-[hsl(var(--border))] resize-none min-h-[48px] max-h-[48px] ${showImageUpload && uploadedImages.length === 0 ? 'opacity-50 cursor-not-allowed bg-muted/30' : ''}`}
+                   placeholder="Type your prompt here..."
+                   disabled={showImageUpload && uploadedImages.length === 0 && messages.length <= 1}
+                   className={`w-full h-12 bg-transparent border border-[hsl(var(--border))] rounded-full pl-4 pr-6 text-[15px] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[hsl(var(--border))] hover:border-[hsl(var(--border))] resize-none min-h-[48px] max-h-[48px] ${showImageUpload && uploadedImages.length === 0 && messages.length <= 1 ? 'opacity-50 cursor-not-allowed bg-muted/30' : ''}`}
                  />
                </div>
              </div>
              <Button 
                onClick={handleSendMessage}
-               disabled={!inputValue.trim() && uploadedImages.length === 0 || (showImageUpload && uploadedImages.length === 0)}
+               disabled={!inputValue.trim() && uploadedImages.length === 0 || (showImageUpload && uploadedImages.length === 0 && messages.length <= 1)}
                size="icon"
                className="h-12 w-12 rounded-full bg-muted hover:bg-muted/80 disabled:bg-muted disabled:text-muted-foreground shrink-0 min-h-[48px] min-w-[48px]"
              >

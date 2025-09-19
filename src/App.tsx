@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ChatProvider } from "@/contexts/ChatContext";
 import { BrandProvider } from "@/contexts/BrandContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedAppLayout from "@/components/ProtectedAppLayout";
 import { PageLoadingState } from "@/components/ui/loading-state";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -30,31 +31,33 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <BrowserRouter>
-          <ChatProvider>
-            <BrandProvider>
-              <TooltipProvider>
-                <Toaster />
-                <Sonner />
-                <div className="min-h-screen bg-background transition-colors duration-0">
-                  <Suspense fallback={<PageLoadingState message="Loading application..." />}>
-                    <Routes>
-                      <Route path="/auth" element={<Auth />} />
-                      <Route element={<ProtectedAppLayout />}>
-                        <Route path="/" element={<Enhance />} />
-                        <Route path="/create" element={<Create />} />
-                        <Route path="/video" element={<Video />} />
-                        <Route path="/chat" element={<Chat />} />
-                        <Route path="/chat/:sessionId" element={<Chat />} />
-                        <Route path="/brand-kit" element={<BrandKit />} />
-                        <Route path="/settings" element={<Settings />} />
-                        <Route path="*" element={<NotFound />} />
-                      </Route>
-                    </Routes>
-                  </Suspense>
-                </div>
-              </TooltipProvider>
-            </BrandProvider>
-          </ChatProvider>
+          <AuthProvider>
+            <ChatProvider>
+              <BrandProvider>
+                <TooltipProvider>
+                  <Toaster />
+                  <Sonner />
+                  <div className="min-h-screen bg-background transition-colors duration-0">
+                    <Suspense fallback={<PageLoadingState message="Loading application..." />}>
+                      <Routes>
+                        <Route path="/auth" element={<Auth />} />
+                        <Route element={<ProtectedAppLayout />}>
+                          <Route path="/" element={<Enhance />} />
+                          <Route path="/create" element={<Create />} />
+                          <Route path="/video" element={<Video />} />
+                          <Route path="/chat" element={<Chat />} />
+                          <Route path="/chat/:sessionId" element={<Chat />} />
+                          <Route path="/brand-kit" element={<BrandKit />} />
+                          <Route path="/settings" element={<Settings />} />
+                          <Route path="*" element={<NotFound />} />
+                        </Route>
+                      </Routes>
+                    </Suspense>
+                  </div>
+                </TooltipProvider>
+              </BrandProvider>
+            </ChatProvider>
+          </AuthProvider>
         </BrowserRouter>
       </ThemeProvider>
     </QueryClientProvider>

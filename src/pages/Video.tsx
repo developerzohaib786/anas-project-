@@ -24,7 +24,7 @@ const Video = () => {
   const [currentPrompt, setCurrentPrompt] = useState<string>();
   const [isInGenerationFlow, setIsInGenerationFlow] = useState(false);
   const [isPollingForVideo, setIsPollingForVideo] = useState(false);
-  const { currentSessionId, updateSession, sessions, createSession } = useChat();
+  const { currentSessionId, updateSession, sessions, createSession, setCurrentSession } = useChat();
   const isRestoringFromSession = useRef(false);
   const hasRestoredFromSession = useRef(false);
 
@@ -93,6 +93,15 @@ const Video = () => {
     () => !!generatedVideo,
     () => !!currentPrompt
   ]);
+
+  // Create session if none exists
+  useEffect(() => {
+    if (!currentSessionId) {
+      console.log("🆕 No current session, creating new one for Video");
+      const newSessionId = createSession("Image to Video");
+      setCurrentSession(newSessionId);
+    }
+  }, [currentSessionId, createSession, setCurrentSession]);
 
   // Convert uploaded image to base64
   const convertImageToBase64 = async (image: UploadedImage): Promise<string> => {
@@ -451,7 +460,7 @@ const Video = () => {
 
       return () => clearTimeout(timeoutId);
     }
-  }, [movementDescription, sfxDescription, videoSize, currentSessionId, updateSession, isInGenerationFlow]);
+  }, [movementDescription, sfxDescription, videoSize, currentSessionId, isInGenerationFlow]); // Remove updateSession from dependencies
 
   // Save uploaded images to session when they change
   useEffect(() => {
@@ -460,7 +469,7 @@ const Video = () => {
         uploadedImages: uploadedImages
       });
     }
-  }, [uploadedImages, currentSessionId, updateSession]);
+  }, [uploadedImages, currentSessionId]); // Remove updateSession from dependencies
 
   const handleNewChat = () => {
     // Clear localStorage backup for old session
