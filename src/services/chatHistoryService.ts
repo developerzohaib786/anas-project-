@@ -9,6 +9,15 @@ export interface ChatMessage {
   videos?: UploadedVideo[];
   isGenerating?: boolean;
   metadata?: any;
+  // Enhanced fields for better prompt-response tracking
+  conversation_context?: {
+    prompt?: string;
+    intent?: string;
+    image_prompt?: string;
+    model_used?: string;
+    tokens_used?: number;
+  };
+  parent_message_id?: string;
 }
 
 export interface UploadedImage {
@@ -18,6 +27,9 @@ export interface UploadedImage {
   file?: File;
   size?: number;
   type?: string;
+  // Enhanced fields for AI-generated images
+  is_generated?: boolean;
+  prompt_used?: string;
 }
 
 export interface UploadedVideo {
@@ -215,7 +227,11 @@ export class ChatHistoryService {
           content: message.content,
           message_type: message.role, // Use role directly as message_type
           metadata: message.metadata || {},
-          attachments: attachments
+          attachments: attachments,
+          // Pass through enhanced fields if they exist
+          ...(message.conversation_context && { conversation_context: message.conversation_context }),
+          ...(message.parent_message_id && { parent_message_id: message.parent_message_id }),
+          ...(message.images && { images: message.images })
         }
       });
 
@@ -481,24 +497,38 @@ export class ChatHistoryService {
         content: msg.content,
         role: msg.role,
         timestamp: new Date(msg.created_at),
-        images: msg.attachments
+        images: msg.chat_attachments
           ?.filter((att: any) => att.file_type.startsWith('image/'))
-          ?.map((att: any) => ({
-            id: att.id,
-            name: att.file_name,
-            url: att.storage_path,
-            size: att.file_size,
-            type: att.file_type,
-          })) || [],
-        videos: msg.attachments
+          ?.map((att: any) => {
+            // Convert storage_path to public URL
+            const { data: publicUrlData } = supabase.storage
+              .from('chat-attachments')
+              .getPublicUrl(att.storage_path);
+            
+            return {
+              id: att.id,
+              name: att.file_name,
+              url: publicUrlData.publicUrl,
+              size: att.file_size,
+              type: att.file_type,
+            };
+          }) || [],
+        videos: msg.chat_attachments
           ?.filter((att: any) => att.file_type.startsWith('video/'))
-          ?.map((att: any) => ({
-            id: att.id,
-            name: att.file_name,
-            url: att.storage_path,
-            size: att.file_size,
-            type: att.file_type,
-          })) || [],
+          ?.map((att: any) => {
+            // Convert storage_path to public URL
+            const { data: publicUrlData } = supabase.storage
+              .from('chat-attachments')
+              .getPublicUrl(att.storage_path);
+            
+            return {
+              id: att.id,
+              name: att.file_name,
+              url: publicUrlData.publicUrl,
+              size: att.file_size,
+              type: att.file_type,
+            };
+          }) || [],
         metadata: msg.metadata,
       }));
     } catch (error) {
@@ -533,22 +563,36 @@ export class ChatHistoryService {
       timestamp: new Date(msg.created_at),
       images: msg.chat_attachments
         ?.filter((att: any) => att.file_type.startsWith('image/'))
-        ?.map((att: any) => ({
-          id: att.id,
-          name: att.file_name,
-          url: att.storage_path,
-          size: att.file_size,
-          type: att.file_type,
-        })) || [],
+        ?.map((att: any) => {
+          // Convert storage_path to public URL
+          const { data: publicUrlData } = supabase.storage
+            .from('chat-attachments')
+            .getPublicUrl(att.storage_path);
+          
+          return {
+            id: att.id,
+            name: att.file_name,
+            url: publicUrlData.publicUrl,
+            size: att.file_size,
+            type: att.file_type,
+          };
+        }) || [],
       videos: msg.chat_attachments
         ?.filter((att: any) => att.file_type.startsWith('video/'))
-        ?.map((att: any) => ({
-          id: att.id,
-          name: att.file_name,
-          url: att.storage_path,
-          size: att.file_size,
-          type: att.file_type,
-        })) || [],
+        ?.map((att: any) => {
+          // Convert storage_path to public URL
+          const { data: publicUrlData } = supabase.storage
+            .from('chat-attachments')
+            .getPublicUrl(att.storage_path);
+          
+          return {
+            id: att.id,
+            name: att.file_name,
+            url: publicUrlData.publicUrl,
+            size: att.file_size,
+            type: att.file_type,
+          };
+        }) || [],
       metadata: msg.metadata,
     }));
   }
@@ -661,6 +705,38 @@ export class ChatHistoryService {
       return data;
     } catch (error) {
       console.error('Failed to update session:', error);
+      throw error;
+    }
+  }
+
+  // Clear all sessions for the current user
+  static async clearAllSessions(): Promise<void> {
+    try {
+      // First delete all messages for all user sessions
+      const { error: messagesError } = await supabase
+        .from('chat_messages')
+        .delete()
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+
+      if (messagesError) {
+        console.error('Error deleting messages:', messagesError);
+        throw messagesError;
+      }
+
+      // Then delete all sessions for the user
+      const { error: sessionsError } = await supabase
+        .from('chat_sessions')
+        .delete()
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+
+      if (sessionsError) {
+        console.error('Error deleting sessions:', sessionsError);
+        throw sessionsError;
+      }
+
+      console.log('All sessions cleared successfully');
+    } catch (error) {
+      console.error('Failed to clear all sessions:', error);
       throw error;
     }
   }

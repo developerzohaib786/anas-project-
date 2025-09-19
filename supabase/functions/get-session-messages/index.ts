@@ -78,10 +78,20 @@ serve(async (req) => {
       )
     }
 
-    // Get messages for the session
+    // Get messages for the session with their attachments
     const { data: messages, error: messagesError } = await supabaseClient
       .from('chat_messages')
-      .select('*')
+      .select(`
+        *,
+        chat_attachments (
+          id,
+          file_name,
+          file_size,
+          file_type,
+          storage_path,
+          created_at
+        )
+      `)
       .eq('session_id', session_id)
       .eq('user_id', user.id)
       .order('created_at', { ascending: true })

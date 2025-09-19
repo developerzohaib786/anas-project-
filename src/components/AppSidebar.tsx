@@ -227,9 +227,13 @@ export function AppSidebar() {
                             {thumbnailImage && (
                               <div className="w-8 h-8 rounded-md overflow-hidden flex-shrink-0 bg-muted">
                                 <img 
-                                  src={thumbnailImage.url || URL.createObjectURL(thumbnailImage.file)} 
+                                  src={thumbnailImage.url} 
                                   alt="Chat thumbnail"
                                   className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    // Hide image if it fails to load
+                                    e.currentTarget.style.display = 'none';
+                                  }}
                                 />
                               </div>
                             )}

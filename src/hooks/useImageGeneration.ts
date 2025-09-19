@@ -40,7 +40,7 @@ import { UploadedImage, FlowType } from '@/types/common';
  * };
  * ```
  */
-export const useImageGeneration = (flowType: FlowType) => {
+export const useImageGeneration = (flowType: FlowType, onImageGenerated?: (imageUrl: string, prompt: string) => void) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentPrompt, setCurrentPrompt] = useState<string>();
   const [generatedImage, setGeneratedImage] = useState<string | undefined>();
@@ -181,6 +181,11 @@ export const useImageGeneration = (flowType: FlowType) => {
                 currentPrompt: prompt
               });
               console.log("💾 Session updated with generated image");
+            }
+
+            // Notify parent component about image generation completion
+            if (onImageGenerated) {
+              onImageGenerated(imageUrl, prompt);
             }
 
             // Show success feedback

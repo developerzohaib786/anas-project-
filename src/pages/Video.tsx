@@ -460,7 +460,7 @@ const Video = () => {
 
       return () => clearTimeout(timeoutId);
     }
-  }, [movementDescription, sfxDescription, videoSize, currentSessionId, updateSession, isInGenerationFlow]);
+  }, [movementDescription, sfxDescription, videoSize, currentSessionId, isInGenerationFlow]); // Remove updateSession from dependencies
 
   // Save uploaded images to session when they change
   useEffect(() => {
@@ -469,7 +469,7 @@ const Video = () => {
         uploadedImages: uploadedImages
       });
     }
-  }, [uploadedImages, currentSessionId, updateSession]);
+  }, [uploadedImages, currentSessionId]); // Remove updateSession from dependencies
 
   const handleNewChat = () => {
     // Clear localStorage backup for old session

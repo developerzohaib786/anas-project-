@@ -10,6 +10,7 @@ import { ImageUpload } from "@/components/ImageUpload";
 import { handleError, withErrorHandling, ApiError, NetworkError } from "@/lib/error-handler";
 import { useSmartSession } from "@/hooks/useSmartSession";
 import { toast } from "sonner";
+import { MediaUploadService } from '@/services/mediaUploadService';
 
 import { Message, UploadedImage, FlowType } from "@/types/common";
 
@@ -34,6 +35,8 @@ interface ChatInterfaceProps {
   flowType: FlowType;
   uploadedImages?: UploadedImage[];
   onImagesChange?: (images: UploadedImage[]) => void;
+  generatedImage?: string; // Add generated image prop
+  currentPrompt?: string; // Add current prompt prop
 }
 
 /**
@@ -51,7 +54,7 @@ interface ChatInterfaceProps {
  * @param {ChatInterfaceProps} props - Component props
  * @returns {JSX.Element} The ChatInterface component
  */
-export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload = false, initialMessage, showPrompts = true, flowType, uploadedImages: externalUploadedImages, onImagesChange: externalOnImagesChange }: ChatInterfaceProps) {
+export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload = false, initialMessage, showPrompts = true, flowType, uploadedImages: externalUploadedImages, onImagesChange: externalOnImagesChange, generatedImage, currentPrompt }: ChatInterfaceProps) {
   const { sessionId: urlSessionId } = useParams();
   const { sessions, currentSessionId, createSession, updateSession, setCurrentSession, getCurrentSession, saveMessage, loadSessionMessages } = useChat();
   
@@ -148,18 +151,32 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
             setIsLoadingMessages(true);
             try {
               const supabaseMessages = await loadSessionMessages(sessionId);
+              console.log("📨 Received messages from API:", supabaseMessages.length, supabaseMessages);
               if (supabaseMessages.length > 0) {
                 // Convert Supabase messages to local Message format
                 const convertedMessages = supabaseMessages.map(msg => ({
                   id: msg.id,
                   content: msg.content,
                   role: msg.role,
-                  timestamp: msg.timestamp,
-                  images: msg.images,
-                  videos: msg.videos,
+                  timestamp: new Date(msg.created_at || msg.timestamp),
+                  images: msg.chat_attachments?.filter(att => att.file_type?.startsWith('image/'))?.map(att => ({
+                    id: att.id,
+                    name: att.file_name,
+                    url: att.storage_path, // This will be converted to public URL by the API
+                    size: att.file_size,
+                    type: att.file_type,
+                  })) || [],
+                  videos: msg.chat_attachments?.filter(att => att.file_type?.startsWith('video/'))?.map(att => ({
+                    id: att.id,
+                    name: att.file_name,
+                    url: att.storage_path,
+                    size: att.file_size,
+                    type: att.file_type,
+                  })) || [],
                   isGenerating: false,
-                  metadata: msg.metadata
+                  metadata: msg.metadata || {}
                 }));
+                console.log("🔄 Converted messages:", convertedMessages);
                 setMessages(convertedMessages);
               } else {
                 // Fresh session - reset to default message
@@ -240,12 +257,21 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
   useEffect(() => {
     if (sessionId && messages.length > 1) {
       console.log("💾 Updating session with messages:", { sessionId, messageCount: messages.length });
-      updateSession(sessionId, { 
-        messages,
-        title: generateSessionTitle(messages)
-      });
+      
+      // Only update title if this is a new session (no existing title or default title)
+      const currentSession = sessions.find(s => s.id === sessionId);
+      const shouldUpdateTitle = !currentSession?.title || 
+                               currentSession.title === 'New Chat' || 
+                               currentSession.title.startsWith('Chat ');
+      
+      const updates: any = { messages };
+      if (shouldUpdateTitle) {
+        updates.title = generateSessionTitle(messages);
+      }
+      
+      updateSession(sessionId, updates);
     }
-  }, [messages, sessionId, updateSession]);
+  }, [messages, sessionId, sessions]); // Add sessions to dependencies to check current title
 
   // Save input state to prevent loss on navigation (debounced to prevent flickering)
   useEffect(() => {
@@ -259,7 +285,7 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
 
       return () => clearTimeout(timeoutId);
     }
-  }, [inputValue, localUploadedImages, externalUploadedImages, currentSessionId, updateSession]);
+  }, [inputValue, localUploadedImages, externalUploadedImages, currentSessionId]); // Remove updateSession from dependencies
 
   const generateSessionTitle = (msgs: Message[]): string => {
     const userMessage = msgs.find(m => m.role === "user");
@@ -321,7 +347,7 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
 
   // Get 4 rotating prompts based on session ID or current time
   const getRotatingPrompts = () => {
-    const seed = sessionId ? sessionId.split('').reduce((a, b) => a + b.charCodeAt(0), 0) : Date.now();
+    const seed = sessionId && typeof sessionId === 'string' ? sessionId.split('').reduce((a, b) => a + b.charCodeAt(0), 0) : Date.now();
     const shuffled = [...allPrompts].sort(() => 0.5 - Math.random());
     return shuffled.slice(0, 4);
   };
@@ -371,7 +397,56 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
     if (sessionId && saveMessage) {
       try {
         console.log("💾 Saving user message to session:", sessionId);
-        await saveMessage(sessionId, userMessage);
+        
+        // Process and upload images to Supabase storage first
+        const processedImages = [];
+        if (uploadedImages.length > 0) {
+          for (const img of uploadedImages) {
+            try {
+              let supabaseUrl = img.url;
+              
+              // If it's a blob URL, upload it to Supabase storage
+              if (img.url.startsWith('blob:') || img.url.startsWith('data:')) {
+                console.log("📤 Uploading image to Supabase storage:", img.name);
+                
+                const uploadedMedia = img.url.startsWith('blob:') 
+                  ? await MediaUploadService.uploadFromBlobUrl(img.url, img.name, user)
+                  : await MediaUploadService.uploadFromDataUrl(img.url, img.name, user);
+                
+                supabaseUrl = uploadedMedia.publicUrl;
+                console.log("✅ Image uploaded to Supabase:", supabaseUrl);
+              }
+              
+              processedImages.push({
+                id: img.id,
+                name: img.name,
+                url: supabaseUrl,
+                size: img.size,
+                type: img.type,
+                is_generated: false, // User uploaded images are not AI generated
+              });
+            } catch (uploadError) {
+              console.error("❌ Failed to upload image:", uploadError);
+              // Use original URL as fallback
+              processedImages.push({
+                id: img.id,
+                name: img.name,
+                url: img.url,
+                size: img.size,
+                type: img.type,
+                is_generated: false,
+              });
+            }
+          }
+        }
+        
+        // Enhanced user message with processed image information
+        const enhancedUserMessage = {
+          ...userMessage,
+          images: processedImages.length > 0 ? processedImages : undefined
+        };
+        
+        await saveMessage(sessionId, enhancedUserMessage);
         console.log("✅ User message saved successfully");
       } catch (error) {
         console.error("❌ Failed to save user message:", error);
@@ -492,7 +567,23 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
       if (sessionId && saveMessage) {
         try {
           console.log("💾 Saving assistant message to session:", sessionId);
-          await saveMessage(sessionId, assistantMessage);
+          
+          // Find the corresponding user message to link as parent
+          const lastUserMessage = newMessages.filter(msg => msg.role === 'user').pop();
+          
+          // Enhanced assistant message with conversation context
+          const enhancedAssistantMessage = {
+            ...assistantMessage,
+            conversation_context: {
+              prompt: currentInput,
+              intent: intent,
+              image_prompt: imagePrompt,
+              model_used: 'gemini-1.5-flash',
+            },
+            parent_message_id: lastUserMessage?.id
+          };
+          
+          await saveMessage(sessionId, enhancedAssistantMessage);
           console.log("✅ Assistant message saved successfully");
         } catch (error) {
           console.error("❌ Failed to save assistant message:", error);
@@ -531,8 +622,65 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
         // Trigger image generation and remove generating message when done
         try {
           await onGenerateImage(imagePrompt || currentInput, currentImages);
-          // Remove the generating message after image generation completes
-          setMessages((prev) => prev.filter(msg => msg.id !== generatingMessageId));
+          
+          // Wait a moment for the generated image to be available in props
+          setTimeout(async () => {
+            // After image generation, check if we have a generated image to add to messages
+            if (generatedImage) {
+              let finalImageUrl = generatedImage;
+              
+              // If the generated image is a data URL, upload it to Supabase storage
+              if (generatedImage.startsWith('data:') && user) {
+                try {
+                  console.log("📤 Uploading generated image to Supabase storage");
+                  const fileName = `generated-image-${Date.now()}.png`;
+                  const uploadedMedia = await MediaUploadService.uploadFromDataUrl(
+                    generatedImage, 
+                    fileName, 
+                    user,
+                    { is_generated: true, prompt_used: imagePrompt || currentInput }
+                  );
+                  finalImageUrl = uploadedMedia.publicUrl;
+                  console.log("✅ Generated image uploaded to Supabase:", finalImageUrl);
+                } catch (uploadError) {
+                  console.error("❌ Failed to upload generated image to Supabase:", uploadError);
+                  // Continue with data URL as fallback
+                }
+              }
+              
+              const imageMessage: Message = {
+                id: (Date.now() + 2).toString(),
+                content: "Here's your generated image:",
+                role: "assistant",
+                timestamp: new Date(),
+                images: [{
+                  id: `generated-${Date.now()}`,
+                  name: `generated-image-${Date.now()}.png`,
+                  url: finalImageUrl,
+                  size: 0,
+                  type: 'image/png',
+                  is_generated: true
+                }]
+              };
+              
+              // Remove the generating message and add the image message
+              setMessages((prev) => [...prev.filter(msg => msg.id !== generatingMessageId), imageMessage]);
+              
+              // Save the image message to database if we have a session
+              if (sessionId && saveMessage) {
+                try {
+                  console.log("💾 Saving generated image message to session:", sessionId);
+                  await saveMessage(sessionId, imageMessage);
+                  console.log("✅ Generated image message saved successfully");
+                } catch (error) {
+                  console.error("❌ Failed to save generated image message:", error);
+                }
+              }
+            } else {
+              // Just remove the generating message if no image was generated
+              setMessages((prev) => prev.filter(msg => msg.id !== generatingMessageId));
+            }
+          }, 1000); // Wait 1 second for the image to be available
         } catch (error) {
           // Remove generating message even if there's an error
           setMessages((prev) => prev.filter(msg => msg.id !== generatingMessageId));

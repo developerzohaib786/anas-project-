@@ -19,6 +19,7 @@ export default defineConfig(({ mode }) => ({
       usePolling: false, // Disable polling to reduce resource usage
     },
     middlewareMode: false, // Ensure full dev server mode
+
   },
   plugins: [
     react(),

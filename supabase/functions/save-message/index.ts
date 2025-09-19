@@ -18,6 +18,24 @@ interface SaveMessageRequest {
     metadata?: Record<string, any>;
   }>;
   metadata?: Record<string, any>;
+  // New fields for enhanced prompt-response tracking
+  parent_message_id?: string; // Link responses to their prompts
+  conversation_context?: {
+    prompt?: string; // Original user prompt for AI responses
+    intent?: string; // AI intent (generate, ask, etc.)
+    image_prompt?: string; // Generated image prompt
+    model_used?: string; // AI model used for response
+    tokens_used?: number; // Token count for the response
+  };
+  images?: Array<{
+    id: string;
+    name: string;
+    url: string;
+    size: number;
+    type: string;
+    is_generated?: boolean; // Flag for AI-generated images
+    prompt_used?: string; // Prompt used to generate the image
+  }>;
 }
 
 serve(async (req) => {
@@ -64,7 +82,10 @@ serve(async (req) => {
       message_type, 
       content, 
       attachments = [], 
-      metadata = {} 
+      metadata = {},
+      parent_message_id,
+      conversation_context = {},
+      images = []
     }: SaveMessageRequest = await req.json()
 
     // Validate required fields
@@ -107,7 +128,17 @@ serve(async (req) => {
       )
     }
 
-    // Save the message
+    // Prepare enhanced metadata with conversation context
+    const enhancedMetadata = {
+      ...metadata,
+      ...(conversation_context && Object.keys(conversation_context).length > 0 && {
+        conversation_context
+      }),
+      ...(parent_message_id && { parent_message_id }),
+      ...(images.length > 0 && { images })
+    };
+
+    // Save the message first
     const { data: message, error: messageError } = await supabaseClient
       .from('chat_messages')
       .insert({
@@ -116,7 +147,7 @@ serve(async (req) => {
         message_type,
         content: content || null,
         attachments,
-        metadata
+        metadata: enhancedMetadata
       })
       .select()
       .single()
@@ -130,6 +161,121 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
       )
+    }
+
+    if (messageError) {
+      console.error('Error saving message:', messageError)
+      return new Response(
+        JSON.stringify({ error: 'Failed to save message' }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      )
+    }
+
+    // Process and store images if provided
+    const savedAttachments = [];
+    
+    // Handle images from the images array (enhanced format)
+    if (images && images.length > 0) {
+      for (const image of images) {
+        try {
+          // For AI-generated images, we might already have a URL
+          // For user uploads, we need to ensure they're stored properly
+          let finalUrl = image.url;
+          let storagePath = image.url;
+
+          // If this is a blob URL or temporary URL, we need to handle it differently
+          if (image.url.startsWith('blob:') || image.url.startsWith('data:')) {
+            // This would require additional handling for blob/data URLs
+            // For now, we'll log this case and continue
+            console.log('Warning: Blob/Data URL detected, may need additional processing:', image.url);
+          }
+
+          // Create attachment record
+          const { data: attachmentData, error: attachmentError } = await supabaseClient
+            .from('chat_attachments')
+            .insert({
+              message_id: message.id,
+              user_id: user.id,
+              file_name: image.name,
+              file_type: image.type,
+              file_size: image.size,
+              storage_path: storagePath,
+              attachment_type: 'image',
+              metadata: {
+                is_generated: image.is_generated || false,
+                prompt_used: image.prompt_used || null,
+                original_id: image.id
+              }
+            })
+            .select()
+            .single();
+
+          if (attachmentError) {
+            console.error('Error saving image attachment:', attachmentError);
+            // Continue with other images even if one fails
+            continue;
+          }
+
+          savedAttachments.push({
+            id: attachmentData.id,
+            file_name: attachmentData.file_name,
+            file_type: attachmentData.file_type,
+            file_size: attachmentData.file_size,
+            storage_path: attachmentData.storage_path,
+            attachment_type: attachmentData.attachment_type,
+            metadata: attachmentData.metadata
+          });
+
+        } catch (imageError) {
+          console.error('Error processing image:', imageError);
+          // Continue with other images
+          continue;
+        }
+      }
+    }
+
+    // Handle traditional attachments array
+    if (attachments && attachments.length > 0) {
+      for (const attachment of attachments) {
+        try {
+          const { data: attachmentData, error: attachmentError } = await supabaseClient
+            .from('chat_attachments')
+            .insert({
+              message_id: message.id,
+              user_id: user.id,
+              file_name: attachment.filename || 'unknown',
+              file_type: attachment.metadata?.type || 'unknown',
+              file_size: attachment.size || 0,
+              storage_path: attachment.url,
+              attachment_type: attachment.type,
+              metadata: attachment.metadata || {}
+            })
+            .select()
+            .single();
+
+          if (attachmentError) {
+            console.error('Error saving attachment:', attachmentError);
+            continue;
+          }
+
+          savedAttachments.push({
+            id: attachmentData.id,
+            file_name: attachmentData.file_name,
+            file_type: attachmentData.file_type,
+            file_size: attachmentData.file_size,
+            storage_path: attachmentData.storage_path,
+            attachment_type: attachmentData.attachment_type,
+            metadata: attachmentData.metadata
+          });
+
+        } catch (attachmentError) {
+          console.error('Error processing attachment:', attachmentError);
+          continue;
+        }
+      }
     }
 
     // Update session's updated_at timestamp
@@ -146,7 +292,7 @@ serve(async (req) => {
           session_id: message.session_id,
           message_type: message.message_type,
           content: message.content,
-          attachments: message.attachments,
+          attachments: savedAttachments, // Return the saved attachments with proper IDs
           metadata: message.metadata,
           created_at: message.created_at,
           updated_at: message.updated_at

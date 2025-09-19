@@ -15,15 +15,10 @@ const Enhance = () => {
   const { currentSessionId, updateSession, sessions, createSession, setCurrentSession } = useChat();
 
   // Use consolidated hooks
-  const {
-    isGenerating,
-    currentPrompt,
-    generatedImage,
-    generateImage,
-    clearGenerated,
-    setGeneratedImage,
-    setCurrentPrompt
-  } = useImageGeneration('enhance');
+  const { isGenerating, currentPrompt, generatedImage, generateImage, clearGenerated, setGeneratedImage, setCurrentPrompt } = useImageGeneration('enhance', (imageUrl, prompt) => {
+    // This callback will be called when image generation completes
+    console.log('🎨 Image generation completed:', imageUrl);
+  });
 
   const { startNewSession } = useSmartSession('enhance', [
     () => uploadedImages.length > 0,
@@ -167,7 +162,7 @@ const Enhance = () => {
         uploadedImages: uploadedImages
       });
     }
-  }, [uploadedImages, currentSessionId, updateSession, stateRestored]);
+  }, [uploadedImages, currentSessionId, stateRestored]); // Remove updateSession from dependencies
 
   const handleNewChat = () => {
     startNewSession(() => {
@@ -189,13 +184,15 @@ const Enhance = () => {
               {/* Chat Interface */}
               <div className="flex-1">
                 <ChatInterface
-                  onGenerateImage={handleGenerateImage}
+                  onGenerateImage={generateImage}
                   showImageUpload={true}
                   showPrompts={false}
                   initialMessage="Upload an image and provide your own prompt to enhance it."
                   flowType="enhance"
                   uploadedImages={uploadedImages}
                   onImagesChange={setUploadedImages}
+                  generatedImage={generatedImage}
+                  currentPrompt={currentPrompt}
                 />
               </div>
             </div>
@@ -220,13 +217,15 @@ const Enhance = () => {
       {/* Mobile Layout */}
       <div className="md:hidden flex-1 min-h-0">
         <ChatInterface
-          onGenerateImage={handleGenerateImage}
+          onGenerateImage={generateImage}
           showImageUpload={true}
           showPrompts={false}
           initialMessage="Upload an image and provide your own prompt to enhance it."
           flowType="enhance"
           uploadedImages={uploadedImages}
           onImagesChange={setUploadedImages}
+          generatedImage={generatedImage}
+          currentPrompt={currentPrompt}
         />
       </div>
     </div>

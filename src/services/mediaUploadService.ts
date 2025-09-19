@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface UploadedMedia {
   id: string;
@@ -173,9 +173,142 @@ export class MediaUploadService {
   }
 
   /**
-   * Upload multiple files
+   * Upload file from blob URL (for AI-generated images)
    */
-  static async uploadFiles(
+  static async uploadFromBlobUrl(
+    blobUrl: string,
+    fileName: string,
+    user: any,
+    metadata?: { is_generated?: boolean; prompt_used?: string }
+  ): Promise<UploadedMedia> {
+    try {
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Fetch the blob data
+      const response = await fetch(blobUrl);
+      if (!response.ok) {
+        throw new Error('Failed to fetch blob data');
+      }
+
+      const blob = await response.blob();
+      const file = new File([blob], fileName, { type: blob.type });
+
+      // Validate file
+      const validation = this.validateFile(file);
+      if (!validation.isValid) {
+        throw new Error(validation.error);
+      }
+
+      // Initialize bucket
+      await this.initializeBucket();
+
+      // Generate unique file path
+      const filePath = this.generateFilePath(file, user.id);
+
+      // Upload file
+      const { data, error } = await supabase.storage
+        .from(this.BUCKET_NAME)
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      // Get public URL
+      const { data: publicUrlData } = supabase.storage
+        .from(this.BUCKET_NAME)
+        .getPublicUrl(filePath);
+
+      const uploadedMedia: UploadedMedia = {
+        id: data.path,
+        url: data.path,
+        publicUrl: publicUrlData.publicUrl,
+        fileName: file.name,
+        fileSize: file.size,
+        mimeType: file.type,
+        uploadedAt: new Date()
+      };
+
+      return uploadedMedia;
+
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Upload file from data URL (base64)
+   */
+  static async uploadFromDataUrl(
+    dataUrl: string,
+    fileName: string,
+    user: any,
+    metadata?: { is_generated?: boolean; prompt_used?: string }
+  ): Promise<UploadedMedia> {
+    try {
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Convert data URL to blob
+      const response = await fetch(dataUrl);
+      const blob = await response.blob();
+      const file = new File([blob], fileName, { type: blob.type });
+
+      // Validate file
+      const validation = this.validateFile(file);
+      if (!validation.isValid) {
+        throw new Error(validation.error);
+      }
+
+      // Initialize bucket
+      await this.initializeBucket();
+
+      // Generate unique file path
+      const filePath = this.generateFilePath(file, user.id);
+
+      // Upload file
+      const { data, error } = await supabase.storage
+        .from(this.BUCKET_NAME)
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      // Get public URL
+      const { data: publicUrlData } = supabase.storage
+        .from(this.BUCKET_NAME)
+        .getPublicUrl(filePath);
+
+      const uploadedMedia: UploadedMedia = {
+        id: data.path,
+        url: data.path,
+        publicUrl: publicUrlData.publicUrl,
+        fileName: file.name,
+        fileSize: file.size,
+        mimeType: file.type,
+        uploadedAt: new Date()
+      };
+
+      return uploadedMedia;
+
+    } catch (error) {
+      throw error;
+    }
+  }
+  /**
+    * Upload multiple files
+    */
+   static async uploadFiles(
     files: File[],
     user: any,
     onProgress?: (fileIndex: number, progress: UploadProgress) => void
