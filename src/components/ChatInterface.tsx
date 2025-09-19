@@ -769,80 +769,64 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
         <ScrollArea className="h-full minimal-scroll" ref={scrollAreaRef}>
           <div className="w-full px-4 py-6 pb-4 md:px-6 md:py-8 md:pb-32">
             <div className="max-w-3xl mx-auto space-y-6">
-            {messages.map((message, index) => (
-              <div
-                key={message.id}
-                className={`flex ${message.role === "user" ? "justify-end" : "justify-start"} animate-fade-in`}
-                style={{
-                  animationDelay: `${index * 0.05}s`,
-                  animationFillMode: 'both'
-                }}
-              >
-                <div className={`max-w-[80%] group`}>
-                  <div className={`${message.role === "user" ? "inline-block bg-muted px-4 py-2.5 rounded-2xl" : "mb-2 text-left"}`}>
-                    {/* Display images if present */}
-                    {message.images && message.images.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {message.images.map((img) => {
-                          // Debug logging for image rendering
-                          console.log("🖼️ Rendering images for message:", message.id, message.images);
-                          console.log("🔍 Message object:", JSON.stringify(message, null, 2));
-                          console.log("🎨 Rendering individual image:", JSON.stringify(img, null, 2));
-                          console.log("🔗 Image URL being used:", img.url);
-                          console.log("🔍 Image URL type:", typeof img.url);
-                          console.log("🔍 Image URL length:", img.url?.length);
-                          
-                          return (
+              {messages.map((message, index) => (
+                <div
+                  key={message.id}
+                  className={`flex ${message.role === "user" ? "justify-end" : "justify-start"} animate-fade-in`}
+                  style={{
+                    animationDelay: `${index * 0.05}s`,
+                    animationFillMode: 'both'
+                  }}
+                >
+                  <div className={`max-w-[80%] group`}>
+                    <div className={`${message.role === "user" ? "inline-block bg-muted px-4 py-2.5 rounded-2xl" : "mb-2 text-left"}`}>
+                      {/* Display images if present */}
+                      {message.images && message.images.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {message.images.map((img) => (
                             <div key={img.id} className="relative">
                               <img
                                 src={img.url}
                                 alt={img.alt || img.name || 'Image'}
-                                className="w-20 h-20 object-cover rounded-lg border border-border"
-                                onLoad={() => console.log("✅ Image loaded successfully:", img.url)}
-                                onError={(e) => {
-                                  console.error("❌ Image failed to load:", img.url);
-                                  console.error("❌ Error details:", e);
-                                  console.error("❌ Image element:", e.target);
-                                }}
+                                className="w-32 h-32 object-cover rounded-lg border border-border"
                               />
                             </div>
-                          );
-                        })}
+                          ))}
+                        </div>
+                      )}
+                      <div className="text-[15px] leading-relaxed font-normal text-foreground">
+                        {message.isGenerating ? (
+                          <>🎨 <span className="shimmer-text">Generating your image now...</span></>
+                        ) : (
+                          message.content
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Action buttons for AI messages */}
+                    {message.role === "assistant" && (
+                      <div className="flex items-center gap-1 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
+                          <Copy className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                        <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
+                          <ThumbsUp className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                        <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
+                          <ThumbsDown className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                        <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
+                          <Volume2 className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                        <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
+                          <Share className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                        <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
+                          <RotateCcw className="h-4 w-4 text-muted-foreground" />
+                        </button>
                       </div>
                     )}
-                    <div className="text-[15px] leading-relaxed font-normal text-foreground">
-                      {message.isGenerating ? (
-                        <>🎨 <span className="shimmer-text">Generating your image now...</span></>
-                      ) : (
-                        message.content
-                      )}
-                    </div>
                   </div>
-                  
-                  {/* Action buttons for AI messages */}
-                  {message.role === "assistant" && (
-                    <div className="flex items-center gap-1 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
-                        <Copy className="h-4 w-4 text-muted-foreground" />
-                      </button>
-                      <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
-                        <ThumbsUp className="h-4 w-4 text-muted-foreground" />
-                      </button>
-                      <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
-                        <ThumbsDown className="h-4 w-4 text-muted-foreground" />
-                      </button>
-                      <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
-                        <Volume2 className="h-4 w-4 text-muted-foreground" />
-                      </button>
-                      <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
-                        <Share className="h-4 w-4 text-muted-foreground" />
-                      </button>
-                      <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
-                        <RotateCcw className="h-4 w-4 text-muted-foreground" />
-                      </button>
-                    </div>
-                  )}
-                </div>
                 </div>
               ))}
               {/* Invisible element to scroll to */}
