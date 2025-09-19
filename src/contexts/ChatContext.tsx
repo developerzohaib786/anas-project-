@@ -157,7 +157,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const updateSession = useCallback(async (sessionId: string, updates: Partial<ChatSession>) => {
     try {
-      await ChatHistoryService.updateSession(sessionId, updates);
+      // Only call the API if we're updating the title
+      if (updates.title) {
+        await ChatHistoryService.updateSession(sessionId, updates.title);
+      }
+      
       setSessions(prev => 
         prev.map(session => 
           session.id === sessionId 
@@ -199,7 +203,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const renameSession = async (sessionId: string, newTitle: string): Promise<void> => {
     try {
-      await ChatHistoryService.updateSession(sessionId, { title: newTitle.trim() || 'Untitled Chat' });
+      await ChatHistoryService.updateSession(sessionId, newTitle.trim() || 'Untitled Chat');
       setSessions(prev => 
         prev.map(session => 
           session.id === sessionId 

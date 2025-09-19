@@ -111,55 +111,57 @@ export class ChatHistoryService {
   static async getSessions(user?: any): Promise<ChatSession[]> {
     if (!user) return [];
 
-    const { data, error } = await supabase
-      .from('chat_sessions')
-      .select(`
-        *,
-        chat_messages (
-          *,
-          chat_attachments (*)
-        )
-      `)
-      .eq('user_id', user.id)
-      .eq('is_archived', false)
-      .order('updated_at', { ascending: false });
+    try {
+      // Use the get-sessions API function which returns optimized session data
+      const response = await supabase.functions.invoke('get-sessions', {
+        body: {
+          page: 1,
+          limit: 50 // Get up to 50 sessions for the sidebar
+        }
+      });
 
-    if (error) throw error;
+      if (response.error) {
+        console.error('Error fetching sessions:', response.error);
+        throw new Error('Failed to fetch sessions');
+      }
 
-    return data.map(session => ({
-      id: session.id,
-      title: session.title,
-      messages: session.chat_messages?.map((msg: any) => ({
-        id: msg.id,
-        content: msg.content,
-        role: msg.role,
-        timestamp: new Date(msg.created_at),
-        images: msg.chat_attachments
-          ?.filter((att: any) => att.file_type.startsWith('image/'))
-          ?.map((att: any) => ({
-            id: att.id,
-            name: att.file_name,
-            url: att.storage_path,
-            size: att.file_size,
-            type: att.file_type,
-          })) || [],
-        videos: msg.chat_attachments
-          ?.filter((att: any) => att.file_type.startsWith('video/'))
-          ?.map((att: any) => ({
-            id: att.id,
-            name: att.file_name,
-            url: att.storage_path,
-            size: att.file_size,
-            type: att.file_type,
-          })) || [],
-        metadata: msg.metadata,
-      })) || [],
-      isCompleted: false,
-      createdAt: new Date(session.created_at),
-      updatedAt: new Date(session.updated_at),
-      session_type: session.session_type,
-      session_metadata: session.session_metadata,
-    }));
+      const { sessions } = response.data;
+
+      return sessions.map((session: any) => ({
+        id: session.id,
+        title: session.title,
+        messages: [], // Don't load messages for sidebar - they'll be loaded when session is opened
+        isCompleted: false,
+        createdAt: new Date(session.created_at),
+        updatedAt: new Date(session.updated_at),
+        session_type: session.session_type || 'chat',
+        session_metadata: session.session_metadata,
+      }));
+    } catch (error) {
+      console.error('Failed to fetch sessions via API, falling back to direct query:', error);
+      
+      // Fallback to direct database query if API fails
+      const { data, error: dbError } = await supabase
+        .from('chat_sessions')
+        .select('id, title, created_at, updated_at, session_type, session_metadata')
+        .eq('user_id', user.id)
+        .eq('is_archived', false)
+        .order('updated_at', { ascending: false })
+        .limit(50);
+
+      if (dbError) throw dbError;
+
+      return data.map(session => ({
+        id: session.id,
+        title: session.title,
+        messages: [], // Don't load messages for sidebar
+        isCompleted: false,
+        createdAt: new Date(session.created_at),
+        updatedAt: new Date(session.updated_at),
+        session_type: session.session_type || 'chat',
+        session_metadata: session.session_metadata,
+      }));
+    }
   }
 
   // Save a message to a session using the new save-message Edge function
@@ -401,15 +403,7 @@ export class ChatHistoryService {
     if (error) throw error;
   }
 
-  // Delete a session
-  static async deleteSession(sessionId: string): Promise<void> {
-    const { error } = await supabase
-      .from('chat_sessions')
-      .update({ is_archived: true })
-      .eq('id', sessionId);
 
-    if (error) throw error;
-  }
 
   // Get a specific session with all messages
   static async getSession(sessionId: string, user?: any): Promise<ChatSession | null> {
@@ -570,5 +564,104 @@ export class ChatHistoryService {
       return words.slice(0, 3).join(' ') + '...';
     }
     return `Chat ${new Date().toLocaleDateString()}`;
+  }
+
+  // Get all sessions with statistics using the new Edge function
+  static async getSessionsWithStats(page: number = 1, limit: number = 20): Promise<{
+    sessions: Array<{
+      id: string;
+      title: string;
+      created_at: string;
+      updated_at: string;
+      message_count: number;
+      last_message_at: string | null;
+      last_message_preview: string | null;
+    }>;
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> {
+    try {
+      // Build URL with query parameters
+      const url = `get-sessions?page=${encodeURIComponent(page.toString())}&limit=${encodeURIComponent(limit.toString())}`;
+      
+      const { data, error } = await supabase.functions.invoke(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (error) {
+        console.error('Error fetching sessions:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Failed to fetch sessions:', error);
+      throw error;
+    }
+  }
+
+  // Delete a session using the new Edge function
+  static async deleteSession(sessionId: string): Promise<void> {
+    try {
+      // Build URL with session_id parameter
+      const url = `delete-session?session_id=${encodeURIComponent(sessionId)}`;
+      
+      const { data, error } = await supabase.functions.invoke(url, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (error) {
+        console.error('Error deleting session:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Failed to delete session:', error);
+      throw error;
+    }
+  }
+
+  // Update/rename a session using the new Edge function
+  static async updateSession(sessionId: string, title: string): Promise<{
+    success: boolean;
+    message: string;
+    session: {
+      id: string;
+      title: string;
+      created_at: string;
+      updated_at: string;
+    };
+  }> {
+    try {
+      const { data, error } = await supabase.functions.invoke('update-session', {
+        body: {
+          session_id: sessionId,
+          title: title,
+        }
+      });
+
+      if (error) {
+        console.error('Error updating session:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Failed to update session:', error);
+      throw error;
+    }
   }
 }
