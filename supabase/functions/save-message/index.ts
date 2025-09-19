@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
@@ -6,35 +6,75 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Cloudinary configuration
+const CLOUDINARY_CLOUD_NAME = Deno.env.get('CLOUDINARY_CLOUD_NAME')
+const CLOUDINARY_API_KEY = Deno.env.get('CLOUDINARY_API_KEY')
+const CLOUDINARY_API_SECRET = Deno.env.get('CLOUDINARY_API_SECRET')
+
+// Helper function to upload to Cloudinary
+async function uploadToCloudinary(
+  imageUrl: string,
+  fileName: string
+): Promise<{ success: boolean; url?: string; path?: string; fileSize?: number; error?: string }> {
+  try {
+    // Fetch the image data
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.statusText}`);
+    }
+    
+    const blob = await response.blob();
+    
+    // Create form data for Cloudinary upload
+    const formData = new FormData();
+    formData.append('file', blob, fileName);
+    formData.append('upload_preset', 'unsigned_preset'); // You need to set this in Cloudinary
+    formData.append('cloud_name', CLOUDINARY_CLOUD_NAME!);
+    
+    // Upload to Cloudinary
+    const uploadResponse = await fetch(
+      `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+      {
+        method: 'POST',
+        body: formData,
+      }
+    );
+    
+    if (!uploadResponse.ok) {
+      throw new Error(`Cloudinary upload failed: ${uploadResponse.statusText}`);
+    }
+    
+    const result = await uploadResponse.json();
+    
+    return {
+      success: true,
+      url: result.secure_url,
+      path: result.public_id,
+      fileSize: result.bytes
+    };
+  } catch (error) {
+    console.error('Cloudinary upload error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
 interface SaveMessageRequest {
-  session_id: string;
-  message_type: 'user' | 'assistant' | 'system';
-  content?: string;
-  attachments?: Array<{
-    type: 'image' | 'video' | 'audio' | 'file';
-    url: string;
-    filename?: string;
-    size?: number;
-    metadata?: Record<string, any>;
-  }>;
-  metadata?: Record<string, any>;
-  // New fields for enhanced prompt-response tracking
-  parent_message_id?: string; // Link responses to their prompts
-  conversation_context?: {
-    prompt?: string; // Original user prompt for AI responses
-    intent?: string; // AI intent (generate, ask, etc.)
-    image_prompt?: string; // Generated image prompt
-    model_used?: string; // AI model used for response
-    tokens_used?: number; // Token count for the response
-  };
+  sessionId?: string;
+  session_id?: string;  // Support snake_case from frontend
+  messageType?: 'user' | 'assistant';
+  message_type?: 'user' | 'assistant';  // Support snake_case from frontend
+  content: string;
+  attachments?: any[];
+  metadata?: any;
   images?: Array<{
     id: string;
-    name: string;
     url: string;
-    size: number;
-    type: string;
-    is_generated?: boolean; // Flag for AI-generated images
-    prompt_used?: string; // Prompt used to generate the image
+    name: string;
+    is_generated?: boolean;
+    size?: number;
   }>;
 }
 
@@ -46,7 +86,7 @@ serve(async (req) => {
 
   try {
     // Create Supabase client
-    const supabaseClient = createClient(
+    const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
@@ -56,19 +96,14 @@ serve(async (req) => {
       }
     )
 
-    // Get the user from the JWT token
+    // Get the user
     const {
       data: { user },
-      error: userError,
-    } = await supabaseClient.auth.getUser()
+    } = await supabase.auth.getUser()
 
-    if (userError || !user) {
-      console.error('Authentication failed:', userError)
+    if (!user) {
       return new Response(
-        JSON.stringify({ 
-          error: 'Unauthorized',
-          details: userError?.message || 'No user found'
-        }),
+        JSON.stringify({ error: 'Unauthorized' }),
         {
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -77,21 +112,16 @@ serve(async (req) => {
     }
 
     // Parse request body
-    const { 
-      session_id, 
-      message_type, 
-      content, 
-      attachments = [], 
-      metadata = {},
-      parent_message_id,
-      conversation_context = {},
-      images = []
-    }: SaveMessageRequest = await req.json()
+    const { sessionId, session_id, messageType, message_type, content, attachments, metadata, images }: SaveMessageRequest = await req.json()
+
+    // Normalize field names - support both camelCase and snake_case
+    const normalizedSessionId = sessionId || session_id;
+    const normalizedMessageType = messageType || message_type;
 
     // Validate required fields
-    if (!session_id || !message_type) {
+    if (!normalizedSessionId || !normalizedMessageType) {
       return new Response(
-        JSON.stringify({ error: 'session_id and message_type are required' }),
+        JSON.stringify({ error: 'Missing required fields: sessionId/session_id, messageType/message_type' }),
         {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -99,10 +129,10 @@ serve(async (req) => {
       )
     }
 
-    // Validate message_type
-    if (!['user', 'assistant', 'system'].includes(message_type)) {
+    // Validate message type
+    if (!['user', 'assistant'].includes(normalizedMessageType)) {
       return new Response(
-        JSON.stringify({ error: 'Invalid message_type. Must be one of: user, assistant, system' }),
+        JSON.stringify({ error: 'Invalid message type. Must be "user" or "assistant"' }),
         {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -110,11 +140,11 @@ serve(async (req) => {
       )
     }
 
-    // Verify that the session belongs to the user
-    const { data: session, error: sessionError } = await supabaseClient
+    // Verify session belongs to user
+    const { data: session, error: sessionError } = await supabase
       .from('chat_sessions')
       .select('id, user_id')
-      .eq('id', session_id)
+      .eq('id', normalizedSessionId)
       .eq('user_id', user.id)
       .single()
 
@@ -128,186 +158,240 @@ serve(async (req) => {
       )
     }
 
-    // Prepare enhanced metadata with conversation context
-    const enhancedMetadata = {
-      ...metadata,
-      ...(conversation_context && Object.keys(conversation_context).length > 0 && {
-        conversation_context
-      }),
-      ...(parent_message_id && { parent_message_id }),
-      ...(images.length > 0 && { images })
-    };
-
-    // Save the message first
-    const { data: message, error: messageError } = await supabaseClient
-      .from('chat_messages')
-      .insert({
-        session_id,
-        user_id: user.id,
-        message_type,
-        content: content || null,
-        attachments,
-        metadata: enhancedMetadata
-      })
-      .select()
-      .single()
-
-    if (messageError) {
-      console.error('Error saving message:', messageError)
-      return new Response(
-        JSON.stringify({ error: 'Failed to save message' }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      )
-    }
-
-    if (messageError) {
-      console.error('Error saving message:', messageError)
-      return new Response(
-        JSON.stringify({ error: 'Failed to save message' }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      )
-    }
-
-    // Process and store images if provided
-    const savedAttachments = [];
+    // Process images BEFORE saving the message to ensure Cloudinary URLs are stored
+    let processedImages = images || [];
     
-    // Handle images from the images array (enhanced format)
     if (images && images.length > 0) {
-      for (const image of images) {
+      console.log('Processing images before saving message:', images.length);
+      
+      processedImages = await Promise.all(images.map(async (image) => {
         try {
-          // For AI-generated images, we might already have a URL
-          // For user uploads, we need to ensure they're stored properly
           let finalUrl = image.url;
-          let storagePath = image.url;
+          let cloudinaryPath = '';
+          let fileSize = image.size || 0;
 
-          // If this is a blob URL or temporary URL, we need to handle it differently
+          // Check if it's a blob URL or data URL that needs uploading
           if (image.url.startsWith('blob:') || image.url.startsWith('data:')) {
-            // This would require additional handling for blob/data URLs
-            // For now, we'll log this case and continue
-            console.log('Warning: Blob/Data URL detected, may need additional processing:', image.url);
+            console.log('Uploading image to Cloudinary:', image.name);
+            const uploadResult = await uploadToCloudinary(image.url, image.name);
+            
+            if (uploadResult.success) {
+              finalUrl = uploadResult.url!;
+              cloudinaryPath = uploadResult.path || '';
+              fileSize = uploadResult.fileSize || 0;
+              console.log('Image uploaded successfully:', finalUrl);
+            } else {
+              console.error('Failed to upload image:', uploadResult.error);
+              // Use original URL as fallback
+            }
+          } else if (!image.url.includes('cloudinary.com')) {
+            // If it's not a Cloudinary URL, try to re-upload it
+            console.log('Re-uploading non-Cloudinary image:', image.name);
+            try {
+              const uploadResult = await uploadToCloudinary(image.url, image.name);
+              if (uploadResult.success) {
+                finalUrl = uploadResult.url!;
+                cloudinaryPath = uploadResult.path || '';
+                fileSize = uploadResult.fileSize || 0;
+                console.log('Image re-uploaded successfully:', finalUrl);
+              }
+            } catch (reuploadError) {
+              console.error('Failed to re-upload image:', reuploadError);
+              // Continue with original URL
+            }
           }
 
-          // Create attachment record
-          const { data: attachmentData, error: attachmentError } = await supabaseClient
+          return {
+            ...image,
+            url: finalUrl,
+            cloudinaryPath,
+            fileSize
+          };
+        } catch (error) {
+          console.error('Error processing image:', error);
+          return image; // Return original image if processing fails
+        }
+      }));
+    }
+
+    // Prepare enhanced metadata with processed images and conversation context
+    const enhancedMetadata = {
+      ...metadata,
+      ...(processedImages.length > 0 && { images: processedImages }),
+      // Always include the message content for easy access
+      message_content: content,
+      // Include message type for context
+      message_type: normalizedMessageType,
+      // For user messages, store as prompt
+      ...(normalizedMessageType === 'user' && { prompt: content }),
+      // For assistant messages, store as response
+      ...(normalizedMessageType === 'assistant' && { response: content }),
+      // Add timestamp for tracking
+      saved_at: new Date().toISOString()
+    };
+
+    // Save the message with processed Cloudinary URLs
+    const { data: savedMessage, error: messageError } = await supabase
+      .from('chat_messages')
+      .insert({
+        session_id: normalizedSessionId,
+        message_type: normalizedMessageType,
+        content,
+        metadata: enhancedMetadata,
+        user_id: user.id
+      })
+      .select()
+      .single();
+
+    if (messageError) {
+      console.error('Error saving message:', messageError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Failed to save message',
+          details: messageError.message 
+        }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    console.log('Message saved successfully with processed images:', savedMessage.id);
+
+    // Create chat_attachments records for processed images
+    const savedAttachments = [];
+    
+    if (processedImages && processedImages.length > 0) {
+      console.log('Creating attachment records for processed images');
+      
+      for (const image of processedImages) {
+        try {
+          const { data: attachmentData, error: attachmentError } = await supabase
             .from('chat_attachments')
             .insert({
-              message_id: message.id,
-              user_id: user.id,
+              message_id: savedMessage.id,
               file_name: image.name,
-              file_type: image.type,
-              file_size: image.size,
-              storage_path: storagePath,
-              attachment_type: 'image',
-              metadata: {
-                is_generated: image.is_generated || false,
-                prompt_used: image.prompt_used || null,
-                original_id: image.id
-              }
+              file_url: image.url,
+              file_type: 'image',
+              file_size: image.fileSize || image.size || 0,
+              storage_path: image.cloudinaryPath || image.url,
+              user_id: user.id
             })
             .select()
             .single();
 
           if (attachmentError) {
-            console.error('Error saving image attachment:', attachmentError);
-            // Continue with other images even if one fails
-            continue;
+            console.error('Error creating attachment record:', attachmentError);
+          } else {
+            savedAttachments.push(attachmentData);
           }
-
-          savedAttachments.push({
-            id: attachmentData.id,
-            file_name: attachmentData.file_name,
-            file_type: attachmentData.file_type,
-            file_size: attachmentData.file_size,
-            storage_path: attachmentData.storage_path,
-            attachment_type: attachmentData.attachment_type,
-            metadata: attachmentData.metadata
-          });
-
-        } catch (imageError) {
-          console.error('Error processing image:', imageError);
-          // Continue with other images
-          continue;
+        } catch (error) {
+          console.error('Error processing attachment:', error);
         }
       }
     }
 
-    // Handle traditional attachments array
+    // Process traditional attachments array (videos, etc.)
     if (attachments && attachments.length > 0) {
       for (const attachment of attachments) {
         try {
-          const { data: attachmentData, error: attachmentError } = await supabaseClient
+          let finalUrl = attachment.url;
+          let storagePath = attachment.url;
+          let actualFileSize = attachment.size || 0;
+
+          // If this is a blob URL or data URL, upload to Cloudinary
+          if (attachment.url.startsWith('blob:') || attachment.url.startsWith('data:')) {
+            console.log('Uploading attachment to Cloudinary:', attachment.name);
+            const uploadResult = await uploadToCloudinary(attachment.url, attachment.name);
+            
+            if (uploadResult.success) {
+              finalUrl = uploadResult.url!;
+              storagePath = uploadResult.path || '';
+              actualFileSize = uploadResult.fileSize || 0;
+              console.log('Attachment uploaded successfully:', finalUrl);
+            } else {
+              console.error('Failed to upload attachment:', uploadResult.error);
+            }
+          } else if (!attachment.url.includes('cloudinary.com')) {
+            // If it's not already a Cloudinary URL, try to upload it
+            console.log('Re-uploading existing attachment to Cloudinary:', attachment.name);
+            try {
+              const uploadResult = await uploadToCloudinary(attachment.url, attachment.name);
+              if (uploadResult.success) {
+                finalUrl = uploadResult.url!;
+                storagePath = uploadResult.path || '';
+                actualFileSize = uploadResult.fileSize || 0;
+                console.log('Attachment re-uploaded successfully:', finalUrl);
+              }
+            } catch (reuploadError) {
+              console.error('Failed to re-upload attachment:', reuploadError);
+            }
+          }
+
+          // Create attachment record
+          const { data: attachmentData, error: attachmentError } = await supabase
             .from('chat_attachments')
             .insert({
-              message_id: message.id,
-              user_id: user.id,
-              file_name: attachment.filename || 'unknown',
-              file_type: attachment.metadata?.type || 'unknown',
-              file_size: attachment.size || 0,
-              storage_path: attachment.url,
-              attachment_type: attachment.type,
-              metadata: attachment.metadata || {}
+              message_id: savedMessage.id,
+              file_name: attachment.name,
+              file_url: finalUrl,
+              file_type: attachment.type || 'unknown',
+              file_size: actualFileSize,
+              storage_path: storagePath,
+              user_id: user.id
             })
             .select()
             .single();
 
           if (attachmentError) {
-            console.error('Error saving attachment:', attachmentError);
-            continue;
+            console.error('Error creating attachment record:', attachmentError);
+          } else {
+            savedAttachments.push(attachmentData);
           }
-
-          savedAttachments.push({
-            id: attachmentData.id,
-            file_name: attachmentData.file_name,
-            file_type: attachmentData.file_type,
-            file_size: attachmentData.file_size,
-            storage_path: attachmentData.storage_path,
-            attachment_type: attachmentData.attachment_type,
-            metadata: attachmentData.metadata
-          });
-
-        } catch (attachmentError) {
-          console.error('Error processing attachment:', attachmentError);
-          continue;
+        } catch (error) {
+          console.error('Error processing attachment:', error);
         }
       }
     }
 
     // Update session's updated_at timestamp
-    await supabaseClient
+    await supabase
       .from('chat_sessions')
       .update({ updated_at: new Date().toISOString() })
-      .eq('id', session_id)
+      .eq('id', normalizedSessionId);
 
+    // Return success response with processed images containing Cloudinary URLs
     return new Response(
       JSON.stringify({
         success: true,
         message: {
-          id: message.id,
-          session_id: message.session_id,
-          message_type: message.message_type,
-          content: message.content,
-          attachments: savedAttachments, // Return the saved attachments with proper IDs
-          metadata: message.metadata,
-          created_at: message.created_at,
-          updated_at: message.updated_at
+          id: savedMessage.id,
+          session_id: savedMessage.session_id,
+          message_type: savedMessage.message_type,
+          content: savedMessage.content,
+          attachments: savedAttachments,
+          metadata: {
+            ...savedMessage.metadata,
+            images: processedImages // Include processed images with Cloudinary URLs
+          },
+          created_at: savedMessage.created_at,
+          updated_at: savedMessage.updated_at
         }
       }),
       {
-        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     )
-
   } catch (error) {
     console.error('Error in save-message function:', error)
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ 
+        success: false, 
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChat } from "@/contexts/ChatContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useParams } from "react-router-dom";
 import { PromptLibrary } from "@/components/PromptLibrary";
 import { ImageUpload } from "@/components/ImageUpload";
@@ -57,6 +58,7 @@ interface ChatInterfaceProps {
 export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload = false, initialMessage, showPrompts = true, flowType, uploadedImages: externalUploadedImages, onImagesChange: externalOnImagesChange, generatedImage, currentPrompt }: ChatInterfaceProps) {
   const { sessionId: urlSessionId } = useParams();
   const { sessions, currentSessionId, createSession, updateSession, setCurrentSession, getCurrentSession, saveMessage, loadSessionMessages } = useChat();
+  const { user } = useAuth();
   
   // Get session ID from URL params or use current session
   const sessionId = urlSessionId || currentSessionId;
@@ -410,6 +412,7 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
           for (const img of uploadedImages) {
             try {
               let cloudinaryUrl = img.url;
+              let cloudinaryPath = '';
               
               // If it's a blob URL or data URL, upload it to Cloudinary storage
               if (img.url.startsWith('blob:') || img.url.startsWith('data:')) {
@@ -420,17 +423,22 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
                   : await CloudinaryBrowserService.uploadFromDataUrl(img.url, img.name, user);
                 
                 cloudinaryUrl = uploadedMedia.publicUrl;
+                cloudinaryPath = uploadedMedia.publicId || '';
                 console.log("✅ Image uploaded to Cloudinary:", cloudinaryUrl);
               }
               
-              processedImages.push({
+              const processedImage = {
                 id: img.id,
                 name: img.name,
                 url: cloudinaryUrl,
                 size: img.size,
                 type: img.type,
                 is_generated: false, // User uploaded images are not AI generated
-              });
+                cloudinaryPath: cloudinaryPath,
+                fileSize: img.size || 0
+              };
+              
+              processedImages.push(processedImage);
             } catch (uploadError) {
               console.error("❌ Failed to upload image:", uploadError);
               // Use original URL as fallback
@@ -441,8 +449,15 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
                 size: img.size,
                 type: img.type,
                 is_generated: false,
+                cloudinaryPath: '',
+                fileSize: img.size || 0
               });
             }
+          }
+          
+          // Update the uploaded images state with Cloudinary URLs
+          if (processedImages.length > 0) {
+            setUploadedImages(processedImages);
           }
         }
         

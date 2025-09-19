@@ -94,7 +94,14 @@ export class CloudinaryBrowserService {
 
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('upload_preset', 'unsigned_preset'); // You'll need to create this in Cloudinary
+    
+    // Check if upload preset is configured
+    const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+    if (!uploadPreset || uploadPreset === 'unsigned_preset' || uploadPreset === 'ml_default') {
+      throw new Error('Cloudinary upload preset not configured. Please create an upload preset in your Cloudinary dashboard and update VITE_CLOUDINARY_UPLOAD_PRESET in your .env file.');
+    }
+    
+    formData.append('upload_preset', uploadPreset);
     
     if (options.folder) {
       formData.append('folder', options.folder);
