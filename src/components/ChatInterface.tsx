@@ -10,7 +10,7 @@ import { ImageUpload } from "@/components/ImageUpload";
 import { handleError, withErrorHandling, ApiError, NetworkError } from "@/lib/error-handler";
 import { useSmartSession } from "@/hooks/useSmartSession";
 import { toast } from "sonner";
-import { MediaUploadService } from '@/services/mediaUploadService';
+import CloudinaryBrowserService from '@/services/cloudinaryBrowserService';
 
 import { Message, UploadedImage, FlowType } from "@/types/common";
 
@@ -404,29 +404,29 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
       try {
         console.log("💾 Saving user message to session:", sessionId);
         
-        // Process and upload images to Supabase storage first
+        // Process and upload images to Cloudinary storage first
         const processedImages = [];
         if (uploadedImages.length > 0) {
           for (const img of uploadedImages) {
             try {
-              let supabaseUrl = img.url;
+              let cloudinaryUrl = img.url;
               
-              // If it's a blob URL, upload it to Supabase storage
+              // If it's a blob URL or data URL, upload it to Cloudinary storage
               if (img.url.startsWith('blob:') || img.url.startsWith('data:')) {
-                console.log("📤 Uploading image to Supabase storage:", img.name);
+                console.log("📤 Uploading image to Cloudinary storage:", img.name);
                 
                 const uploadedMedia = img.url.startsWith('blob:') 
-                  ? await MediaUploadService.uploadFromBlobUrl(img.url, img.name, user)
-                  : await MediaUploadService.uploadFromDataUrl(img.url, img.name, user);
+                  ? await CloudinaryBrowserService.uploadFromBlobUrl(img.url, img.name, user)
+                  : await CloudinaryBrowserService.uploadFromDataUrl(img.url, img.name, user);
                 
-                supabaseUrl = uploadedMedia.publicUrl;
-                console.log("✅ Image uploaded to Supabase:", supabaseUrl);
+                cloudinaryUrl = uploadedMedia.publicUrl;
+                console.log("✅ Image uploaded to Cloudinary:", cloudinaryUrl);
               }
               
               processedImages.push({
                 id: img.id,
                 name: img.name,
-                url: supabaseUrl,
+                url: cloudinaryUrl,
                 size: img.size,
                 type: img.type,
                 is_generated: false, // User uploaded images are not AI generated
@@ -648,21 +648,21 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
             if (generatedImage) {
               let finalImageUrl = generatedImage;
               
-              // If the generated image is a data URL, upload it to Supabase storage
+              // If the generated image is a data URL, upload it to Cloudinary storage
               if (generatedImage.startsWith('data:') && user) {
                 try {
-                  console.log("📤 Uploading generated image to Supabase storage");
+                  console.log("📤 Uploading generated image to Cloudinary storage");
                   const fileName = `generated-image-${Date.now()}.png`;
-                  const uploadedMedia = await MediaUploadService.uploadFromDataUrl(
+                  const uploadedMedia = await CloudinaryBrowserService.uploadFromDataUrl(
                     generatedImage, 
                     fileName, 
                     user,
                     { is_generated: true, prompt_used: imagePrompt || currentInput }
                   );
                   finalImageUrl = uploadedMedia.publicUrl;
-                  console.log("✅ Generated image uploaded to Supabase:", finalImageUrl);
+                  console.log("✅ Generated image uploaded to Cloudinary:", finalImageUrl);
                 } catch (uploadError) {
-                  console.error("❌ Failed to upload generated image to Supabase:", uploadError);
+                  console.error("❌ Failed to upload generated image to Cloudinary:", uploadError);
                   // Continue with data URL as fallback
                 }
               }

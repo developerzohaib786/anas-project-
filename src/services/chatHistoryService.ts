@@ -1,4 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
+import CloudinaryService from '@/services/cloudinaryService';
+import VideoUploadService from '@/services/videoUploadService';
 
 export interface ChatMessage {
   id: string;
@@ -384,29 +386,32 @@ export class ChatHistoryService {
     };
   }
 
-  // Upload file to Supabase storage
+  // Upload file to Cloudinary storage
   static async uploadFile(
     file: File,
     type: 'image' | 'video',
     userId: string
   ): Promise<{ url: string; path: string }> {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-
-    const { data, error } = await supabase.storage
-      .from('chat-attachments')
-      .upload(fileName, file);
-
-    if (error) throw error;
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('chat-attachments')
-      .getPublicUrl(fileName);
-
-    return {
-      url: publicUrl,
-      path: data.path,
-    };
+    try {
+      if (type === 'image') {
+        const uploadedImage = await CloudinaryService.uploadFile(file, { id: userId } as any);
+        return {
+          url: uploadedImage.publicUrl,
+          path: uploadedImage.id,
+        };
+      } else if (type === 'video') {
+        const uploadedVideo = await VideoUploadService.uploadVideo(file, { id: userId } as any);
+        return {
+          url: uploadedVideo.publicUrl,
+          path: uploadedVideo.id,
+        };
+      } else {
+        throw new Error(`Unsupported file type: ${type}`);
+      }
+    } catch (error) {
+      console.error(`Error uploading ${type} to Cloudinary:`, error);
+      throw error;
+    }
   }
 
   // Update session title
