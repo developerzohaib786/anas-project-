@@ -12,7 +12,7 @@ const Enhance = () => {
   const [hasAutoPrompted, setHasAutoPrompted] = useState(false);
   const [isInGenerationFlow, setIsInGenerationFlow] = useState(false);
   const [stateRestored, setStateRestored] = useState(false);
-  const { currentSessionId, updateSession, sessions } = useChat();
+  const { currentSessionId, updateSession, sessions, createSession, setCurrentSession } = useChat();
 
   // Use consolidated hooks
   const {
@@ -39,6 +39,15 @@ const Enhance = () => {
       setIsInGenerationFlow(false);
     }
   }, [generateImage, uploadedImages]);
+
+  // Create session if none exists
+  useEffect(() => {
+    if (!currentSessionId) {
+      console.log("🆕 No current session, creating new one for Enhance");
+      const newSessionId = createSession("Enhance Photo");
+      setCurrentSession(newSessionId);
+    }
+  }, [currentSessionId, createSession, setCurrentSession]);
 
   // Restore complete state when session changes - only once per session
   useEffect(() => {

@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { ChatHistoryService, ChatSession, ChatMessage } from '@/services/chatHistoryService';
+import { useAuth } from './AuthContext';
 
 // Re-export types for backward compatibility
 export type { ChatSession, ChatMessage } from '@/services/chatHistoryService';
@@ -30,39 +31,41 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
 
-  // Load user and sessions on mount
+  // Load user and sessions when user changes
   useEffect(() => {
-    const initializeChat = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setCurrentUserId(user.id);
-        await loadSessions();
-      }
-    };
-
-    initializeChat();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        setCurrentUserId(session.user.id);
-        await loadSessions();
-      } else {
-        setCurrentUserId(null);
-        setSessions([]);
-        setCurrentSessionId(null);
-      }
+    console.log('🔄 ChatContext useEffect triggered', { 
+      hasUser: !!user, 
+      userId: user?.id, 
+      currentUserId,
+      sessionsCount: sessions.length 
     });
-
-    return () => subscription.unsubscribe();
-  }, []);
+    
+    if (user) {
+      // Only load sessions if we don't have them yet or if user ID changed
+      if (!currentUserId || currentUserId !== user.id) {
+        console.log('📡 Loading sessions for user:', user.id);
+        setCurrentUserId(user.id);
+        loadSessions();
+      } else {
+        console.log('✅ Sessions already loaded for user:', user.id);
+      }
+    } else {
+      setCurrentUserId(null);
+      setSessions([]);
+      setCurrentSessionId(null);
+    }
+  }, [user?.id]); // Only depend on user.id, not the entire user object
 
   // Load sessions from Supabase
   const loadSessions = async () => {
+    // Prevent multiple simultaneous loads
+    if (isLoading) return;
+    
     try {
       setIsLoading(true);
-      const loadedSessions = await ChatHistoryService.getSessions();
+      const loadedSessions = await ChatHistoryService.getSessions(user);
       setSessions(loadedSessions);
     } catch (error) {
       console.error('Failed to load sessions:', error);
@@ -74,7 +77,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   // Create a new session
   const createSession = async (title?: string): Promise<string> => {
     try {
-      const newSession = await ChatHistoryService.createSession(title);
+      const newSession = await ChatHistoryService.createSession(title, user);
       setSessions(prev => [newSession, ...prev]);
       setCurrentSessionId(newSession.id);
       return newSession.id;
@@ -106,7 +109,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     message: Omit<ChatMessage, 'id' | 'timestamp'>
   ): Promise<ChatMessage> => {
     try {
-      const savedMessage = await ChatHistoryService.saveMessage(sessionId, message);
+      const savedMessage = await ChatHistoryService.saveMessage(sessionId, message, user);
       
       // Update local state
       setSessions(prev => 
@@ -152,7 +155,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateSession = async (sessionId: string, updates: Partial<ChatSession>) => {
+  const updateSession = useCallback(async (sessionId: string, updates: Partial<ChatSession>) => {
     try {
       await ChatHistoryService.updateSession(sessionId, updates);
       setSessions(prev => 
@@ -173,7 +176,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         )
       );
     }
-  };
+  }, []);
 
   const deleteSession = async (sessionId: string): Promise<void> => {
     try {
@@ -217,13 +220,13 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const setCurrentSession = (sessionId: string | null) => {
+  const setCurrentSession = useCallback((sessionId: string | null) => {
     setCurrentSessionId(sessionId);
-  };
+  }, []);
 
-  const getCurrentSession = (): ChatSession | null => {
+  const getCurrentSession = useCallback((): ChatSession | null => {
     return sessions.find(session => session.id === currentSessionId) || null;
-  };
+  }, [sessions, currentSessionId]);
 
   const clearAllSessions = async () => {
     try {
@@ -241,7 +244,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   // Load messages for a specific session
   const loadSessionMessages = async (sessionId: string): Promise<ChatMessage[]> => {
     try {
-      return await ChatHistoryService.getSessionMessages(sessionId);
+      return await ChatHistoryService.getSessionMessages(sessionId, user);
     } catch (error) {
       console.error('Failed to load session messages:', error);
       return [];

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './AuthContext';
 
 
 export interface Profile {
@@ -56,37 +57,18 @@ export function BrandProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [brandProfile, setBrandProfile] = useState<BrandProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
-  // Load session-bound data
+  // Load session-bound data when user changes
   useEffect(() => {
-    let mounted = true;
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      if (!mounted) return;
-      if (session?.user) {
-        loadData(session.user.id, session.user.email ?? undefined);
-      } else {
-        setProfile(null);
-        setBrandProfile(null);
-        setLoading(false);
-      }
-    });
-
-    supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
-      const user = data.session?.user;
-      if (user) {
-        loadData(user.id, user.email ?? undefined);
-      } else {
-        setLoading(false);
-      }
-    });
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, []);
+    if (user) {
+      loadData(user.id, user.email ?? undefined);
+    } else {
+      setProfile(null);
+      setBrandProfile(null);
+      setLoading(false);
+    }
+  }, [user]);
 
   const loadData = async (userId: string, email?: string) => {
     setLoading(true);
@@ -143,9 +125,8 @@ export function BrandProvider({ children }: { children: ReactNode }) {
   };
 
   const uploadAvatar = async (file: File): Promise<string | null> => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const userId = sessionData.session?.user.id;
-    if (!userId) return null;
+    if (!profile?.id) return null;
+    const userId = profile.id;
     const ext = file.name.split('.').pop();
     const path = `${userId}/${Date.now()}.${ext}`;
     const { error: upErr } = await supabase.storage.from('user-avatars').upload(path, file);
@@ -156,9 +137,8 @@ export function BrandProvider({ children }: { children: ReactNode }) {
   };
 
   const createBrandProfile = async (data: Omit<BrandProfile, 'id' | 'user_id' | 'is_active'>) => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const userId = sessionData.session?.user.id;
-    if (!userId) return;
+    if (!profile?.id) return;
+    const userId = profile.id;
     const { data: created, error } = await supabase
       .from('brand_profiles')
       .insert({ ...data, user_id: userId, is_active: true })
@@ -189,9 +169,10 @@ export function BrandProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshData = async () => {
-    const { data } = await supabase.auth.getSession();
-    const user = data.session?.user;
-    if (user) await loadData(user.id, user.email ?? undefined);
+    // Use the current user from state instead of making another auth call
+    if (profile?.id) {
+      await loadData(profile.id, profile.email);
+    }
   };
 
   return (

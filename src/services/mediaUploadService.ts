@@ -101,15 +101,15 @@ export class MediaUploadService {
   }
 
   /**
-   * Upload a single file to Supabase storage
+   * Upload a file to Supabase storage
    */
   static async uploadFile(
     file: File,
+    user: any,
     onProgress?: (progress: UploadProgress) => void
   ): Promise<UploadedMedia> {
     try {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
+      // Check if user is provided
       if (!user) {
         throw new Error('User not authenticated');
       }
@@ -177,6 +177,7 @@ export class MediaUploadService {
    */
   static async uploadFiles(
     files: File[],
+    user: any,
     onProgress?: (fileIndex: number, progress: UploadProgress) => void
   ): Promise<UploadedMedia[]> {
     const uploadedFiles: UploadedMedia[] = [];
@@ -185,6 +186,7 @@ export class MediaUploadService {
       try {
         const uploadedFile = await this.uploadFile(
           files[i],
+          user,
           (progress) => onProgress?.(i, progress)
         );
         uploadedFiles.push(uploadedFile);

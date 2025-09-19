@@ -42,14 +42,7 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const currentPath = location.pathname;
   
-  const { sessions, deleteSession, createSession, renameSession, currentSessionId, setCurrentSession, loadSessions, isLoading } = useChat();
-
-  // Load sessions from Supabase on component mount
-  useEffect(() => {
-    if (loadSessions) {
-      loadSessions();
-    }
-  }, [loadSessions]);
+  const { sessions, deleteSession, createSession, renameSession, currentSessionId, setCurrentSession, isLoading } = useChat();
 
   // Determine which page a session should open on based on its title
   const getSessionRoute = (session: any) => {
@@ -169,6 +162,11 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
+                      onClick={async () => {
+                        // Create a new session when navigating to main pages
+                        const newSessionId = await createSession(item.title);
+                        setCurrentSession(newSessionId);
+                      }}
                       className={({ isActive }) =>
                         `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 font-medium text-sm mb-1 md:justify-start justify-center w-full text-left ${
                           isActive
@@ -215,7 +213,7 @@ export function AppSidebar() {
                     <SidebarMenuItem key={session.id}>
                       <div className="group relative">
                         <NavLink
-                          to={getSessionRoute(session)}
+                          to={`${getSessionRoute(session)}?session=${session.id}`}
                           onClick={() => setCurrentSession(session.id)}
                           className={() => {
                             const isCurrentSession = currentSessionId === session.id;

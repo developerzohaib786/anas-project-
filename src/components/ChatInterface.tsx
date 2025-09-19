@@ -52,8 +52,11 @@ interface ChatInterfaceProps {
  * @returns {JSX.Element} The ChatInterface component
  */
 export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload = false, initialMessage, showPrompts = true, flowType, uploadedImages: externalUploadedImages, onImagesChange: externalOnImagesChange }: ChatInterfaceProps) {
-  const { sessionId } = useParams();
+  const { sessionId: urlSessionId } = useParams();
   const { sessions, currentSessionId, createSession, updateSession, setCurrentSession, getCurrentSession, saveMessage, loadSessionMessages } = useChat();
+  
+  // Get session ID from URL params or use current session
+  const sessionId = urlSessionId || currentSessionId;
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -78,7 +81,7 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
     if (initialPrompt && !inputValue) {
       setInputValue(initialPrompt);
     }
-  }, [initialPrompt, inputValue]);
+  }, [initialPrompt]); // Removed inputValue dependency to prevent re-runs
 
   // Removed auto-prompt functionality - user will provide their own prompts
 
@@ -123,16 +126,26 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
     }
   };
 
+  // Track if we've already loaded messages for this session
+  const [loadedSessions, setLoadedSessions] = useState<Set<string>>(new Set());
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+
   // Load session data when sessionId changes
   useEffect(() => {
     const loadSessionData = async () => {
-      if (sessionId) {
+      console.log("🔄 ChatInterface loading session data:", { sessionId, currentSessionId, sessionsCount: sessions.length });
+      
+      if (sessionId && !loadedSessions.has(sessionId) && !isLoadingMessages) {
         const session = sessions.find(s => s.id === sessionId);
+        console.log("📋 Found session:", session ? "Yes" : "No", session?.title);
+        
         if (session) {
           setCurrentSession(sessionId);
           
           // Load messages from Supabase if session exists but has no local messages
           if (session.messages.length === 0) {
+            console.log("📡 Loading messages from Supabase for session:", sessionId);
+            setIsLoadingMessages(true);
             try {
               const supabaseMessages = await loadSessionMessages(sessionId);
               if (supabaseMessages.length > 0) {
@@ -170,12 +183,17 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
                   timestamp: new Date(),
                 },
               ]);
+            } finally {
+              setIsLoadingMessages(false);
             }
           } else {
             // Use existing session messages
             setMessages(session.messages);
           }
           
+          // Mark this session as loaded
+          setLoadedSessions(prev => new Set([...prev, sessionId]));
+        
           // Restore session state to prevent loss on navigation
           if (session.uploadedImages && !externalUploadedImages) {
             setLocalUploadedImages(session.uploadedImages);
@@ -216,25 +234,30 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
     };
 
     loadSessionData();
-  }, [sessionId, sessions, currentSessionId, createSession, setCurrentSession, externalUploadedImages, loadSessionMessages]);
+  }, [sessionId, sessions]); // Removed loadedSessions and isLoadingMessages to prevent unnecessary re-runs
 
   // Save messages to session when they change
   useEffect(() => {
-    if (currentSessionId && messages.length > 1) {
-      updateSession(currentSessionId, { 
+    if (sessionId && messages.length > 1) {
+      console.log("💾 Updating session with messages:", { sessionId, messageCount: messages.length });
+      updateSession(sessionId, { 
         messages,
         title: generateSessionTitle(messages)
       });
     }
-  }, [messages, currentSessionId, updateSession]);
+  }, [messages, sessionId, updateSession]);
 
-  // Save input state to prevent loss on navigation
+  // Save input state to prevent loss on navigation (debounced to prevent flickering)
   useEffect(() => {
     if (currentSessionId) {
-      updateSession(currentSessionId, {
-        inputValue: inputValue,
-        uploadedImages: externalUploadedImages || localUploadedImages
-      });
+      const timeoutId = setTimeout(() => {
+        updateSession(currentSessionId, {
+          inputValue: inputValue,
+          uploadedImages: externalUploadedImages || localUploadedImages
+        });
+      }, 500); // Debounce for 500ms
+
+      return () => clearTimeout(timeoutId);
     }
   }, [inputValue, localUploadedImages, externalUploadedImages, currentSessionId, updateSession]);
 
@@ -345,13 +368,17 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
     setMessages(newMessages);
     
     // Save user message to Supabase if we have a session
-    if (currentSessionId && saveMessage) {
+    if (sessionId && saveMessage) {
       try {
-        await saveMessage(currentSessionId, userMessage);
+        console.log("💾 Saving user message to session:", sessionId);
+        await saveMessage(sessionId, userMessage);
+        console.log("✅ User message saved successfully");
       } catch (error) {
-        console.error("Failed to save user message:", error);
+        console.error("❌ Failed to save user message:", error);
         // Continue with the flow even if saving fails
       }
+    } else {
+      console.log("⚠️ No session ID or saveMessage function available", { sessionId, hasSaveMessage: !!saveMessage });
     }
     
     const currentInput = inputValue;
@@ -462,13 +489,17 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
       setMessages((prev) => [...prev, assistantMessage]);
 
       // Save assistant message to Supabase if we have a session
-      if (currentSessionId && saveMessage) {
+      if (sessionId && saveMessage) {
         try {
-          await saveMessage(currentSessionId, assistantMessage);
+          console.log("💾 Saving assistant message to session:", sessionId);
+          await saveMessage(sessionId, assistantMessage);
+          console.log("✅ Assistant message saved successfully");
         } catch (error) {
-          console.error("Failed to save assistant message:", error);
+          console.error("❌ Failed to save assistant message:", error);
           // Continue with the flow even if saving fails
         }
+      } else {
+        console.log("⚠️ No session ID or saveMessage function available for assistant message", { sessionId, hasSaveMessage: !!saveMessage });
       }
 
       // Check if we should generate an image

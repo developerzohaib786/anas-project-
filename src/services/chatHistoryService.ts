@@ -54,8 +54,7 @@ export interface ChatSession {
 
 export class ChatHistoryService {
   // Create a new chat session
-  static async createSession(title: string = 'New Chat'): Promise<ChatSession> {
-    const { data: { user } } = await supabase.auth.getUser();
+  static async createSession(title: string = 'New Chat', user?: any): Promise<ChatSession> {
     if (!user) throw new Error('User not authenticated');
 
     const { data, error } = await supabase
@@ -80,8 +79,7 @@ export class ChatHistoryService {
   }
 
   // Get all chat sessions for the current user
-  static async getSessions(): Promise<ChatSession[]> {
-    const { data: { user } } = await supabase.auth.getUser();
+  static async getSessions(user?: any): Promise<ChatSession[]> {
     if (!user) return [];
 
     const { data, error } = await supabase
@@ -136,9 +134,9 @@ export class ChatHistoryService {
   // Save a message to a session
   static async saveMessage(
     sessionId: string,
-    message: Omit<ChatMessage, 'id' | 'timestamp'>
+    message: Omit<ChatMessage, 'id' | 'timestamp'>,
+    user?: any
   ): Promise<ChatMessage> {
-    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not authenticated');
 
     // Insert the message
@@ -284,8 +282,7 @@ export class ChatHistoryService {
   }
 
   // Get a specific session with all messages
-  static async getSession(sessionId: string): Promise<ChatSession | null> {
-    const { data: { user } } = await supabase.auth.getUser();
+  static async getSession(sessionId: string, user?: any): Promise<ChatSession | null> {
     if (!user) return null;
 
     const { data, error } = await supabase
@@ -338,8 +335,7 @@ export class ChatHistoryService {
   }
 
   // Load messages for a specific session
-  static async getSessionMessages(sessionId: string): Promise<ChatMessage[]> {
-    const { data: { user } } = await supabase.auth.getUser();
+  static async getSessionMessages(sessionId: string, user?: any): Promise<ChatMessage[]> {
     if (!user) return [];
 
     const { data, error } = await supabase
