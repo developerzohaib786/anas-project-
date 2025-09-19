@@ -871,8 +871,8 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
              </div>
            )}
 
-           {/* Uploaded Images Preview - Read-only display */}
-           {uploadedImages.length > 0 && (
+           {/* Uploaded Images Preview - Read-only display (only show when not using ImageUpload component) */}
+           {uploadedImages.length > 0 && !showImageUpload && (
              <div className="mb-4">
                <div className="flex flex-wrap gap-2 mb-3">
                  {uploadedImages.map((image) => (
