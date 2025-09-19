@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { ChatInterface } from "@/components/ChatInterface";
 import { ImagePreview } from "@/components/ImagePreview";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
@@ -156,13 +156,16 @@ const Enhance = () => {
   }, [currentSessionId, stateRestored, uploadedImages.length, generatedImage, setGeneratedImage, setCurrentPrompt]);
 
   // Save uploaded images to session when they change - but only after state is restored
+  const lastUploadedImagesRef = useRef<string>('');
   useEffect(() => {
-    if (currentSessionId && uploadedImages.length >= 0 && stateRestored) {
+    const currentImagesKey = JSON.stringify(uploadedImages);
+    if (currentSessionId && uploadedImages.length >= 0 && stateRestored && lastUploadedImagesRef.current !== currentImagesKey) {
+      lastUploadedImagesRef.current = currentImagesKey;
       updateSession(currentSessionId, {
         uploadedImages: uploadedImages
       });
     }
-  }, [uploadedImages, currentSessionId, stateRestored]); // Remove updateSession from dependencies
+  }, [uploadedImages, currentSessionId, stateRestored, updateSession]); // Include updateSession but use ref to prevent loops
 
   const handleNewChat = () => {
     startNewSession(() => {
