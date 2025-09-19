@@ -156,29 +156,25 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
               console.log("📨 Received messages from API:", supabaseMessages.length, supabaseMessages);
               if (supabaseMessages.length > 0) {
                 // Convert Supabase messages to local Message format
-                const convertedMessages = supabaseMessages.map(msg => ({
-                  id: msg.id,
-                  content: msg.content,
-                  role: msg.role, // Use role field from database (user/assistant)
-                  timestamp: new Date(msg.created_at || msg.timestamp),
-                  images: msg.chat_attachments?.filter(att => att.file_type?.startsWith('image/'))?.map(att => ({
-                    id: att.id,
-                    name: att.file_name,
-                    url: att.storage_path, // Use storage_path from API response
-                    size: att.file_size,
-                    type: att.file_type,
-                  })) || [],
-                  videos: msg.chat_attachments?.filter(att => att.file_type?.startsWith('video/'))?.map(att => ({
-                    id: att.id,
-                    name: att.file_name,
-                    url: att.storage_path,
-                    size: att.file_size,
-                    type: att.file_type,
-                  })) || [],
-                  isGenerating: false,
-                  metadata: msg.metadata || {}
-                }));
+                const convertedMessages = supabaseMessages.map(msg => {
+                  console.log("🔍 Processing message:", msg.id, "Images:", msg.images, "Metadata:", msg.metadata);
+                  return {
+                    id: msg.id,
+                    content: msg.content,
+                    role: msg.role, // Use role field from database (user/assistant)
+                    timestamp: new Date(msg.created_at || msg.timestamp),
+                    images: msg.images || [], // Use already processed images from chatHistoryService
+                    videos: msg.videos || [], // Use already processed videos from chatHistoryService
+                    isGenerating: false,
+                    metadata: msg.metadata || {}
+                  };
+                });
                 console.log("🔄 Converted messages:", convertedMessages);
+                // Log messages with images specifically
+                const messagesWithImages = convertedMessages.filter(msg => msg.images && msg.images.length > 0);
+                console.log("🖼️ Messages with images:", messagesWithImages.length, messagesWithImages);
+                console.log("📋 All messages loaded:", convertedMessages);
+                console.log("🔍 Messages with images:", convertedMessages.filter(m => m.images && m.images.length > 0));
                 setMessages(convertedMessages);
               } else {
                 // Fresh session - reset to default message
@@ -397,11 +393,9 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
       images: uploadedImages.length > 0 ? [...uploadedImages] : undefined,
     };
 
-    // Add user message immediately
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
+    // Save user message to Supabase if we have a session and process images first
+    let finalUserMessage = userMessage;
     
-    // Save user message to Supabase if we have a session
     if (sessionId && saveMessage) {
       try {
         console.log("💾 Saving user message to session:", sessionId);
@@ -462,12 +456,12 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
         }
         
         // Enhanced user message with processed image information
-        const enhancedUserMessage = {
+        finalUserMessage = {
           ...userMessage,
           images: processedImages.length > 0 ? processedImages : undefined
         };
         
-        await saveMessage(sessionId, enhancedUserMessage);
+        await saveMessage(sessionId, finalUserMessage);
         console.log("✅ User message saved successfully");
       } catch (error) {
         console.error("❌ Failed to save user message:", error);
@@ -476,6 +470,10 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
     } else {
       console.log("⚠️ No session ID or saveMessage function available", { sessionId, hasSaveMessage: !!saveMessage });
     }
+    
+    // Add user message to UI with processed images
+    const newMessages = [...messages, finalUserMessage];
+    setMessages(newMessages);
     
     const currentInput = inputValue;
     const currentImages = [...uploadedImages];
@@ -785,15 +783,31 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
                     {/* Display images if present */}
                     {message.images && message.images.length > 0 && (
                       <div className="flex flex-wrap gap-2 mb-3">
-                        {message.images.map((img) => (
-                          <div key={img.id} className="relative">
-                            <img
-                              src={img.url}
-                              alt={img.name}
-                              className="w-20 h-20 object-cover rounded-lg border border-border"
-                            />
-                          </div>
-                        ))}
+                        {message.images.map((img) => {
+                          // Debug logging for image rendering
+                          console.log("🖼️ Rendering images for message:", message.id, message.images);
+                          console.log("🔍 Message object:", JSON.stringify(message, null, 2));
+                          console.log("🎨 Rendering individual image:", JSON.stringify(img, null, 2));
+                          console.log("🔗 Image URL being used:", img.url);
+                          console.log("🔍 Image URL type:", typeof img.url);
+                          console.log("🔍 Image URL length:", img.url?.length);
+                          
+                          return (
+                            <div key={img.id} className="relative">
+                              <img
+                                src={img.url}
+                                alt={img.alt || img.name || 'Image'}
+                                className="w-20 h-20 object-cover rounded-lg border border-border"
+                                onLoad={() => console.log("✅ Image loaded successfully:", img.url)}
+                                onError={(e) => {
+                                  console.error("❌ Image failed to load:", img.url);
+                                  console.error("❌ Error details:", e);
+                                  console.error("❌ Image element:", e.target);
+                                }}
+                              />
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                     <div className="text-[15px] leading-relaxed font-normal text-foreground">
@@ -829,10 +843,10 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
                     </div>
                   )}
                 </div>
-              </div>
-            ))}
-            {/* Invisible element to scroll to */}
-            <div ref={messagesEndRef} />
+                </div>
+              ))}
+              {/* Invisible element to scroll to */}
+              <div ref={messagesEndRef} />
             </div>
           </div>
         </ScrollArea>

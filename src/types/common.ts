@@ -10,9 +10,13 @@
  */
 export interface UploadedImage {
   id: string;
-  file: File;
+  file?: File; // Make file optional for loaded images from database
   url: string;
   name: string;
+  size?: number;
+  type?: string;
+  is_generated?: boolean;
+  prompt_used?: string | null;
 }
 
 /**

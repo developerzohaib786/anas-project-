@@ -370,9 +370,17 @@ export function ChatProvider({ children }: { children: ReactNode }) {
                   content: msg.content,
                   role: msg.role, // Use role field from database (user/assistant)
                   timestamp: new Date(msg.created_at || msg.timestamp),
-                  images: msg.chat_attachments?.filter(att => att.file_type?.startsWith('image/'))?.map(att => ({
+                  // Extract images from metadata.images array (new structure)
+                  images: msg.metadata?.images?.map(img => ({
+                    id: img.id,
+                    url: img.url,
+                    name: img.name || 'image',
+                    alt: img.name || 'image'
+                  })) || 
+                  // Fallback to chat_attachments for backward compatibility
+                  msg.chat_attachments?.filter(att => att.file_type?.startsWith('image/'))?.map(att => ({
                     id: att.id,
-                    url: att.storage_path, // Use storage_path from API response
+                    url: att.storage_path,
                     name: att.file_name || 'image'
                   })) || [],
                   videos: msg.chat_attachments?.filter(att => att.file_type?.startsWith('video/'))?.map(att => ({
