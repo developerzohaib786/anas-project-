@@ -463,13 +463,16 @@ const Video = () => {
   }, [movementDescription, sfxDescription, videoSize, currentSessionId, isInGenerationFlow]); // Remove updateSession from dependencies
 
   // Save uploaded images to session when they change
+  const lastUploadedImagesRef = useRef<string>('');
   useEffect(() => {
-    if (currentSessionId && uploadedImages.length > 0 && !isRestoringFromSession.current) {
+    const currentImagesKey = JSON.stringify(uploadedImages);
+    if (currentSessionId && uploadedImages.length > 0 && !isRestoringFromSession.current && lastUploadedImagesRef.current !== currentImagesKey) {
+      lastUploadedImagesRef.current = currentImagesKey;
       updateSession(currentSessionId, {
         uploadedImages: uploadedImages
       });
     }
-  }, [uploadedImages, currentSessionId]); // Remove updateSession from dependencies
+  }, [uploadedImages, currentSessionId, updateSession]); // Include updateSession but use ref to prevent loops
 
   const handleNewChat = () => {
     // Clear localStorage backup for old session

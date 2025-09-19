@@ -157,12 +157,12 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
                 const convertedMessages = supabaseMessages.map(msg => ({
                   id: msg.id,
                   content: msg.content,
-                  role: msg.role,
+                  role: msg.role, // Use role field from database (user/assistant)
                   timestamp: new Date(msg.created_at || msg.timestamp),
                   images: msg.chat_attachments?.filter(att => att.file_type?.startsWith('image/'))?.map(att => ({
                     id: att.id,
                     name: att.file_name,
-                    url: att.storage_path, // This will be converted to public URL by the API
+                    url: att.storage_path, // Use storage_path from API response
                     size: att.file_size,
                     type: att.file_type,
                   })) || [],
@@ -258,34 +258,40 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
     if (sessionId && messages.length > 1) {
       console.log("💾 Updating session with messages:", { sessionId, messageCount: messages.length });
       
-      // Only update title if this is a new session (no existing title or default title)
-      const currentSession = sessions.find(s => s.id === sessionId);
-      const shouldUpdateTitle = !currentSession?.title || 
-                               currentSession.title === 'New Chat' || 
-                               currentSession.title.startsWith('Chat ');
-      
+      // Get current session data without relying on sessions state to prevent loops
       const updates: any = { messages };
-      if (shouldUpdateTitle) {
+      
+      // Only generate title for sessions without a meaningful title
+      // We'll let the backend handle title generation to avoid dependency issues
+      const firstUserMessage = messages.find(m => m.role === 'user')?.content;
+      if (firstUserMessage && firstUserMessage.length > 0) {
         updates.title = generateSessionTitle(messages);
       }
       
       updateSession(sessionId, updates);
     }
-  }, [messages, sessionId, sessions]); // Add sessions to dependencies to check current title
+  }, [messages, sessionId]); // Remove sessions to prevent infinite loop
 
   // Save input state to prevent loss on navigation (debounced to prevent flickering)
   useEffect(() => {
-    if (currentSessionId) {
+    if (currentSessionId && (inputValue.trim().length > 0 || (externalUploadedImages || localUploadedImages).length > 0)) {
       const timeoutId = setTimeout(() => {
-        updateSession(currentSessionId, {
-          inputValue: inputValue,
-          uploadedImages: externalUploadedImages || localUploadedImages
-        });
-      }, 500); // Debounce for 500ms
+        // Only update if there's meaningful content to save
+        const currentSession = sessions.find(s => s.id === currentSessionId);
+        const hasChanges = currentSession?.inputValue !== inputValue || 
+                          JSON.stringify(currentSession?.uploadedImages || []) !== JSON.stringify(externalUploadedImages || localUploadedImages);
+        
+        if (hasChanges) {
+          updateSession(currentSessionId, {
+            inputValue: inputValue,
+            uploadedImages: externalUploadedImages || localUploadedImages
+          });
+        }
+      }, 1000); // Increase debounce to 1 second to reduce API calls
 
       return () => clearTimeout(timeoutId);
     }
-  }, [inputValue, localUploadedImages, externalUploadedImages, currentSessionId]); // Remove updateSession from dependencies
+  }, [inputValue, localUploadedImages, externalUploadedImages, currentSessionId]); // Remove sessions to prevent infinite loop
 
   const generateSessionTitle = (msgs: Message[]): string => {
     const userMessage = msgs.find(m => m.role === "user");

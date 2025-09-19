@@ -61,7 +61,14 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       }
 
       const data = await response.json();
-      setSessions(data.sessions || []);
+      // Transform API sessions to include empty messages array for proper loading detection
+      const sessionsWithMessages = (data.sessions || []).map((session: any) => ({
+        ...session,
+        messages: [], // Initialize with empty array so setCurrentSession knows to load messages
+        updatedAt: new Date(session.updated_at),
+        createdAt: new Date(session.created_at)
+      }));
+      setSessions(sessionsWithMessages);
     } catch (error) {
       console.error('Error loading sessions:', error);
       setSessions([]); // Set empty array on error instead of using local fallback
@@ -361,11 +368,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
               ? { ...s, messages: messages.map(msg => ({
                   id: msg.id,
                   content: msg.content,
-                  role: msg.message_type, // Use message_type from database
+                  role: msg.role, // Use role field from database (user/assistant)
                   timestamp: new Date(msg.created_at || msg.timestamp),
                   images: msg.chat_attachments?.filter(att => att.file_type?.startsWith('image/'))?.map(att => ({
                     id: att.id,
-                    url: att.file_url,
+                    url: att.storage_path, // Use storage_path from API response
                     name: att.file_name || 'image'
                   })) || [],
                   videos: msg.chat_attachments?.filter(att => att.file_type?.startsWith('video/'))?.map(att => ({
