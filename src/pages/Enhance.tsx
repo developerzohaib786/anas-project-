@@ -66,8 +66,8 @@ const Enhance = () => {
         if (session.uploadedImages && session.uploadedImages.length > 0) {
           setUploadedImages(session.uploadedImages);
           setHasAutoPrompted(true); // If images were uploaded before, we've already prompted
-        } else {
-          setUploadedImages([]);
+        } else if (uploadedImages.length === 0) {
+          // Only clear images if there are no current uploaded images
           setHasAutoPrompted(false);
         }
         

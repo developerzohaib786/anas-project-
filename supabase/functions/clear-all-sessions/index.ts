@@ -42,7 +42,7 @@ serve(async (req) => {
 
     // Delete all messages for the user first
     const { error: messagesError } = await supabaseClient
-      .from('messages')
+      .from('chat_messages')
       .delete()
       .eq('user_id', user.id)
 

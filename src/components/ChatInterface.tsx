@@ -815,7 +815,7 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
         <div className="w-full px-4 py-3 md:px-6 md:py-4">
           <div className="max-w-3xl mx-auto">
             {/* Route Guide - Minimal and Modern */}
-            <div className="mb-4 transition-all duration-300" style={{ height: messages.length <= 1 && !inputValue.trim() && (uploadedImages.length === 0 || showImageUpload) ? 'auto' : '0', overflow: 'hidden' }}>
+            <div className="mb-4 transition-all duration-300" style={{ height: (messages.length <= 1 || uploadedImages.length > 0) && (uploadedImages.length === 0 || showImageUpload || uploadedImages.length > 0) ? 'auto' : '0', overflow: 'hidden' }}>
               {/* Simple image upload for Enhance page - no extra UI */}
               {showImageUpload && (
                 <div className="mb-3">
@@ -829,7 +829,7 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
               )}
               
               {/* Chat flow image upload */}
-              {!showImageUpload && messages.length <= 1 && !inputValue.trim() && uploadedImages.length === 0 && (
+              {!showImageUpload && (messages.length <= 1 || uploadedImages.length > 0) && (
                 <div className="mb-3">
                   <ImageUpload
                     images={uploadedImages}
@@ -843,8 +843,8 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
 
            {/* Example Prompts - Flexible Fill */}
            {showPrompts && (
-             <div className="mb-3 transition-all duration-300" style={{ height: messages.length <= 1 && !inputValue.trim() && uploadedImages.length === 0 ? 'auto' : '0', overflow: 'hidden' }}>
-               {messages.length <= 1 && !inputValue.trim() && uploadedImages.length === 0 && (
+             <div className="mb-3 transition-all duration-300" style={{ height: messages.length <= 1 && uploadedImages.length === 0 ? 'auto' : '0', overflow: 'hidden' }}>
+               {messages.length <= 1 && uploadedImages.length === 0 && (
                  <div className="animate-fade-in">
                    <div className="flex items-center gap-3 w-full">
                      {/* 3 Example Prompts - Flexible sizing */}
