@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { validateFiles, validateFileContent, generateSecureFileName } from "@/lib/file-validation";
 import { handleError } from "@/lib/error-handler";
 import { toast } from "sonner";
+import { convertMultipleHeicFiles, isHeicFile } from "@/utils/heic-converter";
 
 import { UploadedImage } from "@/types/common";
 
@@ -50,86 +51,111 @@ const ImageUpload = memo(function ImageUpload({ images, onImagesChange, maxImage
     const fileArray = Array.from(files);
     console.log('📁 Files to process:', fileArray.map(f => ({ name: f.name, type: f.type, size: f.size })));
     
-    // Validate files first
-    const validation = validateFiles(fileArray, {
-      maxFiles: maxImages - images.length,
-      maxSize: 10 * 1024 * 1024, // 10MB
-      allowedTypes: [
-        'image/jpeg', 
-        'image/jpg', 
-        'image/png', 
-        'image/webp', 
-        'image/gif',
-        'image/heic',
-        'image/heif',
-        'image/avif',
-        'image/tiff',
-        'image/tif',
-        'image/bmp',
-        'image/svg+xml'
-      ]
-    });
-
-    console.log('🔍 Validation result:', validation);
-
-    if (!validation.isValid) {
-      console.error('❌ Validation failed:', validation.error);
-      toast.error(validation.error || 'Invalid file selection');
-      return;
-    }
-
-    // Show warnings if any
-    if (validation.warnings) {
-      validation.warnings.forEach(warning => {
-        console.warn('⚠️ Validation warning:', warning);
-        toast.warning(warning);
+    // Check for HEIC files and show conversion notice
+    const heicFiles = fileArray.filter(isHeicFile);
+    if (heicFiles.length > 0) {
+      toast.info(`Converting ${heicFiles.length} HEIC file(s) to JPEG...`, {
+        description: 'This may take a moment for large files.'
       });
     }
 
-    const remainingSlots = maxImages - images.length;
-    const filesToAdd = fileArray.slice(0, remainingSlots);
-    console.log('✅ Files to add:', filesToAdd.length, 'remaining slots:', remainingSlots);
+    try {
+      // Convert HEIC files to JPEG first
+      console.log('🔄 Converting HEIC files if any...');
+      const convertedFiles = await convertMultipleHeicFiles(fileArray, 0.8);
+      console.log('✅ File conversion complete:', convertedFiles.map(f => ({ name: f.name, type: f.type, size: f.size })));
 
-    // Process files with enhanced security
-    const newImages: UploadedImage[] = [];
-    
-    for (const file of filesToAdd) {
-      try {
-        console.log('🔄 Processing file:', file.name);
-        // Validate file content
-        const contentValidation = await validateFileContent(file);
-        console.log('🔍 Content validation for', file.name, ':', contentValidation);
-        
-        if (!contentValidation.isValid) {
-          console.error('❌ Content validation failed for', file.name, ':', contentValidation.error);
-          toast.error(`${file.name}: ${contentValidation.error}`);
-          continue;
-        }
+      // Validate converted files
+      const validation = validateFiles(convertedFiles, {
+        maxFiles: maxImages - images.length,
+        maxSize: 10 * 1024 * 1024, // 10MB
+        allowedTypes: [
+          'image/jpeg', 
+          'image/jpg', 
+          'image/png', 
+          'image/webp', 
+          'image/gif',
+          'image/heic',
+          'image/heif',
+          'image/avif',
+          'image/tiff',
+          'image/tif',
+          'image/bmp',
+          'image/svg+xml'
+        ]
+      });
 
-        // Create secure file reference
-        const newImage: UploadedImage = {
-          id: `${Date.now()}-${Math.random()}`,
-          file,
-          url: URL.createObjectURL(file),
-          name: file.name
-        };
+      console.log('🔍 Validation result:', validation);
 
-        console.log('✅ Created image object:', newImage);
-        newImages.push(newImage);
-      } catch (error) {
-        console.error('💥 Error processing file', file.name, ':', error);
-        handleError(error, 'File Upload');
+      if (!validation.isValid) {
+        console.error('❌ Validation failed:', validation.error);
+        toast.error(validation.error || 'Invalid file selection');
+        return;
       }
-    }
 
-    console.log('📤 Final images to add:', newImages.length);
-    if (newImages.length > 0) {
-      const updatedImages = [...images, ...newImages];
-      console.log('🔄 Calling onImagesChange with:', updatedImages);
-      onImagesChange(updatedImages);
-      toast.success(`Added ${newImages.length} image(s)`);
-    } else {
-      console.warn('⚠️ No images were successfully processed');
+      // Show warnings if any
+      if (validation.warnings) {
+        validation.warnings.forEach(warning => {
+          console.warn('⚠️ Validation warning:', warning);
+          toast.warning(warning);
+        });
+      }
+
+      const remainingSlots = maxImages - images.length;
+      const filesToAdd = convertedFiles.slice(0, remainingSlots);
+      console.log('✅ Files to add:', filesToAdd.length, 'remaining slots:', remainingSlots);
+
+      // Process files with enhanced security
+      const newImages: UploadedImage[] = [];
+      
+      for (const file of filesToAdd) {
+        try {
+          console.log('🔄 Processing file:', file.name);
+          // Validate file content
+          const contentValidation = await validateFileContent(file);
+          console.log('🔍 Content validation for', file.name, ':', contentValidation);
+          
+          if (!contentValidation.isValid) {
+            console.error('❌ Content validation failed for', file.name, ':', contentValidation.error);
+            toast.error(`${file.name}: ${contentValidation.error}`);
+            continue;
+          }
+
+          // Create secure file reference
+          const newImage: UploadedImage = {
+            id: `${Date.now()}-${Math.random()}`,
+            file,
+            url: URL.createObjectURL(file),
+            name: file.name
+          };
+
+          console.log('✅ Created image object:', newImage);
+          newImages.push(newImage);
+        } catch (error) {
+          console.error('💥 Error processing file', file.name, ':', error);
+          handleError(error, 'File Upload');
+        }
+      }
+
+      console.log('📤 Final images to add:', newImages.length);
+      if (newImages.length > 0) {
+        const updatedImages = [...images, ...newImages];
+        console.log('🔄 Calling onImagesChange with:', updatedImages);
+        onImagesChange(updatedImages);
+        
+        // Show success message with conversion info
+        const convertedCount = heicFiles.length;
+        const successMessage = convertedCount > 0 
+          ? `Added ${newImages.length} image(s) (${convertedCount} converted from HEIC)`
+          : `Added ${newImages.length} image(s)`;
+        toast.success(successMessage);
+      } else {
+        console.warn('⚠️ No images were successfully processed');
+      }
+    } catch (error) {
+      console.error('💥 Error during file processing:', error);
+      toast.error('Failed to process images. Please try again.');
+      handleError(error, 'File Processing');
     }
   }, [images, maxImages, onImagesChange]);
 

@@ -51,10 +51,13 @@ export function validateFile(file: File, options: FileValidationOptions = {}): V
   const fileExtension = getFileExtension(file.name);
   const isAcceptableByExtension = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic', 'heif', 'avif', 'tiff', 'tif', 'bmp', 'svg'].includes(fileExtension);
   
-  if (!opts.allowedTypes.includes(file.type) && !isAcceptableByExtension) {
+  // Special handling for HEIC files which might not be detected correctly by browsers
+  const isHeicFile = fileExtension === 'heic' || fileExtension === 'heif' || file.type === 'image/heic' || file.type === 'image/heif';
+  
+  if (!opts.allowedTypes.includes(file.type) && !isAcceptableByExtension && !isHeicFile) {
     return {
       isValid: false,
-      error: `File type "${file.type}" is not supported. Allowed types: ${opts.allowedTypes.join(', ')}.`,
+      error: `File type "${file.type || 'unknown'}" is not supported. Supported formats: JPEG, PNG, WebP, GIF, HEIC, AVIF, TIFF, BMP, SVG.`,
     };
   }
 
@@ -63,7 +66,7 @@ export function validateFile(file: File, options: FileValidationOptions = {}): V
     // Allow HEIC files even if MIME type is not detected correctly
     return {
       isValid: true,
-      warnings: ['HEIC/HEIF files may require conversion for display in some browsers.']
+      warnings: ['HEIC/HEIF files will be automatically converted to JPEG for better compatibility.']
     };
   }
 
