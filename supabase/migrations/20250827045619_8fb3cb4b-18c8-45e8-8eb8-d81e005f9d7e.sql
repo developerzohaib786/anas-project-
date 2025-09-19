@@ -3,10 +3,10 @@
 -- =============================================
 
 -- First, clear out all existing storage objects
-DELETE FROM storage.objects WHERE bucket_id IN ('avatars', 'brand-photos');
+DELETE FROM storage.objects WHERE bucket_id IN ('avatars', 'brand-photos', 'user-avatars', 'brand-assets');
 
 -- Now we can safely delete and recreate buckets
-DELETE FROM storage.buckets WHERE id IN ('avatars', 'brand-photos');
+DELETE FROM storage.buckets WHERE id IN ('avatars', 'brand-photos', 'user-avatars', 'brand-assets');
 
 -- Create clean storage buckets
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) 
@@ -38,22 +38,24 @@ CREATE TABLE public.profiles (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Enable RLS
+-- Enable RLS on profiles
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 -- Profiles policies
-CREATE POLICY "Users can view own profile" ON public.profiles 
+CREATE POLICY "Users can view own profile" ON public.profiles
     FOR SELECT USING (auth.uid() = id);
 
-CREATE POLICY "Users can insert own profile" ON public.profiles 
+CREATE POLICY "Users can insert own profile" ON public.profiles
     FOR INSERT WITH CHECK (auth.uid() = id);
 
-CREATE POLICY "Users can update own profile" ON public.profiles 
+CREATE POLICY "Users can update own profile" ON public.profiles
     FOR UPDATE USING (auth.uid() = id);
 
 -- =============================================
 -- NEW BRAND PROFILES TABLE
 -- =============================================
+DROP TABLE IF EXISTS brand_profiles CASCADE;
+
 CREATE TABLE public.brand_profiles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,

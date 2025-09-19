@@ -53,7 +53,7 @@ interface ChatInterfaceProps {
  */
 export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload = false, initialMessage, showPrompts = true, flowType, uploadedImages: externalUploadedImages, onImagesChange: externalOnImagesChange }: ChatInterfaceProps) {
   const { sessionId } = useParams();
-  const { sessions, currentSessionId, createSession, updateSession, setCurrentSession, getCurrentSession } = useChat();
+  const { sessions, currentSessionId, createSession, updateSession, setCurrentSession, getCurrentSession, saveMessage, loadSessionMessages } = useChat();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -125,15 +125,72 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
 
   // Load session data when sessionId changes
   useEffect(() => {
-    if (sessionId) {
-      const session = sessions.find(s => s.id === sessionId);
-      if (session) {
-        setCurrentSession(sessionId);
-        // Always load session messages, even if empty (start fresh)
-        if (session.messages.length > 0) {
-          setMessages(session.messages);
+    const loadSessionData = async () => {
+      if (sessionId) {
+        const session = sessions.find(s => s.id === sessionId);
+        if (session) {
+          setCurrentSession(sessionId);
+          
+          // Load messages from Supabase if session exists but has no local messages
+          if (session.messages.length === 0) {
+            try {
+              const supabaseMessages = await loadSessionMessages(sessionId);
+              if (supabaseMessages.length > 0) {
+                // Convert Supabase messages to local Message format
+                const convertedMessages = supabaseMessages.map(msg => ({
+                  id: msg.id,
+                  content: msg.content,
+                  role: msg.role,
+                  timestamp: msg.timestamp,
+                  images: msg.images,
+                  videos: msg.videos,
+                  isGenerating: false,
+                  metadata: msg.metadata
+                }));
+                setMessages(convertedMessages);
+              } else {
+                // Fresh session - reset to default message
+                setMessages([
+                  {
+                    id: "1",
+                    content: "What are we creating today?",
+                    role: "assistant",
+                    timestamp: new Date(),
+                  },
+                ]);
+              }
+            } catch (error) {
+              console.error('Failed to load session messages:', error);
+              // Fallback to default message
+              setMessages([
+                {
+                  id: "1",
+                  content: "What are we creating today?",
+                  role: "assistant",
+                  timestamp: new Date(),
+                },
+              ]);
+            }
+          } else {
+            // Use existing session messages
+            setMessages(session.messages);
+          }
+          
+          // Restore session state to prevent loss on navigation
+          if (session.uploadedImages && !externalUploadedImages) {
+            setLocalUploadedImages(session.uploadedImages);
+          } else if (!externalUploadedImages) {
+            setLocalUploadedImages([]);
+          }
+          
+          if (session.inputValue) {
+            setInputValue(session.inputValue);
+          } else {
+            setInputValue("");
+          }
         } else {
-          // Fresh session - reset to default message
+          // Session not found, navigate to home using React Router
+          // This will be handled by the parent component navigation
           setMessages([
             {
               id: "1",
@@ -142,45 +199,24 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
               timestamp: new Date(),
             },
           ]);
-        }
-        // Restore session state to prevent loss on navigation
-        if (session.uploadedImages && !externalUploadedImages) {
-          setLocalUploadedImages(session.uploadedImages);
-        } else if (!externalUploadedImages) {
-          setLocalUploadedImages([]);
-        }
-        
-        if (session.inputValue) {
-          setInputValue(session.inputValue);
-        } else {
+          if (!externalUploadedImages) {
+            setLocalUploadedImages([]);
+          }
           setInputValue("");
         }
-      } else {
-        // Session not found, navigate to home using React Router
-        // This will be handled by the parent component navigation
-        setMessages([
-          {
-            id: "1",
-            content: "What are we creating today?",
-            role: "assistant",
-            timestamp: new Date(),
-          },
-        ]);
-        if (!externalUploadedImages) {
-          setLocalUploadedImages([]);
+      } else if (!currentSessionId && !sessionId) {
+        // Only create a new session if we're on a chat path without a sessionId
+        // This prevents creating sessions when we navigate to home after deleting
+        const currentPath = window.location.pathname;
+        if (currentPath.startsWith('/chat') && currentPath === '/chat') {
+          const newSessionId = await createSession();
+          window.history.replaceState(null, '', `/chat/${newSessionId}`);
         }
-        setInputValue("");
       }
-    } else if (!currentSessionId && !sessionId) {
-      // Only create a new session if we're on a chat path without a sessionId
-      // This prevents creating sessions when we navigate to home after deleting
-      const currentPath = window.location.pathname;
-      if (currentPath.startsWith('/chat') && currentPath === '/chat') {
-        const newSessionId = createSession();
-        window.history.replaceState(null, '', `/chat/${newSessionId}`);
-      }
-    }
-  }, [sessionId, sessions, currentSessionId, createSession, setCurrentSession, externalUploadedImages]);
+    };
+
+    loadSessionData();
+  }, [sessionId, sessions, currentSessionId, createSession, setCurrentSession, externalUploadedImages, loadSessionMessages]);
 
   // Save messages to session when they change
   useEffect(() => {
@@ -308,6 +344,16 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     
+    // Save user message to Supabase if we have a session
+    if (currentSessionId && saveMessage) {
+      try {
+        await saveMessage(currentSessionId, userMessage);
+      } catch (error) {
+        console.error("Failed to save user message:", error);
+        // Continue with the flow even if saving fails
+      }
+    }
+    
     const currentInput = inputValue;
     const currentImages = [...uploadedImages];
     setInputValue("");
@@ -414,6 +460,16 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
+
+      // Save assistant message to Supabase if we have a session
+      if (currentSessionId && saveMessage) {
+        try {
+          await saveMessage(currentSessionId, assistantMessage);
+        } catch (error) {
+          console.error("Failed to save assistant message:", error);
+          // Continue with the flow even if saving fails
+        }
+      }
 
       // Check if we should generate an image
       if (intent === 'generate' || 

@@ -150,8 +150,8 @@ CREATE TRIGGER update_brand_guidelines_updated_at
 -- This ensures users can immediately start using brand kit
 INSERT INTO public.teams (name, description, created_by)
 SELECT 
-  COALESCE(p.brand_name, p.first_name || '''s Team', 'My Team') as name,
-  'Default team for ' || COALESCE(p.brand_name, p.first_name, 'user') as description,
+  COALESCE(p.first_name || '''s Team', 'My Team') as name,
+  'Default team for ' || COALESCE(p.first_name, 'user') as description,
   p.id as created_by
 FROM public.profiles p
 WHERE p.onboarding_completed = true
