@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, memo } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
 import { ChatInterface } from "@/components/ChatInterface";
 import { ImagePreview } from "@/components/ImagePreview";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
@@ -9,7 +10,10 @@ import { useSmartSession } from "@/hooks/useSmartSession";
 import { toast } from "sonner";
 
 const Chat = () => {
-  const { currentSessionId, updateSession, sessions } = useChat();
+  const { sessionId: urlSessionId } = useParams();
+  const [searchParams] = useSearchParams();
+  const sessionFromQuery = searchParams.get('session');
+  const { currentSessionId, updateSession, sessions, setCurrentSession } = useChat();
   
   // Use consolidated hooks
   const { 
@@ -26,6 +30,15 @@ const Chat = () => {
     () => !!generatedImage,
     () => !!currentPrompt
   ]);
+
+  // Handle session switching from URL parameters
+  useEffect(() => {
+    const targetSessionId = sessionFromQuery || urlSessionId;
+    if (targetSessionId && targetSessionId !== currentSessionId) {
+      console.log('🔄 Chat: Switching to session from URL:', targetSessionId);
+      setCurrentSession(targetSessionId);
+    }
+  }, [sessionFromQuery, urlSessionId, currentSessionId, setCurrentSession]);
 
   const handleGenerateImage = useCallback(async (prompt: string, images?: UploadedImage[]) => {
     await generateImage(prompt, images);

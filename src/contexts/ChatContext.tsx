@@ -35,19 +35,24 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   // Load sessions from API
   const loadSessions = useCallback(async () => {
-    if (!user?.id || isLoading) return;
+    if (!user?.id || isLoading) {
+      console.log('🚫 Skipping loadSessions:', { hasUserId: !!user?.id, isLoading });
+      return;
+    }
     
+    console.log('🚀 Starting loadSessions for user:', user.id);
     setIsLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       
       if (!token) {
-        console.error('No access token available');
+        console.error('❌ No access token available');
         setIsLoading(false);
         return;
       }
 
+      console.log('📡 Making API call to get-sessions...');
       const response = await fetch('https://pbndydilyqxqmcxwadvy.supabase.co/functions/v1/get-sessions', {
         method: 'GET',
         headers: {
@@ -56,26 +61,34 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         }
       });
 
+      console.log('📊 API Response status:', response.status, response.statusText);
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API Error response:', errorText);
         throw new Error(`Failed to load sessions: ${response.statusText}`);
       }
 
       const data = await response.json();
-      // Transform API sessions to include empty messages array for proper loading detection
+      console.log('📦 API Response data:', data);
+      
+      // Transform API sessions - don't initialize with empty messages if they might already exist
       const sessionsWithMessages = (data.sessions || []).map((session: any) => ({
         ...session,
-        messages: [], // Initialize with empty array so setCurrentSession knows to load messages
+        messages: session.messages || [], // Use existing messages or empty array
         updatedAt: new Date(session.updated_at),
         createdAt: new Date(session.created_at)
       }));
+      
+      console.log('✅ Sessions loaded successfully:', sessionsWithMessages.length);
       setSessions(sessionsWithMessages);
     } catch (error) {
-      console.error('Error loading sessions:', error);
+      console.error('❌ Error loading sessions:', error);
       setSessions([]); // Set empty array on error instead of using local fallback
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, isLoading]);
 
   // Load user and sessions when user changes
   useEffect(() => {
@@ -83,10 +96,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       hasUser: !!user, 
       userId: user?.id, 
       currentUserId,
-      sessionsCount: sessions.length 
+      sessionsCount: sessions.length,
+      isLoading 
     });
     
-    if (user) {
+    if (user?.id) {
       // Only load sessions if we don't have them yet or if user ID changed
       if (!currentUserId || currentUserId !== user.id) {
         console.log('📡 Loading sessions for user:', user.id);
@@ -96,11 +110,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         console.log('✅ Sessions already loaded for user:', user.id);
       }
     } else {
+      console.log('🚫 No user ID, clearing sessions');
       setCurrentUserId(null);
       setSessions([]);
       setCurrentSessionId(null);
     }
-  }, [user?.id, loadSessions]); // Only depend on user.id, not the entire user object
+  }, [user?.id, loadSessions, currentUserId, isLoading]); // Add dependencies to ensure proper triggering
 
   // Create a new session
   const createSession = async (title?: string): Promise<string> => {
@@ -320,10 +335,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       const token = session?.access_token;
       
       if (!token) {
+        console.error('❌ No access token available for loadSessionMessages');
         throw new Error('No access token available');
       }
 
       console.log('🔍 Loading messages for session:', sessionId);
+      console.log('📡 Making API call to get-session-messages...');
       const response = await fetch(`https://pbndydilyqxqmcxwadvy.supabase.co/functions/v1/get-session-messages?session_id=${sessionId}`, {
         method: 'GET',
         headers: {
@@ -331,17 +348,21 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         }
       });
 
+      console.log('📊 get-session-messages API Response status:', response.status, response.statusText);
+
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ API Error:', response.status, errorText);
+        console.error('❌ get-session-messages API Error:', response.status, errorText);
         throw new Error(`Failed to load session messages: ${response.statusText}`);
       }
 
       const data = await response.json();
-      console.log('📦 API Response:', data);
+      console.log('📦 get-session-messages API Response:', data);
       
       // The API returns { success: true, session: {...}, messages: [...] }
-      return data.messages || [];
+      const messages = data.messages || [];
+      console.log('✅ Loaded messages count:', messages.length);
+      return messages;
     } catch (error) {
       console.error('❌ Error loading session messages:', error);
       return [];
@@ -349,14 +370,17 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setCurrentSession = useCallback(async (sessionId: string | null) => {
+    console.log('🎯 setCurrentSession called with:', sessionId);
     setCurrentSessionId(sessionId);
     
-    // If switching to a session, load its messages if not already loaded
+    // If switching to a session, always try to load its messages
     if (sessionId) {
       const session = sessions.find(s => s.id === sessionId);
-      console.log('🔄 Switching to session:', sessionId, 'Current messages count:', session?.messages?.length || 0);
+      console.log('🔄 Switching to session:', sessionId, 'Found session:', !!session, 'Current messages count:', session?.messages?.length || 0);
       
-      if (session && session.messages.length === 0) {
+      // Always load messages for the session, regardless of current message count
+      // This ensures we get the latest messages from the server
+      if (session) {
         try {
           console.log("📡 Loading messages for session:", sessionId);
           const messages = await loadSessionMessages(sessionId);
@@ -378,11 +402,33 @@ export function ChatProvider({ children }: { children: ReactNode }) {
                     alt: img.name || 'image'
                   })) || 
                   // Fallback to chat_attachments for backward compatibility
-                  msg.chat_attachments?.filter(att => att.file_type?.startsWith('image/'))?.map(att => ({
-                    id: att.id,
-                    url: att.storage_path,
-                    name: att.file_name || 'image'
-                  })) || [],
+                  msg.chat_attachments?.filter(att => att.file_type?.startsWith('image/'))?.map(att => {
+                    // Use public_url or cloudinary_url from API response first
+                    let imageUrl = att.public_url || att.cloudinary_url || att.storage_path;
+                    
+                    // Only generate Supabase URL if no public URL is available and storage_path doesn't start with http
+                    if (!imageUrl || (!imageUrl.startsWith('http') && att.storage_path && !att.storage_path.startsWith('http'))) {
+                      const { data: publicUrlData } = supabase.storage
+                        .from('chat-attachments')
+                        .getPublicUrl(att.storage_path);
+                      imageUrl = publicUrlData.publicUrl;
+                    }
+                    
+                    console.log('Processing image attachment:', {
+                      id: att.id,
+                      fileName: att.file_name,
+                      publicUrl: att.public_url,
+                      cloudinaryUrl: att.cloudinary_url,
+                      storagePath: att.storage_path,
+                      finalUrl: imageUrl
+                    });
+                    
+                    return {
+                      id: att.id,
+                      url: imageUrl,
+                      name: att.file_name || 'image'
+                    };
+                  }) || [],
                   videos: msg.chat_attachments?.filter(att => att.file_type?.startsWith('video/'))?.map(att => ({
                     id: att.id,
                     url: att.file_url,
@@ -395,6 +441,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         } catch (error) {
           console.error("❌ Failed to load session messages:", error);
         }
+      } else {
+        console.log('❌ Session not found in sessions array');
       }
     }
   }, [sessions, loadSessionMessages]);

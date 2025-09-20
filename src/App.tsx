@@ -32,8 +32,8 @@ const App = () => (
       <ThemeProvider>
         <BrowserRouter>
           <AuthProvider>
-            <ChatProvider>
-              <BrandProvider>
+            <BrandProvider>
+              <ChatProvider>
                 <TooltipProvider>
                   <Toaster />
                   <Sonner />
@@ -55,8 +55,8 @@ const App = () => (
                     </Suspense>
                   </div>
                 </TooltipProvider>
-              </BrandProvider>
-            </ChatProvider>
+              </ChatProvider>
+            </BrandProvider>
           </AuthProvider>
         </BrowserRouter>
       </ThemeProvider>
