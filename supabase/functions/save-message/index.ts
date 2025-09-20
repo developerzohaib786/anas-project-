@@ -140,10 +140,10 @@ serve(async (req) => {
       )
     }
 
-    // Verify session belongs to user
+    // Verify session belongs to user and get session type
     const { data: session, error: sessionError } = await supabase
       .from('chat_sessions')
-      .select('id, user_id')
+      .select('id, user_id, session_type, session_metadata')
       .eq('id', normalizedSessionId)
       .eq('user_id', user.id)
       .single()
@@ -214,21 +214,62 @@ serve(async (req) => {
       }));
     }
 
-    // Prepare enhanced metadata with processed images and conversation context
+    // Prepare enhanced metadata based on session type
     const enhancedMetadata = {
       ...metadata,
-      ...(processedImages.length > 0 && { images: processedImages }),
       // Always include the message content for easy access
       message_content: content,
       // Include message type for context
       message_type: normalizedMessageType,
-      // For user messages, store as prompt
-      ...(normalizedMessageType === 'user' && { prompt: content }),
-      // For assistant messages, store as response
-      ...(normalizedMessageType === 'assistant' && { response: content }),
+      // Include session type for context
+      session_type: session.session_type,
       // Add timestamp for tracking
       saved_at: new Date().toISOString()
     };
+
+    // Handle session-type specific metadata
+    if (session.session_type === 'enhance') {
+      // For enhance sessions, focus on image processing and prompts
+      if (normalizedMessageType === 'user') {
+        enhancedMetadata.prompt = content;
+        if (processedImages.length > 0) {
+          enhancedMetadata.input_images = processedImages;
+        }
+      } else if (normalizedMessageType === 'assistant') {
+        enhancedMetadata.response = content;
+        if (processedImages.length > 0) {
+          enhancedMetadata.generated_images = processedImages;
+        }
+      }
+    } else if (session.session_type === 'video') {
+      // For video sessions, handle video-specific metadata
+      if (normalizedMessageType === 'user') {
+        enhancedMetadata.prompt = content;
+        if (processedImages.length > 0) {
+          enhancedMetadata.input_images = processedImages;
+        }
+      } else if (normalizedMessageType === 'assistant') {
+        enhancedMetadata.response = content;
+        if (processedImages.length > 0) {
+          enhancedMetadata.generated_images = processedImages;
+        }
+        // Video-specific metadata can be added here
+        if (metadata?.video_url) {
+          enhancedMetadata.generated_video = metadata.video_url;
+        }
+      }
+    } else {
+      // For chat sessions, store all content types
+      if (normalizedMessageType === 'user') {
+        enhancedMetadata.prompt = content;
+      } else if (normalizedMessageType === 'assistant') {
+        enhancedMetadata.response = content;
+      }
+      
+      if (processedImages.length > 0) {
+        enhancedMetadata.images = processedImages;
+      }
+    }
 
     // Save the message with processed Cloudinary URLs
     const { data: savedMessage, error: messageError } = await supabase

@@ -60,10 +60,10 @@ serve(async (req) => {
       )
     }
 
-    // Verify that the session belongs to the user
+    // Verify session belongs to user and get session type
     const { data: session, error: sessionError } = await supabaseClient
       .from('chat_sessions')
-      .select('id, user_id, title, session_type, session_metadata')
+      .select('id, user_id, session_type, session_metadata')
       .eq('id', session_id)
       .eq('user_id', user.id)
       .single()
@@ -130,7 +130,7 @@ serve(async (req) => {
       }
     }
 
-    // Process messages to include Cloudinary URLs for attachments
+    // Process messages to include Cloudinary URLs for attachments and session-type specific data
     const processedMessages = messages?.map(message => {
       const processedMessage = { ...message };
       
@@ -149,6 +149,7 @@ serve(async (req) => {
             if (typeof metadata === 'string') {
               metadata = JSON.parse(metadata);
             }
+            
             if (metadata && metadata.cloudinary_url) {
               publicUrl = metadata.cloudinary_url;
             }
@@ -175,6 +176,61 @@ serve(async (req) => {
       } else {
         processedMessage.chat_attachments = [];
       }
+
+      // Process metadata based on session type
+      if (message.metadata) {
+        try {
+          let metadata = message.metadata;
+          if (typeof metadata === 'string') {
+            metadata = JSON.parse(metadata);
+          }
+
+          // Add session-type specific processing
+          if (session.session_type === 'enhance') {
+            // For enhance sessions, prioritize image data
+            if (metadata.input_images) {
+              processedMessage.input_images = metadata.input_images;
+            }
+            if (metadata.generated_images) {
+              processedMessage.generated_images = metadata.generated_images;
+            }
+            if (metadata.prompt) {
+              processedMessage.prompt = metadata.prompt;
+            }
+          } else if (session.session_type === 'video') {
+            // For video sessions, include video-specific data
+            if (metadata.input_images) {
+              processedMessage.input_images = metadata.input_images;
+            }
+            if (metadata.generated_images) {
+              processedMessage.generated_images = metadata.generated_images;
+            }
+            if (metadata.generated_video) {
+              processedMessage.generated_video = metadata.generated_video;
+            }
+            if (metadata.prompt) {
+              processedMessage.prompt = metadata.prompt;
+            }
+          } else {
+            // For chat sessions, include all available data
+            if (metadata.images) {
+              processedMessage.images = metadata.images;
+            }
+            if (metadata.prompt) {
+              processedMessage.prompt = metadata.prompt;
+            }
+            if (metadata.response) {
+              processedMessage.response = metadata.response;
+            }
+          }
+
+          // Always include common metadata
+          processedMessage.session_type = session.session_type;
+          processedMessage.processed_metadata = metadata;
+        } catch (error) {
+          console.error('Error processing message metadata:', error);
+        }
+      }
       
       return processedMessage;
     }) || [];
@@ -195,7 +251,6 @@ serve(async (req) => {
         success: true,
         session: {
           id: session.id,
-          title: session.title,
           session_type: session.session_type,
           session_metadata: session.session_metadata
         },

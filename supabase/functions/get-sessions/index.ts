@@ -9,6 +9,8 @@ const corsHeaders = {
 interface SessionWithStats {
   id: string
   title: string
+  session_type: 'chat' | 'enhance' | 'video'
+  session_metadata?: any
   created_at: string
   updated_at: string
   message_count: number
@@ -61,6 +63,8 @@ serve(async (req) => {
       .select(`
         id,
         title,
+        session_type,
+        session_metadata,
         created_at,
         updated_at,
         chat_messages (
@@ -94,6 +98,8 @@ serve(async (req) => {
       return {
         id: session.id,
         title: session.title,
+        session_type: session.session_type,
+        session_metadata: session.session_metadata,
         created_at: session.created_at,
         updated_at: session.updated_at,
         message_count: messages.length,
