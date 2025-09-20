@@ -31,6 +31,15 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  define: {
+    global: 'globalThis',
+    'process.env': {},
+    'process.version': '"v18.0.0"',
+    'process.platform': '"browser"',
+    'process.arch': '"x64"',
+    'process.versions': '{}',
+    'process.browser': 'true',
+  },
   build: {
     rollupOptions: {
       output: {

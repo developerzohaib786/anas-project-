@@ -4,13 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChat } from "@/contexts/ChatContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useParams } from "react-router-dom";
 import { PromptLibrary } from "@/components/PromptLibrary";
 import { ImageUpload } from "@/components/ImageUpload";
 import { handleError, withErrorHandling, ApiError, NetworkError } from "@/lib/error-handler";
 import { useSmartSession } from "@/hooks/useSmartSession";
 import { toast } from "sonner";
-import { MediaUploadService } from '@/services/mediaUploadService';
+import CloudinaryBrowserService from '@/services/cloudinaryBrowserService';
 
 import { Message, UploadedImage, FlowType } from "@/types/common";
 
@@ -57,6 +58,7 @@ interface ChatInterfaceProps {
 export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload = false, initialMessage, showPrompts = true, flowType, uploadedImages: externalUploadedImages, onImagesChange: externalOnImagesChange, generatedImage, currentPrompt }: ChatInterfaceProps) {
   const { sessionId: urlSessionId } = useParams();
   const { sessions, currentSessionId, createSession, updateSession, setCurrentSession, getCurrentSession, saveMessage, loadSessionMessages } = useChat();
+  const { user } = useAuth();
   
   // Get session ID from URL params or use current session
   const sessionId = urlSessionId || currentSessionId;
@@ -154,29 +156,25 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
               console.log("📨 Received messages from API:", supabaseMessages.length, supabaseMessages);
               if (supabaseMessages.length > 0) {
                 // Convert Supabase messages to local Message format
-                const convertedMessages = supabaseMessages.map(msg => ({
-                  id: msg.id,
-                  content: msg.content,
-                  role: msg.role, // Use role field from database (user/assistant)
-                  timestamp: new Date(msg.created_at || msg.timestamp),
-                  images: msg.chat_attachments?.filter(att => att.file_type?.startsWith('image/'))?.map(att => ({
-                    id: att.id,
-                    name: att.file_name,
-                    url: att.storage_path, // Use storage_path from API response
-                    size: att.file_size,
-                    type: att.file_type,
-                  })) || [],
-                  videos: msg.chat_attachments?.filter(att => att.file_type?.startsWith('video/'))?.map(att => ({
-                    id: att.id,
-                    name: att.file_name,
-                    url: att.storage_path,
-                    size: att.file_size,
-                    type: att.file_type,
-                  })) || [],
-                  isGenerating: false,
-                  metadata: msg.metadata || {}
-                }));
+                const convertedMessages = supabaseMessages.map(msg => {
+                  console.log("🔍 Processing message:", msg.id, "Images:", msg.images, "Metadata:", msg.metadata);
+                  return {
+                    id: msg.id,
+                    content: msg.content,
+                    role: msg.role, // Use role field from database (user/assistant)
+                    timestamp: new Date(msg.created_at || msg.timestamp),
+                    images: msg.images || [], // Use already processed images from chatHistoryService
+                    videos: msg.videos || [], // Use already processed videos from chatHistoryService
+                    isGenerating: false,
+                    metadata: msg.metadata || {}
+                  };
+                });
                 console.log("🔄 Converted messages:", convertedMessages);
+                // Log messages with images specifically
+                const messagesWithImages = convertedMessages.filter(msg => msg.images && msg.images.length > 0);
+                console.log("🖼️ Messages with images:", messagesWithImages.length, messagesWithImages);
+                console.log("📋 All messages loaded:", convertedMessages);
+                console.log("🔍 Messages with images:", convertedMessages.filter(m => m.images && m.images.length > 0));
                 setMessages(convertedMessages);
               } else {
                 // Fresh session - reset to default message
@@ -395,42 +393,46 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
       images: uploadedImages.length > 0 ? [...uploadedImages] : undefined,
     };
 
-    // Add user message immediately
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
+    // Save user message to Supabase if we have a session and process images first
+    let finalUserMessage = userMessage;
     
-    // Save user message to Supabase if we have a session
     if (sessionId && saveMessage) {
       try {
         console.log("💾 Saving user message to session:", sessionId);
         
-        // Process and upload images to Supabase storage first
+        // Process and upload images to Cloudinary storage first
         const processedImages = [];
         if (uploadedImages.length > 0) {
           for (const img of uploadedImages) {
             try {
-              let supabaseUrl = img.url;
+              let cloudinaryUrl = img.url;
+              let cloudinaryPath = '';
               
-              // If it's a blob URL, upload it to Supabase storage
+              // If it's a blob URL or data URL, upload it to Cloudinary storage
               if (img.url.startsWith('blob:') || img.url.startsWith('data:')) {
-                console.log("📤 Uploading image to Supabase storage:", img.name);
+                console.log("📤 Uploading image to Cloudinary storage:", img.name);
                 
                 const uploadedMedia = img.url.startsWith('blob:') 
-                  ? await MediaUploadService.uploadFromBlobUrl(img.url, img.name, user)
-                  : await MediaUploadService.uploadFromDataUrl(img.url, img.name, user);
+                  ? await CloudinaryBrowserService.uploadFromBlobUrl(img.url, img.name, user)
+                  : await CloudinaryBrowserService.uploadFromDataUrl(img.url, img.name, user);
                 
-                supabaseUrl = uploadedMedia.publicUrl;
-                console.log("✅ Image uploaded to Supabase:", supabaseUrl);
+                cloudinaryUrl = uploadedMedia.publicUrl;
+                cloudinaryPath = uploadedMedia.publicId || '';
+                console.log("✅ Image uploaded to Cloudinary:", cloudinaryUrl);
               }
               
-              processedImages.push({
+              const processedImage = {
                 id: img.id,
                 name: img.name,
-                url: supabaseUrl,
+                url: cloudinaryUrl,
                 size: img.size,
                 type: img.type,
                 is_generated: false, // User uploaded images are not AI generated
-              });
+                cloudinaryPath: cloudinaryPath,
+                fileSize: img.size || 0
+              };
+              
+              processedImages.push(processedImage);
             } catch (uploadError) {
               console.error("❌ Failed to upload image:", uploadError);
               // Use original URL as fallback
@@ -441,18 +443,25 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
                 size: img.size,
                 type: img.type,
                 is_generated: false,
+                cloudinaryPath: '',
+                fileSize: img.size || 0
               });
             }
+          }
+          
+          // Update the uploaded images state with Cloudinary URLs
+          if (processedImages.length > 0) {
+            setUploadedImages(processedImages);
           }
         }
         
         // Enhanced user message with processed image information
-        const enhancedUserMessage = {
+        finalUserMessage = {
           ...userMessage,
           images: processedImages.length > 0 ? processedImages : undefined
         };
         
-        await saveMessage(sessionId, enhancedUserMessage);
+        await saveMessage(sessionId, finalUserMessage);
         console.log("✅ User message saved successfully");
       } catch (error) {
         console.error("❌ Failed to save user message:", error);
@@ -461,6 +470,10 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
     } else {
       console.log("⚠️ No session ID or saveMessage function available", { sessionId, hasSaveMessage: !!saveMessage });
     }
+    
+    // Add user message to UI with processed images
+    const newMessages = [...messages, finalUserMessage];
+    setMessages(newMessages);
     
     const currentInput = inputValue;
     const currentImages = [...uploadedImages];
@@ -648,21 +661,21 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
             if (generatedImage) {
               let finalImageUrl = generatedImage;
               
-              // If the generated image is a data URL, upload it to Supabase storage
+              // If the generated image is a data URL, upload it to Cloudinary storage
               if (generatedImage.startsWith('data:') && user) {
                 try {
-                  console.log("📤 Uploading generated image to Supabase storage");
+                  console.log("📤 Uploading generated image to Cloudinary storage");
                   const fileName = `generated-image-${Date.now()}.png`;
-                  const uploadedMedia = await MediaUploadService.uploadFromDataUrl(
+                  const uploadedMedia = await CloudinaryBrowserService.uploadFromDataUrl(
                     generatedImage, 
                     fileName, 
                     user,
                     { is_generated: true, prompt_used: imagePrompt || currentInput }
                   );
                   finalImageUrl = uploadedMedia.publicUrl;
-                  console.log("✅ Generated image uploaded to Supabase:", finalImageUrl);
+                  console.log("✅ Generated image uploaded to Cloudinary:", finalImageUrl);
                 } catch (uploadError) {
-                  console.error("❌ Failed to upload generated image to Supabase:", uploadError);
+                  console.error("❌ Failed to upload generated image to Cloudinary:", uploadError);
                   // Continue with data URL as fallback
                 }
               }
@@ -756,68 +769,68 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
         <ScrollArea className="h-full minimal-scroll" ref={scrollAreaRef}>
           <div className="w-full px-4 py-6 pb-4 md:px-6 md:py-8 md:pb-32">
             <div className="max-w-3xl mx-auto space-y-6">
-            {messages.map((message, index) => (
-              <div
-                key={message.id}
-                className={`flex ${message.role === "user" ? "justify-end" : "justify-start"} animate-fade-in`}
-                style={{
-                  animationDelay: `${index * 0.05}s`,
-                  animationFillMode: 'both'
-                }}
-              >
-                <div className={`max-w-[80%] group`}>
-                  <div className={`${message.role === "user" ? "inline-block bg-muted px-4 py-2.5 rounded-2xl" : "mb-2 text-left"}`}>
-                    {/* Display images if present */}
-                    {message.images && message.images.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {message.images.map((img) => (
-                          <div key={img.id} className="relative">
-                            <img
-                              src={img.url}
-                              alt={img.name}
-                              className="w-20 h-20 object-cover rounded-lg border border-border"
-                            />
-                          </div>
-                        ))}
+              {messages.map((message, index) => (
+                <div
+                  key={message.id}
+                  className={`flex ${message.role === "user" ? "justify-end" : "justify-start"} animate-fade-in`}
+                  style={{
+                    animationDelay: `${index * 0.05}s`,
+                    animationFillMode: 'both'
+                  }}
+                >
+                  <div className={`max-w-[80%] group`}>
+                    <div className={`${message.role === "user" ? "inline-block bg-muted px-4 py-2.5 rounded-2xl" : "mb-2 text-left"}`}>
+                      {/* Display images if present */}
+                      {message.images && message.images.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {message.images.map((img) => (
+                            <div key={img.id} className="relative">
+                              <img
+                                src={img.url}
+                                alt={img.alt || img.name || 'Image'}
+                                className="w-32 h-32 object-cover rounded-lg border border-border"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="text-[15px] leading-relaxed font-normal text-foreground">
+                        {message.isGenerating ? (
+                          <>🎨 <span className="shimmer-text">Generating your image now...</span></>
+                        ) : (
+                          message.content
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Action buttons for AI messages */}
+                    {message.role === "assistant" && (
+                      <div className="flex items-center gap-1 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
+                          <Copy className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                        <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
+                          <ThumbsUp className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                        <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
+                          <ThumbsDown className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                        <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
+                          <Volume2 className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                        <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
+                          <Share className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                        <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
+                          <RotateCcw className="h-4 w-4 text-muted-foreground" />
+                        </button>
                       </div>
                     )}
-                    <div className="text-[15px] leading-relaxed font-normal text-foreground">
-                      {message.isGenerating ? (
-                        <>🎨 <span className="shimmer-text">Generating your image now...</span></>
-                      ) : (
-                        message.content
-                      )}
-                    </div>
                   </div>
-                  
-                  {/* Action buttons for AI messages */}
-                  {message.role === "assistant" && (
-                    <div className="flex items-center gap-1 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
-                        <Copy className="h-4 w-4 text-muted-foreground" />
-                      </button>
-                      <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
-                        <ThumbsUp className="h-4 w-4 text-muted-foreground" />
-                      </button>
-                      <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
-                        <ThumbsDown className="h-4 w-4 text-muted-foreground" />
-                      </button>
-                      <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
-                        <Volume2 className="h-4 w-4 text-muted-foreground" />
-                      </button>
-                      <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
-                        <Share className="h-4 w-4 text-muted-foreground" />
-                      </button>
-                      <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
-                        <RotateCcw className="h-4 w-4 text-muted-foreground" />
-                      </button>
-                    </div>
-                  )}
                 </div>
-              </div>
-            ))}
-            {/* Invisible element to scroll to */}
-            <div ref={messagesEndRef} />
+              ))}
+              {/* Invisible element to scroll to */}
+              <div ref={messagesEndRef} />
             </div>
           </div>
         </ScrollArea>

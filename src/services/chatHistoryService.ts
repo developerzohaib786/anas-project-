@@ -1,4 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
+import CloudinaryService from '@/services/cloudinaryService';
+import VideoUploadService from '@/services/videoUploadService';
 
 export interface ChatMessage {
   id: string;
@@ -185,10 +187,10 @@ export class ChatHistoryService {
     if (!user) throw new Error('User not authenticated');
 
     try {
-      // Prepare attachments data
+      // Prepare attachments data for legacy file uploads
       const attachments = [];
       
-      // Handle image attachments
+      // Handle image attachments that still have File objects (legacy support)
       if (message.images && message.images.length > 0) {
         for (const image of message.images) {
           if (image.file) {
@@ -204,7 +206,7 @@ export class ChatHistoryService {
         }
       }
 
-      // Handle video attachments
+      // Handle video attachments that still have File objects (legacy support)
       if (message.videos && message.videos.length > 0) {
         for (const video of message.videos) {
           if (video.file) {
@@ -220,6 +222,9 @@ export class ChatHistoryService {
         }
       }
 
+      // Prepare images data - filter out images that have File objects (already handled above)
+      const processedImages = message.images?.filter(img => !img.file) || [];
+
       // Use the save-message Edge function
       const response = await supabase.functions.invoke('save-message', {
         body: {
@@ -231,7 +236,8 @@ export class ChatHistoryService {
           // Pass through enhanced fields if they exist
           ...(message.conversation_context && { conversation_context: message.conversation_context }),
           ...(message.parent_message_id && { parent_message_id: message.parent_message_id }),
-          ...(message.images && { images: message.images })
+          // Pass processed images (without File objects) to save-message function
+          ...(processedImages.length > 0 && { images: processedImages })
         }
       });
 
@@ -384,29 +390,32 @@ export class ChatHistoryService {
     };
   }
 
-  // Upload file to Supabase storage
+  // Upload file to Cloudinary storage
   static async uploadFile(
     file: File,
     type: 'image' | 'video',
     userId: string
   ): Promise<{ url: string; path: string }> {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-
-    const { data, error } = await supabase.storage
-      .from('chat-attachments')
-      .upload(fileName, file);
-
-    if (error) throw error;
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('chat-attachments')
-      .getPublicUrl(fileName);
-
-    return {
-      url: publicUrl,
-      path: data.path,
-    };
+    try {
+      if (type === 'image') {
+        const uploadedImage = await CloudinaryService.uploadFile(file, { id: userId } as any);
+        return {
+          url: uploadedImage.publicUrl,
+          path: uploadedImage.id,
+        };
+      } else if (type === 'video') {
+        const uploadedVideo = await VideoUploadService.uploadVideo(file, { id: userId } as any);
+        return {
+          url: uploadedVideo.publicUrl,
+          path: uploadedVideo.id,
+        };
+      } else {
+        throw new Error(`Unsupported file type: ${type}`);
+      }
+    } catch (error) {
+      console.error(`Error uploading ${type} to Cloudinary:`, error);
+      throw error;
+    }
   }
 
   // Update session title
@@ -492,45 +501,144 @@ export class ChatHistoryService {
 
       const messages = response.data.messages || [];
       
-      return messages.map((msg: any) => ({
-        id: msg.id,
-        content: msg.content,
-        role: msg.role,
-        timestamp: new Date(msg.created_at),
-        images: msg.chat_attachments
-          ?.filter((att: any) => att.file_type.startsWith('image/'))
+      return messages.map((msg: any) => {
+        // Get images from chat_attachments
+        let images = msg.chat_attachments
+          ?.filter((att: any) => att.attachment_type === 'image' || att.file_type.startsWith('image/'))
           ?.map((att: any) => {
-            // Convert storage_path to public URL
-            const { data: publicUrlData } = supabase.storage
-              .from('chat-attachments')
-              .getPublicUrl(att.storage_path);
+            // Use Cloudinary URL if available, otherwise fallback to public URL generation
+            let imageUrl = att.public_url || att.cloudinary_url;
+            
+            if (!imageUrl && att.storage_path) {
+              // Fallback for backward compatibility
+              if (att.storage_path.includes('cloudinary.com')) {
+                imageUrl = att.storage_path;
+              } else {
+                // Generate Supabase public URL as last resort
+                const { data: publicUrlData } = supabase.storage
+                  .from('chat-attachments')
+                  .getPublicUrl(att.storage_path);
+                imageUrl = publicUrlData.publicUrl;
+              }
+            }
             
             return {
               id: att.id,
               name: att.file_name,
-              url: publicUrlData.publicUrl,
+              url: imageUrl,
               size: att.file_size,
               type: att.file_type,
+              is_generated: att.metadata?.is_generated || false,
+              prompt_used: att.metadata?.prompt_used || null,
             };
-          }) || [],
-        videos: msg.chat_attachments
-          ?.filter((att: any) => att.file_type.startsWith('video/'))
-          ?.map((att: any) => {
-            // Convert storage_path to public URL
-            const { data: publicUrlData } = supabase.storage
-              .from('chat-attachments')
-              .getPublicUrl(att.storage_path);
+          }) || [];
+
+        // If no images from chat_attachments, check metadata for images
+        if (images.length === 0 && msg.metadata?.images) {
+          console.log('📸 Raw metadata structure:', JSON.stringify(msg.metadata, null, 2));
+          console.log('📸 Processing images from metadata:', msg.metadata.images);
+          console.log('📸 Metadata images type:', typeof msg.metadata.images, Array.isArray(msg.metadata.images));
+          console.log('🔍 First image structure:', JSON.stringify(msg.metadata.images[0], null, 2));
+          
+          images = msg.metadata.images.map((img: any, index: number) => {
+            console.log(`📸 Processing image ${index}:`, JSON.stringify(img, null, 2));
             
-            return {
-              id: att.id,
-              name: att.file_name,
-              url: publicUrlData.publicUrl,
-              size: att.file_size,
-              type: att.file_type,
+            // Handle different possible structures
+            let imageUrl = '';
+            
+            if (typeof img === 'string') {
+              imageUrl = img;
+              console.log('📝 String image:', { imageUrl });
+            } else if (img && typeof img === 'object') {
+              // Check all possible URL properties
+              imageUrl = img.url || img.src || img.image_url || img.cloudinaryUrl || img.finalUrl || '';
+              console.log('📝 Object image properties:', {
+                url: img.url,
+                src: img.src,
+                image_url: img.image_url,
+                cloudinaryUrl: img.cloudinaryUrl,
+                finalUrl: img.finalUrl,
+                selectedUrl: imageUrl
+              });
+            }
+            
+            // Clean URL more carefully - handle spaces and backticks
+             if (typeof imageUrl === 'string') {
+               const originalUrl = imageUrl;
+               // First trim whitespace
+               imageUrl = imageUrl.trim();
+               // Then remove backticks if they wrap the entire URL
+               if (imageUrl.startsWith('`') && imageUrl.endsWith('`')) {
+                 imageUrl = imageUrl.slice(1, -1).trim(); // Trim again after removing backticks
+               }
+               console.log('🧹 Cleaned URL:', { originalUrl, cleanedUrl: imageUrl });
+             }
+            
+            const processedImage = {
+              id: img.id || img.image_id || img.name || `metadata-img-${index}`,
+              name: img.name || 'image',
+              url: imageUrl,
+              size: img.size || 0,
+              type: img.type || 'image/jpeg',
+              is_generated: img.is_generated || false,
+              prompt_used: img.prompt_used || null,
             };
-          }) || [],
-        metadata: msg.metadata,
-      }));
+            
+            console.log('🔧 Processing image:', {
+              original: img.url || img,
+              cleaned: imageUrl,
+              final: processedImage
+            });
+            
+            return processedImage;
+          }).filter(img => img.url); // Only include images with valid URLs
+          
+          console.log('✅ Processed metadata images:', images);
+        } else if (msg.metadata?.images) {
+          console.log('⚠️ Metadata has images but chat_attachments also has images:', {
+            attachments_count: images.length,
+            metadata_images: msg.metadata.images
+          });
+        } else {
+          console.log('❌ No images found in metadata or attachments for message:', msg.id);
+        }
+
+        return {
+          id: msg.id,
+          content: msg.content,
+          role: msg.role,
+          timestamp: new Date(msg.created_at),
+          images,
+          videos: msg.chat_attachments
+            ?.filter((att: any) => att.attachment_type === 'video' || att.file_type.startsWith('video/'))
+            ?.map((att: any) => {
+              // Use Cloudinary URL if available, otherwise fallback to public URL generation
+              let videoUrl = att.public_url || att.cloudinary_url;
+              
+              if (!videoUrl && att.storage_path) {
+                // Fallback for backward compatibility
+                if (att.storage_path.includes('cloudinary.com')) {
+                  videoUrl = att.storage_path;
+                } else {
+                  // Generate Supabase public URL as last resort
+                  const { data: publicUrlData } = supabase.storage
+                    .from('chat-attachments')
+                    .getPublicUrl(att.storage_path);
+                  videoUrl = publicUrlData.publicUrl;
+                }
+              }
+              
+              return {
+                id: att.id,
+                name: att.file_name,
+                url: videoUrl,
+                size: att.file_size,
+                type: att.file_type,
+              };
+            }) || [],
+          metadata: msg.metadata,
+        };
+      });
     } catch (error) {
       console.error('Failed to load messages via API, falling back to direct database access:', error);
       
