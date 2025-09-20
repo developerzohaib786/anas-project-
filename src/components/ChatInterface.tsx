@@ -783,15 +783,33 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
                       {/* Display images if present */}
                       {message.images && message.images.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-3">
-                          {message.images.map((img) => (
-                            <div key={img.id} className="relative">
-                              <img
-                                src={img.url}
-                                alt={img.alt || img.name || 'Image'}
-                                className="w-32 h-32 object-cover rounded-lg border border-border"
-                              />
-                            </div>
-                          ))}
+                          {message.images.map((img) => {
+                            console.log('Rendering image:', {
+                              id: img.id,
+                              url: img.url,
+                              name: img.name,
+                              alt: img.alt
+                            });
+                            return (
+                              <div key={img.id} className="relative">
+                                <img
+                                  src={img.url}
+                                  alt={img.alt || img.name || 'Image'}
+                                  className="w-32 h-32 object-cover rounded-lg border border-border"
+                                  onError={(e) => {
+                                    console.error('Image failed to load:', {
+                                      url: img.url,
+                                      error: e,
+                                      target: e.target
+                                    });
+                                  }}
+                                  onLoad={() => {
+                                    console.log('Image loaded successfully:', img.url);
+                                  }}
+                                />
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                       <div className="text-[15px] leading-relaxed font-normal text-foreground">

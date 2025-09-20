@@ -96,12 +96,32 @@ const Video = () => {
 
   // Create session if none exists
   useEffect(() => {
-    if (!currentSessionId) {
-      console.log("🆕 No current session, creating new one for Video");
-      const newSessionId = createSession("Image to Video");
-      setCurrentSession(newSessionId);
+    if (!currentSessionId && !isInGenerationFlow && !isRestoringFromSession.current) {
+      console.log('🆕 No session found, creating new video session');
+      
+      // Clear any existing state first
+      setUploadedImages([]);
+      setGeneratedVideo(undefined);
+      setCurrentPrompt("");
+      setMovementDescription("");
+      setSfxDescription("");
+      setVideoSize('horizontal');
+      setIsGenerating(false);
+      setIsPollingForVideo(false);
+      
+      // Reset restoration flags
+      hasRestoredFromSession.current = false;
+      isRestoringFromSession.current = false;
+      
+      const result = startNewSession(() => {
+        console.log('✅ New video session created with clean state');
+      });
+      
+      if (result.type === 'created') {
+        console.log('🎬 Video session created:', result.sessionId);
+      }
     }
-  }, [currentSessionId, createSession, setCurrentSession]);
+  }, [currentSessionId, isInGenerationFlow, startNewSession]);
 
   // Convert uploaded image to base64
   const convertImageToBase64 = async (image: UploadedImage): Promise<string> => {
@@ -370,27 +390,50 @@ const Video = () => {
         console.log('🔄 Restoring session state:', session.id);
         isRestoringFromSession.current = true;
         
-        // Restore state from session
-        if (session.generatedVideo) {
-          setGeneratedVideo(session.generatedVideo);
-          setCurrentPrompt(session.currentPrompt);
-        }
+        // Only restore if session has actual content
+        const hasContent = session.generatedVideo || 
+                          (session.uploadedImages && session.uploadedImages.length > 0) ||
+                          session.currentPrompt ||
+                          (session.videoMetadata && (session.videoMetadata.movement || session.videoMetadata.sfx));
         
-        if (session.uploadedImages && session.uploadedImages.length > 0) {
-          setUploadedImages(session.uploadedImages);
-        }
+        if (hasContent) {
+          // Restore state from session
+          if (session.generatedVideo) {
+            setGeneratedVideo(session.generatedVideo);
+            setCurrentPrompt(session.currentPrompt);
+          }
+          
+          if (session.uploadedImages && session.uploadedImages.length > 0) {
+            setUploadedImages(session.uploadedImages);
+          }
 
-        // Restore video metadata if available
-        if (session.videoMetadata) {
-          setMovementDescription(session.videoMetadata.movement || "");
-          setSfxDescription(session.videoMetadata.sfx || "");
-          const videoSizeValue = session.videoMetadata.size as VideoSize;
-          setVideoSize(videoSizeValue || 'horizontal');
+          // Restore video metadata if available
+          if (session.videoMetadata) {
+            setMovementDescription(session.videoMetadata.movement || "");
+            setSfxDescription(session.videoMetadata.sfx || "");
+            const videoSizeValue = session.videoMetadata.size as VideoSize;
+            setVideoSize(videoSizeValue || 'horizontal');
+          }
+          
+          console.log('✅ Session restoration complete with content');
+        } else {
+          console.log('🆕 Empty session - keeping clean state');
         }
         
         hasRestoredFromSession.current = true;
         isRestoringFromSession.current = false;
-        console.log('✅ Session restoration complete');
+      }
+    } else {
+      // No session - ensure clean state
+      if (!isInGenerationFlow) {
+        setUploadedImages([]);
+        setGeneratedVideo(undefined);
+        setCurrentPrompt("");
+        setMovementDescription("");
+        setSfxDescription("");
+        setVideoSize('horizontal');
+        hasRestoredFromSession.current = false;
+        console.log('🧹 No session - cleaned state');
       }
     }
   }, [currentSessionId, sessions, isInGenerationFlow]);
@@ -475,21 +518,38 @@ const Video = () => {
   }, [uploadedImages, currentSessionId, updateSession]); // Include updateSession but use ref to prevent loops
 
   const handleNewChat = () => {
-    // Clear localStorage backup for old session
+    console.log('🆕 Starting new video session');
+    
+    // Clear localStorage backup first
+    const backupKey = `video_backup_${currentSessionId}`;
     if (currentSessionId) {
-      const backupKey = `video-form-backup-${currentSessionId}`;
       localStorage.removeItem(backupKey);
+      console.log('🗑️ Cleared localStorage backup for session:', currentSessionId);
     }
     
-    startNewSession(() => {
-      setGeneratedVideo(undefined);
-      setCurrentPrompt(undefined);
-      setUploadedImages([]);
-      setMovementDescription("");
-      setSfxDescription("");
-      // Reset restoration flag for new session
-      hasRestoredFromSession.current = false;
+    // Clear all state immediately
+    setUploadedImages([]);
+    setGeneratedVideo(undefined);
+    setCurrentPrompt("");
+    setMovementDescription("");
+    setSfxDescription("");
+    setVideoSize('horizontal');
+    setIsGenerating(false);
+    
+    // Reset restoration flags
+    hasRestoredFromSession.current = false;
+    isRestoringFromSession.current = false;
+    
+    // Start new session using smart session management
+    const result = startNewSession(() => {
+      console.log('✅ New video session state cleared');
     });
+    
+    // Navigate to clean video page
+    if (result.type === 'created' && result.sessionId) {
+      window.history.replaceState(null, '', `/video`);
+      console.log('🔄 Navigated to clean video page');
+    }
   };
 
   return (
