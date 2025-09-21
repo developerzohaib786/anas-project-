@@ -13,9 +13,7 @@ Summary of Nino Style: Nino's photography should feel like editorial luxury life
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      headers: corsHeaders
-    });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
@@ -27,88 +25,102 @@ serve(async (req) => {
         error: 'Missing or invalid prompt'
       }), {
         status: 400,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    // Get Gemini API key
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     if (!GEMINI_API_KEY) {
-      throw new Error('Gemini API key not found in environment variables. Please add GEMINI_API_KEY to your Supabase secrets.');
+      throw new Error('Gemini API key not found in environment variables');
     }
 
-    // Determine if this is image editing or text-to-image generation
     const hasUploadedImages = uploaded_images && uploaded_images.length > 0;
-    console.log(`📸 Processing ${hasUploadedImages ? 'image editing' : 'text-to-image generation'} request`);
+    console.log(`📸 Processing ${hasUploadedImages ? 'image enhancement' : 'text-to-image generation'} request`);
 
-    let apiUrl, requestBody;
+    let enhancedPrompt;
+    let requestBody;
+    let apiUrl;
 
     if (hasUploadedImages) {
-      // IMAGE EDITING MODE - Use Gemini 2.0 Flash with image input
+      // Image enhancement mode using Gemini 2.0 Flash Preview Image Generation
+      enhancedPrompt = `Enhance this image with luxury editorial style: ${prompt}. 
+
+${NINO_SYSTEM_INSTRUCTIONS}
+
+Transform this image to match: Editorial luxury hotel photography aesthetic, cinematic lighting, rich shadows, golden hour warmth, film-like grain, high contrast, muted earthy tones. Enhance quality and style while preserving the original subject and composition.`;
+
+      // Get the first uploaded image - your frontend sends: { data: "data:image/...", mimeType: "image/jpeg", name: "file.jpg" }
+      const imageData = uploaded_images[0];
+      console.log('📋 Image data type:', typeof imageData);
+      console.log('📋 Image data keys:', Object.keys(imageData || {}));
+      
+      let base64Image;
+      let mimeType;
+      
+      if (imageData && typeof imageData === 'object' && imageData.data) {
+        // Your frontend format: { data: "data:image/jpeg;base64,/9j/4AAQ...", mimeType: "image/jpeg", name: "file.jpg" }
+        if (imageData.data.startsWith('data:')) {
+          const parts = imageData.data.split(',');
+          base64Image = parts[1];
+          mimeType = imageData.mimeType || parts[0].split(';')[0].split(':')[1];
+          console.log('✅ Extracted base64 from data URL, length:', base64Image.length);
+        } else {
+          base64Image = imageData.data;
+          mimeType = imageData.mimeType || 'image/jpeg';
+          console.log('✅ Using raw base64 data, length:', base64Image.length);
+        }
+      } else {
+        console.error('❌ Unsupported image format:', typeof imageData);
+        console.error('❌ Image data structure:', imageData);
+        throw new Error('Uploaded image must be an object with data property containing base64 data');
+      }
+
+      // Gemini 2.0 Flash Preview Image Generation API for image editing
       apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent';
       
-      // Compose enhanced prompt with Nino style for image editing
-      const enhancedPrompt = `${prompt}.\n\n${NINO_SYSTEM_INSTRUCTIONS}\nStyle: Transform this image into editorial luxury hotel photography style with cinematic composition, rich shadows, golden hour lighting, film-like grain, high contrast, muted earthy tones, professional campaign quality. Maintain the core subject and composition while enhancing the aesthetic.`;
-
-      // Prepare content parts with uploaded images
-      const parts = [
-        { text: enhancedPrompt }
-      ];
-
-      // Add uploaded images to the request
-      uploaded_images.forEach((uploadedImage, index) => {
-        if (uploadedImage.data && uploadedImage.mimeType) {
-          // Extract base64 data (remove data:image/xxx;base64, prefix if present)
-          let base64Data = uploadedImage.data;
-          if (base64Data.startsWith('data:')) {
-            base64Data = base64Data.split(',')[1];
-          }
-
-          parts.push({
-            inline_data: {
-              mime_type: uploadedImage.mimeType,
-              data: base64Data
-            }
-          });
-        }
-      });
-
       requestBody = {
         contents: [{
-          parts: parts
+          parts: [
+            { text: enhancedPrompt },
+            {
+              inline_data: {
+                mime_type: mimeType,
+                data: base64Image
+              }
+            }
+          ]
         }],
         generationConfig: {
-          responseModalities: ['TEXT', 'IMAGE']
+          responseModalities: ["TEXT", "IMAGE"]
         }
       };
 
     } else {
-      // TEXT-TO-IMAGE MODE - Use Imagen for pure text-to-image generation
-      apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-preview-06-06:predict';
-      
-      // Compose enhanced prompt with Nino style
-      const enhancedPrompt = `${prompt}.\n\n${NINO_SYSTEM_INSTRUCTIONS}\nStyle: Editorial luxury hotel photography, cinematic composition, rich shadows, golden hour lighting, film-like grain, high contrast, muted earthy tones, professional campaign quality.`;
+      // Text-to-image generation using Gemini 2.0 Flash Preview Image Generation
+      enhancedPrompt = `${prompt}.
 
+${NINO_SYSTEM_INSTRUCTIONS}
+
+Style: Editorial luxury hotel photography, cinematic composition, rich shadows, golden hour lighting, film-like grain, high contrast, muted earthy tones, professional campaign quality. Create an image that feels like Condé Nast Traveler meets Kinfolk magazine.`;
+
+      apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent';
+      
       requestBody = {
-        instances: [
-          {
-            prompt: enhancedPrompt
-          }
-        ],
-        parameters: {
-          sampleCount: 1,
-          aspectRatio: aspect_ratio || '1:1',
-          personGeneration: 'allow_adult'
+        contents: [{
+          parts: [
+            { text: enhancedPrompt }
+          ]
+        }],
+        generationConfig: {
+          responseModalities: ["TEXT", "IMAGE"]
         }
       };
     }
 
-    console.log(`🎨 Calling ${hasUploadedImages ? 'Gemini API for image editing' : 'Imagen API for text-to-image generation'}...`);
-    console.log('Using API URL:', apiUrl);
+    console.log('🎨 Calling Gemini 2.0 Flash Preview Image Generation API...');
+    console.log('Mode:', hasUploadedImages ? 'Image Enhancement' : 'Text-to-Image');
 
+    console.log('📡 Making API request...');
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
@@ -118,137 +130,110 @@ serve(async (req) => {
       body: JSON.stringify(requestBody)
     });
 
+    console.log('📡 Response received, status:', response.status, response.statusText);
+
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('API Error Response:', errorText);
-      throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+      console.error('🚫 Gemini API Error:', response.status, errorText);
+      
+      if (response.status === 403) {
+        throw new Error('API access denied. Please ensure your API key has access to Gemini 2.0 Flash Preview Image Generation and billing is enabled (paid tier required).');
+      } else if (response.status === 404) {
+        throw new Error('Gemini 2.0 Flash Preview Image Generation model not found. The model may not be available in your region or you may need a paid tier.');
+      } else if (response.status === 429) {
+        throw new Error('Rate limit exceeded. Please wait before trying again.');
+      } else {
+        throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+      }
     }
 
-    const result = await response.json();
-    console.log('API Response received');
-    console.log('Response structure:', JSON.stringify(result, null, 2));
+    let result;
+    try {
+      result = await response.json();
+      console.log('✅ JSON response parsed successfully');
+    } catch (jsonError) {
+      console.error('❌ Failed to parse JSON response:', jsonError);
+      throw new Error('Invalid JSON response from Gemini API');
+    }
 
-    // Extract image from response (different for Gemini vs Imagen)
+    // Extract image from Gemini 2.0 response structure
     let generatedImageUrl = null;
     let responseText = null;
-    
-    if (hasUploadedImages) {
-      // GEMINI RESPONSE FORMAT (Image editing)
-      // The response structure is: { candidates: [{ content: { parts: [{ text: "...", inline_data: { mime_type: "...", data: "..." } }] } }] }
-      if (result.candidates && result.candidates.length > 0) {
-        const candidate = result.candidates[0];
-        if (candidate.content && candidate.content.parts) {
-          for (const part of candidate.content.parts) {
-            if (part.text) {
-              responseText = part.text;
-              console.log('📝 Gemini response text:', responseText);
-            }
-            if (part.inline_data && part.inline_data.data) {
-              const mimeType = part.inline_data.mime_type || 'image/png';
-              generatedImageUrl = `data:${mimeType};base64,${part.inline_data.data}`;
-              console.log('🖼️ Found image in Gemini response, length:', part.inline_data.data.length);
-              break;
-            }
-          }
-        }
-      }
-    } else {
-      // IMAGEN RESPONSE FORMAT (Text-to-image)
-      if (result.predictions && result.predictions[0]) {
-        const prediction = result.predictions[0];
-        if (prediction.bytesBase64Encoded) {
-          generatedImageUrl = `data:image/png;base64,${prediction.bytesBase64Encoded}`;
-          console.log('🖼️ Found image in Imagen response, length:', prediction.bytesBase64Encoded.length);
-        } else if (prediction.mimeType && prediction.bytesBase64Encoded) {
-          generatedImageUrl = `data:${prediction.mimeType};base64,${prediction.bytesBase64Encoded}`;
-          console.log('🖼️ Found image in Imagen response with custom mime type');
+
+    if (result.candidates && result.candidates[0] && result.candidates[0].content && result.candidates[0].content.parts) {
+      const parts = result.candidates[0].content.parts;
+      
+      for (const part of parts) {
+        if (part.text) {
+          responseText = part.text;
+          console.log('📝 Response text:', responseText);
+        } else if (part.inline_data && part.inline_data.data) {
+          // Gemini returns base64 image data in inline_data.data
+          generatedImageUrl = `data:image/png;base64,${part.inline_data.data}`;
+          console.log('🖼️ Image found, length:', part.inline_data.data.length);
+        } else if (part.inlineData && part.inlineData.data) {
+          // Alternative property name format
+          generatedImageUrl = `data:image/png;base64,${part.inlineData.data}`;
+          console.log('🖼️ Image found (alt format), length:', part.inlineData.data.length);
         }
       }
     }
 
     if (!generatedImageUrl) {
-      console.error('No image found in API response. Full response structure:');
-      console.error(JSON.stringify(result, null, 2));
+      console.error('❌ No image found in API response');
+      console.error('Response structure:', JSON.stringify(result, null, 2));
       
-      // Provide detailed debugging information
-      if (hasUploadedImages) {
-        console.error('Expected Gemini structure: candidates[0].content.parts[].inline_data.data');
-        if (result.candidates) {
-          console.error('Candidates found:', result.candidates.length);
-          if (result.candidates[0]?.content?.parts) {
-            console.error('Parts found:', result.candidates[0].content.parts.length);
-            result.candidates[0].content.parts.forEach((part, i) => {
-              console.error(`Part ${i}:`, Object.keys(part));
-            });
-          }
-        }
+      if (responseText && responseText.includes('I can\'t generate')) {
+        throw new Error('Gemini declined to generate the image. Try a different prompt or uploaded image.');
       } else {
-        console.error('Expected Imagen structure: predictions[0].bytesBase64Encoded');
-        if (result.predictions) {
-          console.error('Predictions found:', result.predictions.length);
-          if (result.predictions[0]) {
-            console.error('Prediction keys:', Object.keys(result.predictions[0]));
-          }
-        }
+        throw new Error('No image generated from Gemini API - the model may have only returned text');
       }
-      
-      throw new Error(`No image generated from ${hasUploadedImages ? 'Gemini' : 'Imagen'} API - unexpected response structure`);
     }
 
-    console.log(`✅ Image ${hasUploadedImages ? 'edited' : 'generated'} successfully`);
+    console.log(`✅ Image ${hasUploadedImages ? 'enhanced' : 'generated'} successfully`);
 
     return new Response(JSON.stringify({
       success: true,
       image: generatedImageUrl,
       imageUrl: generatedImageUrl,
       prompt: prompt,
-      enhancedPrompt: hasUploadedImages ? 
-        `Image editing: ${prompt} with Nino aesthetic enhancement` : 
-        `Text-to-image: ${prompt} with Nino aesthetic`,
-      responseText: responseText, // Include any text response from Gemini
+      enhancedPrompt: enhancedPrompt.substring(0, 200) + '...',
       style: 'Nino Aesthetic - Editorial Luxury',
-      aspectRatio: aspect_ratio || '1:1',
-      mode: hasUploadedImages ? 'image-editing' : 'text-to-image',
+      aspectRatio: aspect_ratio || '16:9',
+      mode: hasUploadedImages ? 'image-enhancement' : 'text-to-image',
       uploadedImagesCount: uploaded_images ? uploaded_images.length : 0,
+      note: hasUploadedImages ? 'Enhanced your uploaded image with luxury aesthetic using Gemini 2.0 Flash Preview' : 'Generated from text prompt with Nino luxury aesthetic using Gemini 2.0 Flash Preview',
+      responseText: responseText, // Include any text response from Gemini
       metadata: {
         styleApplied: 'Cinematic hotel marketing with rich shadows and golden warmth',
         quality: 'Campaign-ready',
         aesthetic: 'Condé Nast Traveler meets Kinfolk magazine',
         timestamp: new Date().toISOString(),
-        generatedWith: hasUploadedImages ? 'Gemini 2.0 Flash (Image Editing)' : 'Imagen 4 (Text-to-Image)',
-        model: hasUploadedImages ? 'gemini-2.0-flash-preview-image-generation' : 'imagen-4.0-generate-preview-06-06',
-        apiResponseStructure: hasUploadedImages ? 'Gemini candidates format' : 'Imagen predictions format'
+        generatedWith: 'Gemini 2.0 Flash Preview Image Generation',
+        model: 'gemini-2.0-flash-preview-image-generation',
+        enhancementMode: hasUploadedImages ? 'Image editing with reference image' : 'Text-to-image generation'
       }
     }), {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json'
-      }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
     console.error('💥 Generate-image error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unexpected error occurred';
-    const errorStack = error instanceof Error ? error.stack : undefined;
-    const errorName = error instanceof Error ? error.name : 'Unknown Error';
-
+    
     return new Response(JSON.stringify({
       error: errorMessage,
-      stack: errorStack,
-      name: errorName,
       troubleshooting: {
         checkApiKey: 'Ensure GEMINI_API_KEY is set in Supabase secrets',
-        checkModel: 'Ensure you have access to Gemini 2.0 Flash Preview (paid tier required)',
-        checkQuota: 'Verify your Google Cloud/Gemini API quota and billing',
-        checkImages: 'Ensure uploaded images are in supported formats (PNG, JPEG, WebP)',
-        debugTip: 'Check Supabase function logs for detailed API response structure'
+        checkBilling: 'Ensure billing is enabled for Gemini API - Gemini 2.0 Flash Preview Image Generation requires paid tier',
+        checkQuota: 'Verify your API quota and rate limits',
+        imageFormat: 'Ensure uploaded images are in base64 format with proper MIME types',
+        modelAccess: 'Check if you have access to Gemini 2.0 Flash Preview Image Generation model',
+        region: 'Image generation may not be available in all regions'
       }
     }), {
       status: 500,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json'
-      }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 });
