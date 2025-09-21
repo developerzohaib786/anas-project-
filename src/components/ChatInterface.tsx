@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { ArrowUp, Copy, ThumbsUp, ThumbsDown, Volume2, Share, RotateCcw, X, Upload, Sparkles, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getOptimizedImageUrl, getResponsiveImageUrls } from '../utils/imageOptimization';
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChat } from "@/contexts/ChatContext";
@@ -95,6 +96,42 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
     hasUserClearedText.current = false;
   }, [uploadedImages.length]);
 
+  // Watch for generatedImage prop changes and add to messages immediately
+  useEffect(() => {
+    if (generatedImage && currentPrompt) {
+      console.log("🖼️ New generated image received, adding to messages:", generatedImage.substring(0, 50) + "...");
+      
+      const imageMessage: Message = {
+        id: `generated-${Date.now()}`,
+        content: "Here's your generated image:",
+        role: "assistant",
+        timestamp: new Date(),
+        images: [{
+          id: `generated-${Date.now()}`,
+          name: `generated-image-${Date.now()}.png`,
+          url: generatedImage,
+          size: 0,
+          type: 'image/png',
+          is_generated: true,
+          cloudinaryPath: ''
+        }]
+      };
+      
+      // Remove any existing generating messages and add the new image message
+      setMessages((prev) => {
+        const filteredMessages = prev.filter(msg => !msg.content.includes("Generating your image"));
+        return [...filteredMessages, imageMessage];
+      });
+      
+      // Save the image message to database if we have a session
+      if (sessionId && saveMessage) {
+        saveMessage(sessionId, imageMessage).catch(error => {
+          console.error("❌ Failed to save generated image message:", error);
+        });
+      }
+    }
+  }, [generatedImage]); // Only depend on generatedImage for immediate updates
+
   // Smart session management for the new chat button
   const { startNewSession } = useSmartSession(flowType, [
     () => uploadedImages.length > 0,
@@ -145,6 +182,14 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
         console.log("📋 Found session:", session ? "Yes" : "No", session?.title);
         
         if (session) {
+          // Immediately clear messages to prevent showing old data
+          setMessages([{
+            id: "loading",
+            content: "Loading session...",
+            role: "assistant",
+            timestamp: new Date(),
+          }]);
+          
           setCurrentSession(sessionId);
           
           // Load messages from Supabase if session exists but has no local messages
@@ -176,6 +221,25 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
                 console.log("📋 All messages loaded:", convertedMessages);
                 console.log("🔍 Messages with images:", convertedMessages.filter(m => m.images && m.images.length > 0));
                 setMessages(convertedMessages);
+                
+                // Extract the latest generated image from messages to trigger immediate display
+                // This ensures images appear immediately when session loads
+                const latestGeneratedImageMessage = convertedMessages
+                  .filter(msg => msg.role === 'assistant' && msg.images && msg.images.length > 0)
+                  .find(msg => msg.images?.some(img => img.is_generated));
+                
+                if (latestGeneratedImageMessage && latestGeneratedImageMessage.images) {
+                  const generatedImg = latestGeneratedImageMessage.images.find(img => img.is_generated);
+                  if (generatedImg && generatedImg.url) {
+                    console.log("🖼️ Found generated image in session messages, triggering immediate display");
+                    // Create a temporary message to trigger the useEffect that handles generatedImage
+                    // This ensures the image displays immediately without waiting for prop updates
+                    setTimeout(() => {
+                      // Trigger a re-render to ensure the image is visible
+                      setMessages(prev => [...prev]);
+                    }, 0);
+                  }
+                }
               } else {
                 // Fresh session - reset to default message
                 setMessages([
@@ -202,8 +266,18 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
               setIsLoadingMessages(false);
             }
           } else {
-            // Use existing session messages
-            setMessages(session.messages);
+            // Use existing session messages - but clear first to prevent old data showing
+            setMessages([{
+              id: "loading",
+              content: "Loading session...",
+              role: "assistant",
+              timestamp: new Date(),
+            }]);
+            
+            // Small delay to ensure UI updates, then set actual messages
+            setTimeout(() => {
+              setMessages(session.messages);
+            }, 50);
           }
           
           // Mark this session as loaded
@@ -238,6 +312,16 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
           setInputValue("");
         }
       } else if (!currentSessionId && !sessionId) {
+        // Clear messages when no session is selected to prevent showing old data
+        setMessages([
+          {
+            id: "1",
+            content: "What are we creating today?",
+            role: "assistant",
+            timestamp: new Date(),
+          },
+        ]);
+        
         // Only create a new session if we're on a chat path without a sessionId
         // This prevents creating sessions when we navigate to home after deleting
         const currentPath = window.location.pathname;
@@ -456,9 +540,16 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
         }
         
         // Enhanced user message with processed image information
+        // Ensure images have proper URLs for display
+        const displayImages = processedImages.length > 0 ? processedImages.map(img => ({
+          ...img,
+          url: img.url || img.cloudinaryPath || '', // Ensure URL is always available for display
+          alt: img.name || 'User uploaded image'
+        })) : undefined;
+        
         finalUserMessage = {
           ...userMessage,
-          images: processedImages.length > 0 ? processedImages : undefined
+          images: displayImages
         };
         
         await saveMessage(sessionId, finalUserMessage);
@@ -544,10 +635,47 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
             reader.readAsDataURL(file);
           });
 
+        const convertUrlToBase64 = async (url: string): Promise<string> => {
+          try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            return new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsDataURL(blob);
+            });
+          } catch (error) {
+            console.error("Failed to convert URL to base64:", error);
+            throw error;
+          }
+        };
+
         try {
           imageData = await Promise.all(
-            currentImages.map(async (img) => ({ data: await convertToBase64(img.file), name: img.name }))
+            currentImages.map(async (img) => {
+              let data: string;
+              
+              // If we have a File object, convert it directly
+              if (img.file) {
+                data = await convertToBase64(img.file);
+              } 
+              // If we only have a URL (processed images), fetch and convert
+              else if (img.url) {
+                data = await convertUrlToBase64(img.url);
+              } 
+              // Fallback - this shouldn't happen but handle gracefully
+              else {
+                console.warn("Image has neither file nor url:", img);
+                return null;
+              }
+              
+              return { data, name: img.name };
+            })
           );
+          
+          // Filter out any null results
+          imageData = imageData.filter(item => item !== null) as { data: string; name: string }[];
         } catch (e) {
           console.error("Failed to convert images for chat:", e);
         }
@@ -653,87 +781,12 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
         
         // Trigger image generation and remove generating message when done
         try {
-          await onGenerateImage(imagePrompt || currentInput, currentImages);
+          const generatedImageResult = await onGenerateImage(imagePrompt || currentInput, currentImages);
           
-          // Wait a moment for the generated image to be available in props
-          setTimeout(async () => {
-            // After image generation, check if we have a generated image to add to messages
-            if (generatedImage) {
-              let finalImageUrl = generatedImage;
-              
-              // If the generated image is a data URL, upload it to Cloudinary storage
-              if (generatedImage.startsWith('data:') && user) {
-                try {
-                  console.log("📤 Uploading generated image to Cloudinary storage");
-                  const fileName = `generated-image-${Date.now()}.png`;
-                  const uploadedMedia = await CloudinaryBrowserService.uploadFromDataUrl(
-                    generatedImage, 
-                    fileName, 
-                    user,
-                    { is_generated: true, prompt_used: imagePrompt || currentInput }
-                  );
-                  finalImageUrl = uploadedMedia.publicUrl;
-                  console.log("✅ Generated image uploaded to Cloudinary:", finalImageUrl);
-                } catch (uploadError) {
-                  console.error("❌ Failed to upload generated image to Cloudinary:", uploadError);
-                  // Continue with data URL as fallback
-                }
-              }
-              
-              // Upload the generated image to Cloudinary before saving
-              let cloudinaryImageUrl = finalImageUrl;
-              let cloudinaryPath = '';
-              
-              try {
-                console.log("📤 Uploading generated image to Cloudinary...");
-                const imageName = `generated-image-${Date.now()}.png`;
-                const uploadedMedia = await CloudinaryBrowserService.uploadFromUrl(finalImageUrl, imageName, user);
-                
-                if (uploadedMedia.success && uploadedMedia.url) {
-                  cloudinaryImageUrl = uploadedMedia.url;
-                  cloudinaryPath = uploadedMedia.path || '';
-                  console.log("✅ Generated image uploaded to Cloudinary:", cloudinaryImageUrl);
-                } else {
-                  console.warn("⚠️ Failed to upload to Cloudinary, using original URL:", uploadedMedia.error);
-                }
-              } catch (error) {
-                console.error("❌ Error uploading generated image to Cloudinary:", error);
-              }
-
-              const imageMessage: Message = {
-                id: (Date.now() + 2).toString(),
-                content: "Here's your generated image:",
-                role: "assistant",
-                timestamp: new Date(),
-                images: [{
-                  id: `generated-${Date.now()}`,
-                  name: `generated-image-${Date.now()}.png`,
-                  url: cloudinaryImageUrl,
-                  size: 0,
-                  type: 'image/png',
-                  is_generated: true,
-                  cloudinaryPath: cloudinaryPath
-                }]
-              };
-              
-              // Remove the generating message and add the image message
-              setMessages((prev) => [...prev.filter(msg => msg.id !== generatingMessageId), imageMessage]);
-              
-              // Save the image message to database if we have a session
-              if (sessionId && saveMessage) {
-                try {
-                  console.log("💾 Saving generated image message to session:", sessionId);
-                  await saveMessage(sessionId, imageMessage);
-                  console.log("✅ Generated image message saved successfully");
-                } catch (error) {
-                  console.error("❌ Failed to save generated image message:", error);
-                }
-              }
-            } else {
-              // Just remove the generating message if no image was generated
-              setMessages((prev) => prev.filter(msg => msg.id !== generatingMessageId));
-            }
-          }, 1000); // Wait 1 second for the image to be available
+          // The image will be handled by the useEffect watching generatedImage prop
+          // Just remove the generating message here
+          setMessages((prev) => prev.filter(msg => msg.id !== generatingMessageId));
+          
         } catch (error) {
           // Remove generating message even if there's an error
           setMessages((prev) => prev.filter(msg => msg.id !== generatingMessageId));
@@ -804,30 +857,86 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
                       {/* Display images if present */}
                       {message.images && message.images.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-3">
-                          {message.images.map((img) => {
-                            console.log('Rendering image:', {
+                          {console.log('🖼️ Message has images:', message.images.length, message.images)}
+                          {message.images.map((img, index) => {
+                            console.log(`🔍 Rendering image ${index}:`, {
                               id: img.id,
                               url: img.url,
                               name: img.name,
-                              alt: img.alt
+                              alt: img.alt,
+                              cloudinaryPath: img.cloudinaryPath,
+                              fullObject: img
                             });
+                            
+                            // Use the URL directly if available, otherwise fallback
+                            const imageUrl = img.url || img.cloudinaryPath || '';
+                            console.log(`📍 Final imageUrl for ${img.name}:`, imageUrl);
+                            
+                            if (!imageUrl) {
+                              console.warn('❌ No URL available for image:', img);
+                              return null;
+                            }
+                            
                             return (
-                              <div key={img.id} className="relative">
+                              <div key={img.id || index} className="relative group">
+                                {/* Loading skeleton */}
+                                <div className="absolute inset-0 bg-muted animate-pulse rounded-lg" />
                                 <img
-                                  src={img.url}
+                                  src={imageUrl}
                                   alt={img.alt || img.name || 'Image'}
-                                  className="w-32 h-32 object-cover rounded-lg border border-border"
+                                  className="w-32 h-32 object-cover rounded-lg border border-border relative z-10 transition-opacity duration-300"
+                                  style={{ 
+                                    opacity: 0,
+                                    maxWidth: '100%',
+                                    height: 'auto'
+                                  }}
+                                  loading="lazy"
+                                  decoding="async"
+                                  onLoad={(e) => {
+                                    console.log('✅ Image loaded successfully:', imageUrl);
+                                    const target = e.target as HTMLImageElement;
+                                    const skeleton = target.previousElementSibling as HTMLElement;
+                                    if (skeleton) {
+                                      skeleton.style.display = 'none';
+                                    }
+                                    target.style.opacity = '1';
+                                  }}
                                   onError={(e) => {
                                     console.error('Image failed to load:', {
                                       url: img.url,
                                       error: e,
                                       target: e.target
                                     });
+                                    // Hide loading skeleton and show error state
+                                    const target = e.target as HTMLImageElement;
+                                    const skeleton = target.previousElementSibling as HTMLElement;
+                                    if (skeleton) {
+                                      skeleton.style.display = 'none';
+                                    }
+                                    target.style.opacity = '1';
+                                    target.style.backgroundColor = '#fee2e2';
+                                    target.style.border = '2px dashed #ef4444';
+                                    target.style.display = 'flex';
+                                    target.style.alignItems = 'center';
+                                    target.style.justifyContent = 'center';
+                                    target.style.minHeight = '128px';
+                                    target.alt = 'Failed to load image';
                                   }}
-                                  onLoad={() => {
+                                  onLoad={(e) => {
                                     console.log('Image loaded successfully:', img.url);
+                                    // Hide loading skeleton
+                                    const target = e.target as HTMLImageElement;
+                                    const skeleton = target.previousElementSibling as HTMLElement;
+                                    if (skeleton) {
+                                      skeleton.style.display = 'none';
+                                    }
+                                    target.style.opacity = '1';
                                   }}
                                 />
+                                {/* Error fallback overlay */}
+                                <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity bg-muted/80 rounded-lg">
+                                  Failed to load
+                                </div>
                               </div>
                             );
                           })}

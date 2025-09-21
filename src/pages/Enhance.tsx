@@ -231,7 +231,7 @@ const Enhance = () => {
               {/* Chat Interface */}
               <div className="flex-1">
                 <ChatInterface
-                  onGenerateImage={generateImage}
+                  onGenerateImage={handleGenerateImage}
                   showImageUpload={true}
                   showPrompts={false}
                   initialMessage="Upload an image and provide your own prompt to enhance it."
@@ -264,7 +264,7 @@ const Enhance = () => {
       {/* Mobile Layout */}
       <div className="md:hidden flex-1 min-h-0">
         <ChatInterface
-          onGenerateImage={generateImage}
+          onGenerateImage={handleGenerateImage}
           showImageUpload={true}
           showPrompts={false}
           initialMessage="Upload an image and provide your own prompt to enhance it."

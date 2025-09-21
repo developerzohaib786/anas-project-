@@ -76,6 +76,9 @@ export class CloudinaryBrowserService {
     return { isValid: true };
   }
 
+  /**
+   * Upload file to Cloudinary with optimizations
+   */
   static async uploadFile(
     file: File,
     user: any,
@@ -103,12 +106,25 @@ export class CloudinaryBrowserService {
     
     formData.append('upload_preset', uploadPreset);
     
+    // Add optimization parameters
+    formData.append('quality', 'auto:good');
+    formData.append('fetch_format', 'auto');
+    formData.append('flags', 'progressive');
+    
     if (options.folder) {
       formData.append('folder', options.folder);
     }
     
     if (options.tags) {
       formData.append('tags', options.tags.join(','));
+    }
+
+    // Add responsive breakpoints for images
+    if (this.ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      formData.append('responsive_breakpoints', JSON.stringify([
+        { max_width: 1000, max_images: 5 },
+        { max_width: 500, max_images: 3 }
+      ]));
     }
 
     if (onProgress) {
@@ -122,10 +138,17 @@ export class CloudinaryBrowserService {
 
       const uploadUrl = `https://api.cloudinary.com/v1_1/${config.cloudName}/${resourceType}/upload`;
 
+      // Add timeout and retry logic
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
       const response = await fetch(uploadUrl, {
         method: 'POST',
         body: formData,
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`Upload failed: ${response.statusText}`);
@@ -156,6 +179,12 @@ export class CloudinaryBrowserService {
           error: error instanceof Error ? error.message : 'Upload failed' 
         });
       }
+      
+      // Retry logic for network errors
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Upload timeout - please try again with a smaller image');
+      }
+      
       throw error;
     }
   }

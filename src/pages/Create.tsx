@@ -93,7 +93,13 @@ const Create = () => {
         <ResizablePanelGroup direction="horizontal" className="h-full">
           {/* Chat Interface Panel */}
           <ResizablePanel defaultSize={70} minSize={50}>
-            <ChatInterface onGenerateImage={handleGenerateImage} showImageUpload={false} flowType="create" />
+            <ChatInterface 
+              onGenerateImage={handleGenerateImage} 
+              showImageUpload={false} 
+              flowType="create"
+              generatedImage={generatedImage}
+              currentPrompt={currentPrompt}
+            />
           </ResizablePanel>
           
           {/* Resizable Handle */}
@@ -114,7 +120,13 @@ const Create = () => {
 
       {/* Mobile Layout */}
       <div className="md:hidden flex-1 min-h-0">
-        <ChatInterface onGenerateImage={handleGenerateImage} showImageUpload={false} flowType="create" />
+        <ChatInterface 
+          onGenerateImage={handleGenerateImage} 
+          showImageUpload={false} 
+          flowType="create"
+          generatedImage={generatedImage}
+          currentPrompt={currentPrompt}
+        />
         </div>
     </div>
   );

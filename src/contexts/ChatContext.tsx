@@ -372,16 +372,29 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const setCurrentSession = useCallback(async (sessionId: string | null) => {
     console.log('🎯 setCurrentSession called with:', sessionId);
-    setCurrentSessionId(sessionId);
     
-    // If switching to a session, always try to load its messages
-    if (sessionId) {
-      const session = sessions.find(s => s.id === sessionId);
-      console.log('🔄 Switching to session:', sessionId, 'Found session:', !!session, 'Current messages count:', session?.messages?.length || 0);
+    // If switching to a session, first clear the current session to prevent showing old data
+    if (sessionId && sessionId !== currentSessionId) {
+      console.log('🧹 Clearing current session state before switching');
+      setCurrentSessionId(null); // Clear current session first
       
-      // Always load messages for the session, regardless of current message count
-      // This ensures we get the latest messages from the server
+      // Small delay to ensure UI updates
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      const session = sessions.find(s => s.id === sessionId);
+      console.log('🔄 Switching to session:', sessionId, 'Found session:', !!session);
+      
       if (session) {
+        // Clear the session's messages first to prevent showing stale data
+        setSessions(prev => prev.map(s => 
+          s.id === sessionId 
+            ? { ...s, messages: [] } // Clear messages first
+            : s
+        ));
+        
+        // Now set the current session ID
+        setCurrentSessionId(sessionId);
+        
         try {
           console.log("📡 Loading messages for session:", sessionId);
           const messages = await loadSessionMessages(sessionId);
@@ -395,31 +408,38 @@ export function ChatProvider({ children }: { children: ReactNode }) {
                   content: msg.content,
                   role: msg.role, // Use role field from database (user/assistant)
                   timestamp: new Date(msg.created_at || msg.timestamp),
-                  // Extract images from metadata - check ALL possible locations and combine them
+                  // Simplified image extraction - prioritize direct properties first
                   images: (() => {
-                    let allImages = [];
+                    // Priority order: direct properties > metadata > attachments
+                    let images = [];
                     
-                    // Check all possible image locations and combine them
-                    const imageSources = [
-                      msg.metadata?.images,
-                      msg.metadata?.input_images,
-                      msg.metadata?.generated_images,
-                      msg.input_images, // Direct property from API
-                      msg.generated_images, // Direct property from API
-                      msg.processed_metadata?.input_images, // Processed metadata
-                      msg.processed_metadata?.generated_images,
-                      msg.processed_metadata?.images
-                    ];
+                    // 1. Check direct properties first (most reliable)
+                    if (msg.input_images && Array.isArray(msg.input_images)) {
+                      images = images.concat(msg.input_images);
+                    }
+                    if (msg.generated_images && Array.isArray(msg.generated_images)) {
+                      images = images.concat(msg.generated_images);
+                    }
                     
-                    // Combine all image arrays, filtering out null/undefined
-                    imageSources.forEach(imageArray => {
-                      if (Array.isArray(imageArray)) {
-                        allImages = allImages.concat(imageArray);
+                    // 2. Check metadata if no direct images found
+                    if (images.length === 0 && msg.metadata) {
+                      const metadataImages = msg.metadata.images || msg.metadata.input_images || msg.metadata.generated_images;
+                      if (Array.isArray(metadataImages)) {
+                        images = images.concat(metadataImages);
                       }
-                    });
+                    }
+                    
+                    // 3. Fallback to processed metadata
+                    if (images.length === 0 && msg.processed_metadata) {
+                      const processedImages = msg.processed_metadata.images || msg.processed_metadata.input_images || msg.processed_metadata.generated_images;
+                      if (Array.isArray(processedImages)) {
+                        images = images.concat(processedImages);
+                      }
+                    }
+                    
                     
                     // Remove duplicates based on URL or ID
-                    const uniqueImages = allImages.filter((img, index, self) => 
+                    const uniqueImages = images.filter((img, index, self) => 
                       index === self.findIndex(i => i.url === img.url || (i.id && img.id && i.id === img.id))
                     );
                     
@@ -473,8 +493,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       } else {
         console.log('❌ Session not found in sessions array');
       }
+    } else if (sessionId === null) {
+      // If explicitly setting to null, clear the current session
+      setCurrentSessionId(null);
     }
-  }, [sessions, loadSessionMessages]);
+  }, [sessions, loadSessionMessages, currentSessionId]);
 
   const getCurrentSession = useCallback((): ChatSession | null => {
     return sessions.find(session => session.id === currentSessionId) || null;
