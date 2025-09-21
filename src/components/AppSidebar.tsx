@@ -9,6 +9,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { ChatActionsMenu } from "@/components/ChatActionsMenu";
+import { InlineLoadingState } from "@/components/ui/loading-state";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -43,6 +44,7 @@ export function AppSidebar() {
   const currentPath = location.pathname;
   
   const { sessions, deleteSession, createSession, renameSession, currentSessionId, setCurrentSession, isLoading } = useChat();
+  const [switchingToSession, setSwitchingToSession] = useState<string | null>(null);
 
   // Determine which page a session should open on based on its title
   const getSessionRoute = (session: any) => {
@@ -234,7 +236,7 @@ export function AppSidebar() {
                               default:
                                 return `/chat/${session.id}`;
                             }
-                          })()}
+                          })()} 
                           className={() => {
                             const isCurrentSession = currentSessionId === session.id;
                             return `flex items-center px-3 py-2 rounded-lg transition-all duration-200 text-sm w-full text-foreground hover:bg-accent hover:text-accent-foreground ${
@@ -242,6 +244,11 @@ export function AppSidebar() {
                             }`;
                           }}
                           title={session.title}
+                          onClick={() => {
+                            setSwitchingToSession(session.id);
+                            // Clear switching state after a delay
+                            setTimeout(() => setSwitchingToSession(null), 1000);
+                          }}
                         >
                           <div className="flex items-center min-w-0 flex-1 gap-3">
                             {/* Session type icon */}
@@ -264,7 +271,12 @@ export function AppSidebar() {
                                 />
                               </div>
                             )}
-                            <span className="truncate flex-1 pr-8">{session.title}</span>
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <span className="truncate flex-1">{session.title}</span>
+                              {switchingToSession === session.id && (
+                                <InlineLoadingState size="sm" className="flex-shrink-0" />
+                              )}
+                            </div>
                           </div>
                         </NavLink>
                         <ChatActionsMenu
