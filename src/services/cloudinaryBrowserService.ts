@@ -119,13 +119,18 @@ export class CloudinaryBrowserService {
       formData.append('tags', options.tags.join(','));
     }
 
-    // Add responsive breakpoints for images
-    if (this.ALLOWED_IMAGE_TYPES.includes(file.type)) {
-      formData.append('responsive_breakpoints', JSON.stringify([
-        { max_width: 1000, max_images: 5 },
-        { max_width: 500, max_images: 3 }
-      ]));
-    }
+    // Add responsive breakpoints for images (only for signed uploads)
+    // Note: Responsive breakpoints are not allowed with unsigned uploads
+    // If you need responsive breakpoints, configure signed uploads in your Cloudinary dashboard
+    // and update the upload method to use signed uploads instead of upload_preset
+    
+    // Commented out responsive breakpoints for unsigned uploads
+    // if (this.ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    //   formData.append('responsive_breakpoints', JSON.stringify([
+    //     { max_width: 1000, max_images: 5, create_derived: true },
+    //     { max_width: 500, max_images: 3, create_derived: true }
+    //   ]));
+    // }
 
     if (onProgress) {
       onProgress({ progress: 0, isUploading: true });
