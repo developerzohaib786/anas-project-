@@ -18,6 +18,7 @@ import { UploadedImage, FlowType } from '@/types/common';
  * - Secure file handling with base64 conversion
  * - Centralized error handling with user-friendly messages
  * - Session state management integration
+ * - Smart mode detection (text-to-image vs image editing)
  * 
  * **Usage:**
  * ```typescript
@@ -47,9 +48,10 @@ export const useImageGeneration = (flowType: FlowType, onImageGenerated?: (image
   const { currentSessionId, updateSession } = useChat();
 
   /**
-   * Convert uploaded images to base64 for API call
+   * Convert uploaded images to the format expected by the Edge Function
+   * Includes proper MIME type detection and base64 conversion
    */
-  const convertImagesToBase64 = async (images: UploadedImage[]) => {
+  const prepareImagesForAPI = async (images: UploadedImage[]) => {
     const convertToBase64 = (file: File): Promise<string> => {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -60,21 +62,44 @@ export const useImageGeneration = (flowType: FlowType, onImageGenerated?: (image
     };
 
     try {
-      const base64Images = await Promise.all(
-        images.map(async (img) => ({
-          data: await convertToBase64(img.file),
-          name: img.name
-        }))
+      const processedImages = await Promise.all(
+        images.map(async (img) => {
+          let base64Data: string;
+          let mimeType: string;
+
+          // Handle different input formats
+          if (img.data && img.data.startsWith('data:')) {
+            // Already base64 encoded
+            base64Data = img.data;
+            mimeType = img.mimeType || img.data.split(';')[0].split(':')[1];
+          } else if (img.file) {
+            // Need to convert File to base64
+            base64Data = await convertToBase64(img.file);
+            mimeType = img.file.type;
+          } else {
+            console.warn('Invalid image format:', img);
+            return null;
+          }
+
+          return {
+            data: base64Data,
+            mimeType,
+            name: img.name
+          };
+        })
       );
-      return base64Images;
+
+      // Filter out null values
+      return processedImages.filter(img => img !== null);
     } catch (error) {
-      console.error("Error converting images to base64:", error);
-      return undefined;
+      console.error("Error preparing images for API:", error);
+      throw new Error("Failed to process uploaded images");
     }
   };
 
   /**
-   * Generate image using the consolidated logic
+   * Generate image using the consolidated logic with support for both 
+   * text-to-image generation and image editing
    */
   const generateImage = async (prompt: string, images?: UploadedImage[], uploadedImages?: UploadedImage[]) => {
     console.log(`🎨 Starting ${flowType} image generation for prompt:`, prompt);
@@ -102,21 +127,23 @@ export const useImageGeneration = (flowType: FlowType, onImageGenerated?: (image
       // Use uploaded images if available, otherwise fall back to images parameter
       const imagesToUse = uploadedImages?.length ? uploadedImages : images;
       
-      // Convert uploaded images to base64 for the API call
-      let imageData = undefined;
+      // Prepare images for API if any are provided
+      let processedImages = undefined;
       if (imagesToUse && imagesToUse.length > 0) {
-        imageData = await convertImagesToBase64(imagesToUse);
+        processedImages = await prepareImagesForAPI(imagesToUse);
+        console.log(`📷 Prepared ${processedImages.length} images for ${processedImages.length > 0 ? 'editing' : 'generation'} mode`);
       }
 
       console.log(`🎨 Invoking generate-image function with prompt: "${prompt}"`);
-      console.log(`📷 Reference images: ${imageData?.length || 0}`);
+      console.log(`📷 Reference images: ${processedImages?.length || 0}`);
+      console.log(`🔄 Mode: ${processedImages?.length > 0 ? 'Image Editing (Gemini)' : 'Text-to-Image (Imagen)'}`);
 
       // Test network connectivity
       try {
-        const testResponse = await fetch('https://pbndydilyqxqmcxwadvy.supabase.co/rest/v1/', {
+        const testResponse = await fetch(`${supabase.supabaseUrl}/rest/v1/`, {
           method: 'HEAD',
           headers: {
-            'apikey': supabase.supabaseKey
+            'apikey': supabase.supabaseAnonKey
           }
         });
         console.log('🌐 Network test:', testResponse.status, testResponse.statusText);
@@ -135,6 +162,22 @@ export const useImageGeneration = (flowType: FlowType, onImageGenerated?: (image
           const authToken = session?.access_token || supabase.supabaseAnonKey;
           
           console.log('🔐 Using auth token:', authToken ? 'Present' : 'Missing');
+
+          // Prepare request body for the new dual-mode Edge Function
+          const requestBody = {
+            prompt,
+            aspect_ratio: '16:9', // Default aspect ratio, can be made configurable
+            ...(processedImages && processedImages.length > 0 && {
+              uploaded_images: processedImages
+            })
+          };
+          
+          console.log('📦 Request body structure:', {
+            prompt: requestBody.prompt,
+            aspect_ratio: requestBody.aspect_ratio,
+            uploaded_images_count: processedImages?.length || 0,
+            mode: processedImages?.length > 0 ? 'image-editing' : 'text-to-image'
+          });
           
           const response = await fetch(`${supabase.supabaseUrl}/functions/v1/generate-image`, {
             method: 'POST',
@@ -143,27 +186,33 @@ export const useImageGeneration = (flowType: FlowType, onImageGenerated?: (image
               'Content-Type': 'application/json',
               'apikey': supabase.supabaseAnonKey
             },
-            body: JSON.stringify({ 
-              prompt,
-              images: imageData
-            })
+            body: JSON.stringify(requestBody)
           });
 
           if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            const errorText = await response.text();
+            console.error('🚫 API Error Response:', errorText);
+            throw new Error(`HTTP ${response.status}: ${response.statusText}. Details: ${errorText}`);
           }
 
           const data = await response.json();
-          console.log('🔍 Function response:', data);
+          console.log('🔍 Function response:', {
+            success: data.success,
+            mode: data.mode,
+            model: data.metadata?.model,
+            uploadedImagesCount: data.uploadedImagesCount
+          });
 
-          // Handle different response formats for compatibility
+          // Handle the response from the new dual-mode Edge Function
           const imageUrl = data?.image || data?.imageUrl;
           
-          if (imageUrl) {
+          if (data.success && imageUrl) {
             console.log("🔍 API Response Image Analysis:");
             console.log("  - Image URL length:", imageUrl.length);
             console.log("  - Starts with data:", imageUrl.startsWith('data:'));
             console.log("  - First 100 chars:", imageUrl.substring(0, 100));
+            console.log("  - Generation mode:", data.mode);
+            console.log("  - Model used:", data.metadata?.model);
             
             // Validate base64 format if it's a data URL
             if (imageUrl.startsWith('data:image/')) {
@@ -184,7 +233,9 @@ export const useImageGeneration = (flowType: FlowType, onImageGenerated?: (image
             if (currentSessionId) {
               updateSession(currentSessionId, {
                 generatedImage: imageUrl,
-                currentPrompt: prompt
+                currentPrompt: prompt,
+                generationMode: data.mode,
+                modelUsed: data.metadata?.model
               });
               console.log("💾 Session updated with generated image");
             }
@@ -194,8 +245,11 @@ export const useImageGeneration = (flowType: FlowType, onImageGenerated?: (image
               onImageGenerated(imageUrl, prompt);
             }
 
-            // Show success feedback
-            toast.success('Image generated successfully!', {
+            // Show success feedback with mode-specific messaging
+            const modeText = data.mode === 'image-editing' ? 'Image enhanced' : 'Image generated';
+            const modelText = data.metadata?.model?.includes('gemini') ? '(Gemini)' : '(Imagen)';
+            
+            toast.success(`${modeText} successfully! ${modelText}`, {
               description: data?.metadata?.styleApplied || 'Your enhanced image is ready'
             });
             
@@ -203,7 +257,8 @@ export const useImageGeneration = (flowType: FlowType, onImageGenerated?: (image
             break;
           } else {
             console.warn("⚠️ No image in response data:", data);
-            throw new Error('Generated image URL not found in response');
+            const errorMsg = data.error || 'Generated image URL not found in response';
+            throw new Error(errorMsg);
           }
         } catch (networkError) {
           // Check if it's a network error that we should retry
@@ -228,6 +283,13 @@ export const useImageGeneration = (flowType: FlowType, onImageGenerated?: (image
       // Check if it's a retryable error and offer retry
       if (appError.retryable) {
         console.log('Retryable error encountered:', appError.code);
+      }
+
+      // Show error feedback with troubleshooting info
+      if (err.message?.includes('Gemini API')) {
+        toast.error('Image generation failed', {
+          description: 'Please check your API key and ensure you have access to Gemini 2.0 Flash Preview (paid tier required for image editing)'
+        });
       }
     } finally {
       setIsGenerating(false);

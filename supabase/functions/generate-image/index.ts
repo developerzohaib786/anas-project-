@@ -1,9 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
 };
 
 // Nino Style Guidelines - Built into the model
@@ -14,166 +13,242 @@ Summary of Nino Style: Nino's photography should feel like editorial luxury life
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, {
+      headers: corsHeaders
+    });
   }
 
   try {
     console.log('🎯 Nino Custom Model - Image generation request received');
-    
-    // Initialize Supabase client for auth
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
-    );
-
-    // Get user from JWT
-    const {
-      data: { user },
-    } = await supabaseClient.auth.getUser();
-
-    if (!user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized - Please login to generate images' }),
-        { 
-          status: 401, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-
-    const { prompt, aspect_ratio, images } = await req.json();
+    const { prompt, aspect_ratio, uploaded_images } = await req.json();
 
     if (!prompt || typeof prompt !== 'string') {
-      return new Response(JSON.stringify({ error: 'Missing or invalid prompt' }), {
+      return new Response(JSON.stringify({
+        error: 'Missing or invalid prompt'
+      }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Prepare content parts array - start with text prompt
-    const contentParts = [
-      { text: `${prompt}. Apply Nino aesthetic style with rich shadows, golden hour lighting, tactile textures, and editorial luxury mood.` }
-    ];
-
-    // Process reference images if provided
-    let referenceImageCount = 0;
-    if (images && Array.isArray(images) && images.length > 0) {
-      console.log(`Processing ${images.length} reference images`);
-      images.forEach((img: { data?: string; name?: string; type?: string }) => {
-        if (img.data) {
-          referenceImageCount++;
-          // Process the base64 image data for future use
-          const base64Data = img.data.includes(',') ? img.data.split(',')[1] : img.data;
-          console.log(`Processed reference image: ${img.name || 'unnamed'} (${base64Data.substring(0, 50)}...)`);
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
         }
       });
     }
 
-    // For now, we'll use curated images instead of external API
-    // TODO: Add actual image generation API when ready
-    console.log('Using curated Nino-style images for generation');
-
-    // Create enhanced prompt with Nino style guidelines
-    const enhancedPrompt = `${prompt}. 
-
-APPLY NINO AESTHETIC: Editorial luxury hotel photography style. ${NINO_SYSTEM_INSTRUCTIONS}
-
-Technical specifications:
-- Cinematic composition with rich shadows and golden warmth
-- Film-like grain texture, not digital noise
-- Deep blacks and strong highlights for bold contrast
-- Muted, earthy saturation - elegant and natural
-- Dutch angles and layered depth (foreground/midground/background)
-- Soft halation around light sources
-- Lifestyle moments, not posed portraits
-- Professional hotel marketing quality
-- High resolution, campaign-ready
-
-${referenceImageCount > 0 ? `Reference images provided: ${referenceImageCount} images for style analysis` : ''}`;
-
-    console.log('🎨 Generating image with enhanced Nino aesthetic prompt...');
-    console.log(`User: ${user.email} | Prompt: "${prompt}" | Reference Images: ${referenceImageCount}`);
-
-    // For now, return curated high-quality images that match Nino aesthetic
-    // TODO: Replace with actual image generation API (DALL-E, Midjourney, Stable Diffusion)
-    
-    const ninoStyleImages = [
-      'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200&h=800&fit=crop&crop=center&auto=format&q=80', // Luxury lobby with rich shadows
-      'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=1200&h=800&fit=crop&crop=center&auto=format&q=80', // Hotel room golden hour
-      'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=1200&h=800&fit=crop&crop=center&auto=format&q=80', // Pool with reflections
-      'https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=1200&h=800&fit=crop&crop=center&auto=format&q=80', // Restaurant ambiance
-      'https://images.unsplash.com/photo-1544148103-0773bf10d330?w=1200&h=800&fit=crop&crop=center&auto=format&q=80', // Spa serenity
-      'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=1200&h=800&fit=crop&crop=center&auto=format&q=80', // Beach resort
-      'https://images.unsplash.com/photo-1559508551-44bff1de756b?w=1200&h=800&fit=crop&crop=center&auto=format&q=80', // Hotel exterior
-      'https://images.unsplash.com/photo-1568084680786-a84f91d1153c?w=1200&h=800&fit=crop&crop=center&auto=format&q=80', // Luxury suite
-    ];
-
-    // Intelligent image selection based on prompt analysis
-    let selectedImageIndex = 0;
-    const promptLower = prompt.toLowerCase();
-    
-    if (promptLower.includes('pool') || promptLower.includes('swimming')) {
-      selectedImageIndex = 2;
-    } else if (promptLower.includes('room') || promptLower.includes('bedroom') || promptLower.includes('suite')) {
-      selectedImageIndex = Math.random() > 0.5 ? 1 : 7;
-    } else if (promptLower.includes('restaurant') || promptLower.includes('dining') || promptLower.includes('food')) {
-      selectedImageIndex = 3;
-    } else if (promptLower.includes('spa') || promptLower.includes('wellness') || promptLower.includes('massage')) {
-      selectedImageIndex = 4;
-    } else if (promptLower.includes('beach') || promptLower.includes('ocean') || promptLower.includes('seaside')) {
-      selectedImageIndex = 5;
-    } else if (promptLower.includes('lobby') || promptLower.includes('reception') || promptLower.includes('entrance')) {
-      selectedImageIndex = 0;
-    } else if (promptLower.includes('exterior') || promptLower.includes('building') || promptLower.includes('facade')) {
-      selectedImageIndex = 6;
-    } else {
-      selectedImageIndex = Math.floor(Math.random() * ninoStyleImages.length);
+    // Get Gemini API key
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+    if (!GEMINI_API_KEY) {
+      throw new Error('Gemini API key not found in environment variables. Please add GEMINI_API_KEY to your Supabase secrets.');
     }
 
-    const selectedImage = ninoStyleImages[selectedImageIndex];
+    // Determine if this is image editing or text-to-image generation
+    const hasUploadedImages = uploaded_images && uploaded_images.length > 0;
+    console.log(`📸 Processing ${hasUploadedImages ? 'image editing' : 'text-to-image generation'} request`);
 
-    // Simulate processing delay for realistic experience
-    await new Promise(resolve => setTimeout(resolve, 3000 + Math.random() * 2000));
+    let apiUrl, requestBody;
 
-    console.log('🎨 Nino-style image generated successfully');
+    if (hasUploadedImages) {
+      // IMAGE EDITING MODE - Use Gemini 2.0 Flash with image input
+      apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent';
+      
+      // Compose enhanced prompt with Nino style for image editing
+      const enhancedPrompt = `${prompt}.\n\n${NINO_SYSTEM_INSTRUCTIONS}\nStyle: Transform this image into editorial luxury hotel photography style with cinematic composition, rich shadows, golden hour lighting, film-like grain, high contrast, muted earthy tones, professional campaign quality. Maintain the core subject and composition while enhancing the aesthetic.`;
+
+      // Prepare content parts with uploaded images
+      const parts = [
+        { text: enhancedPrompt }
+      ];
+
+      // Add uploaded images to the request
+      uploaded_images.forEach((uploadedImage, index) => {
+        if (uploadedImage.data && uploadedImage.mimeType) {
+          // Extract base64 data (remove data:image/xxx;base64, prefix if present)
+          let base64Data = uploadedImage.data;
+          if (base64Data.startsWith('data:')) {
+            base64Data = base64Data.split(',')[1];
+          }
+
+          parts.push({
+            inline_data: {
+              mime_type: uploadedImage.mimeType,
+              data: base64Data
+            }
+          });
+        }
+      });
+
+      requestBody = {
+        contents: [{
+          parts: parts
+        }],
+        generationConfig: {
+          responseModalities: ['TEXT', 'IMAGE']
+        }
+      };
+
+    } else {
+      // TEXT-TO-IMAGE MODE - Use Imagen for pure text-to-image generation
+      apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-preview-06-06:predict';
+      
+      // Compose enhanced prompt with Nino style
+      const enhancedPrompt = `${prompt}.\n\n${NINO_SYSTEM_INSTRUCTIONS}\nStyle: Editorial luxury hotel photography, cinematic composition, rich shadows, golden hour lighting, film-like grain, high contrast, muted earthy tones, professional campaign quality.`;
+
+      requestBody = {
+        instances: [
+          {
+            prompt: enhancedPrompt
+          }
+        ],
+        parameters: {
+          sampleCount: 1,
+          aspectRatio: aspect_ratio || '1:1',
+          personGeneration: 'allow_adult'
+        }
+      };
+    }
+
+    console.log(`🎨 Calling ${hasUploadedImages ? 'Gemini API for image editing' : 'Imagen API for text-to-image generation'}...`);
+    console.log('Using API URL:', apiUrl);
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'x-goog-api-key': GEMINI_API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API Error Response:', errorText);
+      throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+    }
+
+    const result = await response.json();
+    console.log('API Response received');
+    console.log('Response structure:', JSON.stringify(result, null, 2));
+
+    // Extract image from response (different for Gemini vs Imagen)
+    let generatedImageUrl = null;
+    let responseText = null;
+    
+    if (hasUploadedImages) {
+      // GEMINI RESPONSE FORMAT (Image editing)
+      // The response structure is: { candidates: [{ content: { parts: [{ text: "...", inline_data: { mime_type: "...", data: "..." } }] } }] }
+      if (result.candidates && result.candidates.length > 0) {
+        const candidate = result.candidates[0];
+        if (candidate.content && candidate.content.parts) {
+          for (const part of candidate.content.parts) {
+            if (part.text) {
+              responseText = part.text;
+              console.log('📝 Gemini response text:', responseText);
+            }
+            if (part.inline_data && part.inline_data.data) {
+              const mimeType = part.inline_data.mime_type || 'image/png';
+              generatedImageUrl = `data:${mimeType};base64,${part.inline_data.data}`;
+              console.log('🖼️ Found image in Gemini response, length:', part.inline_data.data.length);
+              break;
+            }
+          }
+        }
+      }
+    } else {
+      // IMAGEN RESPONSE FORMAT (Text-to-image)
+      if (result.predictions && result.predictions[0]) {
+        const prediction = result.predictions[0];
+        if (prediction.bytesBase64Encoded) {
+          generatedImageUrl = `data:image/png;base64,${prediction.bytesBase64Encoded}`;
+          console.log('🖼️ Found image in Imagen response, length:', prediction.bytesBase64Encoded.length);
+        } else if (prediction.mimeType && prediction.bytesBase64Encoded) {
+          generatedImageUrl = `data:${prediction.mimeType};base64,${prediction.bytesBase64Encoded}`;
+          console.log('🖼️ Found image in Imagen response with custom mime type');
+        }
+      }
+    }
+
+    if (!generatedImageUrl) {
+      console.error('No image found in API response. Full response structure:');
+      console.error(JSON.stringify(result, null, 2));
+      
+      // Provide detailed debugging information
+      if (hasUploadedImages) {
+        console.error('Expected Gemini structure: candidates[0].content.parts[].inline_data.data');
+        if (result.candidates) {
+          console.error('Candidates found:', result.candidates.length);
+          if (result.candidates[0]?.content?.parts) {
+            console.error('Parts found:', result.candidates[0].content.parts.length);
+            result.candidates[0].content.parts.forEach((part, i) => {
+              console.error(`Part ${i}:`, Object.keys(part));
+            });
+          }
+        }
+      } else {
+        console.error('Expected Imagen structure: predictions[0].bytesBase64Encoded');
+        if (result.predictions) {
+          console.error('Predictions found:', result.predictions.length);
+          if (result.predictions[0]) {
+            console.error('Prediction keys:', Object.keys(result.predictions[0]));
+          }
+        }
+      }
+      
+      throw new Error(`No image generated from ${hasUploadedImages ? 'Gemini' : 'Imagen'} API - unexpected response structure`);
+    }
+
+    console.log(`✅ Image ${hasUploadedImages ? 'edited' : 'generated'} successfully`);
 
     return new Response(JSON.stringify({
       success: true,
-      image: selectedImage,
-      imageUrl: selectedImage, // For compatibility with frontend
+      image: generatedImageUrl,
+      imageUrl: generatedImageUrl,
       prompt: prompt,
-      enhancedPrompt: enhancedPrompt,
+      enhancedPrompt: hasUploadedImages ? 
+        `Image editing: ${prompt} with Nino aesthetic enhancement` : 
+        `Text-to-image: ${prompt} with Nino aesthetic`,
+      responseText: responseText, // Include any text response from Gemini
       style: 'Nino Aesthetic - Editorial Luxury',
-      aspectRatio: aspect_ratio || '16:9',
-      referenceImagesProcessed: referenceImageCount,
-      userId: user.id,
+      aspectRatio: aspect_ratio || '1:1',
+      mode: hasUploadedImages ? 'image-editing' : 'text-to-image',
+      uploadedImagesCount: uploaded_images ? uploaded_images.length : 0,
       metadata: {
         styleApplied: 'Cinematic hotel marketing with rich shadows and golden warmth',
         quality: 'Campaign-ready',
         aesthetic: 'Condé Nast Traveler meets Kinfolk magazine',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        generatedWith: hasUploadedImages ? 'Gemini 2.0 Flash (Image Editing)' : 'Imagen 4 (Text-to-Image)',
+        model: hasUploadedImages ? 'gemini-2.0-flash-preview-image-generation' : 'imagen-4.0-generate-preview-06-06',
+        apiResponseStructure: hasUploadedImages ? 'Gemini candidates format' : 'Imagen predictions format'
       }
     }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
     });
-  } catch (error: unknown) {
+
+  } catch (error) {
     console.error('💥 Generate-image error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unexpected error occurred';
     const errorStack = error instanceof Error ? error.stack : undefined;
     const errorName = error instanceof Error ? error.name : 'Unknown Error';
-    
-    return new Response(
-      JSON.stringify({ 
-        error: errorMessage,
-        stack: errorStack,
-        name: errorName 
-      }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+
+    return new Response(JSON.stringify({
+      error: errorMessage,
+      stack: errorStack,
+      name: errorName,
+      troubleshooting: {
+        checkApiKey: 'Ensure GEMINI_API_KEY is set in Supabase secrets',
+        checkModel: 'Ensure you have access to Gemini 2.0 Flash Preview (paid tier required)',
+        checkQuota: 'Verify your Google Cloud/Gemini API quota and billing',
+        checkImages: 'Ensure uploaded images are in supported formats (PNG, JPEG, WebP)',
+        debugTip: 'Check Supabase function logs for detailed API response structure'
+      }
+    }), {
+      status: 500,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
+    });
   }
 });
