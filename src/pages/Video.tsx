@@ -9,11 +9,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Video as VideoIcon } from "lucide-react";
 import { useChat } from "@/contexts/ChatContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { UploadedImage, VideoSize } from "@/types/common";
 import { useSmartSession } from "@/hooks/useSmartSession";
 import { imageGenerationRateLimiter } from "@/lib/rate-limiter";
 import { handleError } from "@/lib/error-handler";
 import { supabase } from "@/integrations/supabase/client";
+import CloudinaryBrowserService from "@/services/cloudinaryBrowserService";
 
 const Video = () => {
   const [searchParams] = useSearchParams();
@@ -27,7 +29,8 @@ const Video = () => {
   const [currentPrompt, setCurrentPrompt] = useState<string>();
   const [isInGenerationFlow, setIsInGenerationFlow] = useState(false);
   const [isPollingForVideo, setIsPollingForVideo] = useState(false);
-  const { currentSessionId, updateSession, sessions, createSession, setCurrentSession } = useChat();
+  const { currentSessionId, updateSession, sessions, createSession, setCurrentSession, saveMessage } = useChat();
+  const { user } = useAuth();
   const isRestoringFromSession = useRef(false);
   const hasRestoredFromSession = useRef(false);
 
@@ -198,6 +201,33 @@ const Video = () => {
           setGeneratedVideo(statusData.videoUrl);
           setIsPollingForVideo(false);
           
+          // Save assistant message with the generated video
+          if (currentSessionId && saveMessage) {
+            try {
+              console.log("💾 Saving assistant video response to session:", currentSessionId);
+              
+              const assistantMessage = {
+                id: `assistant-${Date.now()}`,
+                content: "I've generated your video! Here's the result:",
+                role: "assistant" as const,
+                timestamp: new Date(),
+                generatedVideo: statusData.videoUrl,
+                videoMetadata: {
+                  movement: movementDescription,
+                  sfx: sfxDescription,
+                  size: videoSize,
+                  isDemoVideo: false,
+                  demoMessage: null
+                }
+              };
+              
+              await saveMessage(currentSessionId, assistantMessage);
+              console.log("✅ Assistant video response saved successfully");
+            } catch (error) {
+              console.error("❌ Failed to save assistant video response:", error);
+            }
+          }
+          
           // Update session with the real video
           if (currentSessionId) {
             updateSession(currentSessionId, {
@@ -283,6 +313,80 @@ const Video = () => {
     
     const prompt = `${formatLabel} video: ${movementDescription}${sfxDescription ? ` with ${sfxDescription}` : ''}`;
     setCurrentPrompt(prompt);
+    
+    // Save user message to session before generation
+    if (currentSessionId && saveMessage) {
+      try {
+        console.log("💾 Saving user video request to session:", currentSessionId);
+        
+        // Process and upload images to Cloudinary storage first
+        const processedImages = [];
+        if (uploadedImages.length > 0) {
+          for (const img of uploadedImages) {
+            try {
+              let cloudinaryUrl = img.url;
+              let cloudinaryPath = '';
+              
+              // If it's a blob URL or data URL, upload it to Cloudinary storage
+              if (img.url.startsWith('blob:') || img.url.startsWith('data:')) {
+                console.log("📤 Uploading image to Cloudinary storage:", img.name);
+                
+                const uploadedMedia = img.url.startsWith('blob:') 
+                  ? await CloudinaryBrowserService.uploadFromBlobUrl(img.url, img.name, user)
+                  : await CloudinaryBrowserService.uploadFromDataUrl(img.url, img.name, user);
+                
+                cloudinaryUrl = uploadedMedia.publicUrl;
+                cloudinaryPath = uploadedMedia.publicId || '';
+                console.log("✅ Image uploaded to Cloudinary:", cloudinaryUrl);
+              }
+              
+              const processedImage = {
+                id: img.id,
+                name: img.name,
+                url: cloudinaryUrl,
+                size: img.size,
+                type: img.type,
+                is_generated: false,
+                cloudinaryPath: cloudinaryPath,
+                fileSize: img.size || 0
+              };
+              
+              processedImages.push(processedImage);
+            } catch (uploadError) {
+              console.error("❌ Failed to upload image:", uploadError);
+              // Use original URL as fallback
+              processedImages.push({
+                id: img.id,
+                name: img.name,
+                url: img.url,
+                size: img.size,
+                type: img.type,
+                is_generated: false,
+                cloudinaryPath: '',
+                fileSize: img.size || 0
+              });
+            }
+          }
+        }
+        
+        const userMessage = {
+          id: `user-${Date.now()}`,
+          content: `Generate video: ${prompt}`,
+          role: "user" as const,
+          timestamp: new Date(),
+          images: processedImages
+        };
+        
+        await saveMessage(currentSessionId, userMessage);
+        console.log("✅ User video request saved successfully");
+      } catch (error) {
+        console.error("❌ Failed to save user video request:", error);
+        // Continue with generation even if saving fails
+      }
+    } else {
+      console.log("⚠️ No session ID or saveMessage function available", { sessionId: currentSessionId, hasSaveMessage: !!saveMessage });
+    }
+    
     setIsInGenerationFlow(true);
     setIsGenerating(true);
     setGeneratedVideo(undefined);
