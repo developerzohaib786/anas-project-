@@ -130,10 +130,16 @@ export const useImageGeneration = (flowType: FlowType, onImageGenerated?: (image
       
       while (retryCount <= maxRetries) {
         try {
+          // Get the current session to use the user's JWT token
+          const { data: { session } } = await supabase.auth.getSession();
+          const authToken = session?.access_token || supabase.supabaseAnonKey;
+          
+          console.log('🔐 Using auth token:', authToken ? 'Present' : 'Missing');
+          
           const response = await fetch(`${supabase.supabaseUrl}/functions/v1/generate-image`, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${supabase.supabaseAnonKey}`,
+              'Authorization': `Bearer ${authToken}`,
               'Content-Type': 'application/json',
               'apikey': supabase.supabaseAnonKey
             },
