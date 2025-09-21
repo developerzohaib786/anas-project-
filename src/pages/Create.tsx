@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ChatInterface } from "@/components/ChatInterface";
 import { ImagePreview } from "@/components/ImagePreview";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
@@ -8,6 +9,8 @@ import { useImageGeneration } from "@/hooks/useImageGeneration";
 import { useSmartSession } from "@/hooks/useSmartSession";
 
 const Create = () => {
+  const [searchParams] = useSearchParams();
+  const sessionFromQuery = searchParams.get('session');
   const [isInGenerationFlow, setIsInGenerationFlow] = useState(false);
   const { currentSessionId, updateSession, sessions, createSession, setCurrentSession } = useChat();
   
@@ -36,14 +39,22 @@ const Create = () => {
     }
   };
 
+  // Handle session switching from URL parameters
+  useEffect(() => {
+    if (sessionFromQuery && sessionFromQuery !== currentSessionId) {
+      console.log('🔄 Create: Switching to session from URL:', sessionFromQuery);
+      setCurrentSession(sessionFromQuery);
+    }
+  }, [sessionFromQuery, currentSessionId, setCurrentSession]);
+
   // Create session if none exists
   useEffect(() => {
-    if (!currentSessionId) {
+    if (!currentSessionId && !sessionFromQuery) {
       console.log("🆕 No current session, creating new one for Create");
-      const newSessionId = createSession("Chat to Create");
+      const newSessionId = createSession("Chat to Create", 'create');
       setCurrentSession(newSessionId);
     }
-  }, [currentSessionId, createSession, setCurrentSession]);
+  }, [currentSessionId, sessionFromQuery, createSession, setCurrentSession]);
 
   // Restore image state when session changes
   useEffect(() => {

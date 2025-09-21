@@ -9,7 +9,7 @@ export type { ChatSession, ChatMessage } from '@/services/chatHistoryService';
 interface ChatContextType {
   sessions: ChatSession[];
   currentSessionId: string | null;
-  createSession: (title?: string) => Promise<string>;
+  createSession: (title?: string, session_type?: 'chat' | 'enhance' | 'video' | 'create') => Promise<string>;
   updateSession: (sessionId: string, updates: Partial<ChatSession>) => void;
   deleteSession: (sessionId: string) => Promise<void>;
   renameSession: (sessionId: string, newTitle: string) => Promise<void>;
@@ -118,8 +118,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, [user?.id, loadSessions, currentUserId, isLoading]); // Add dependencies to ensure proper triggering
 
   // Create a new session
-  const createSession = async (title?: string): Promise<string> => {
+  const createSession = async (title?: string, session_type?: 'chat' | 'enhance' | 'video' | 'create'): Promise<string> => {
     try {
+      const sessionType = session_type || 'chat'; // Default to 'chat' if not provided
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       
@@ -134,8 +135,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          title: title || 'New Chat',
-          session_type: 'chat',
+          title: title || `New ${sessionType.charAt(0).toUpperCase() + sessionType.slice(1)} Session`,
+          session_type: sessionType,
           session_metadata: {}
         })
       });
@@ -394,13 +395,41 @@ export function ChatProvider({ children }: { children: ReactNode }) {
                   content: msg.content,
                   role: msg.role, // Use role field from database (user/assistant)
                   timestamp: new Date(msg.created_at || msg.timestamp),
-                  // Extract images from metadata.images array (new structure)
-                  images: msg.metadata?.images?.map(img => ({
-                    id: img.id,
-                    url: img.url,
-                    name: img.name || 'image',
-                    alt: img.name || 'image'
-                  })) || 
+                  // Extract images from metadata - check ALL possible locations and combine them
+                  images: (() => {
+                    let allImages = [];
+                    
+                    // Check all possible image locations and combine them
+                    const imageSources = [
+                      msg.metadata?.images,
+                      msg.metadata?.input_images,
+                      msg.metadata?.generated_images,
+                      msg.input_images, // Direct property from API
+                      msg.generated_images, // Direct property from API
+                      msg.processed_metadata?.input_images, // Processed metadata
+                      msg.processed_metadata?.generated_images,
+                      msg.processed_metadata?.images
+                    ];
+                    
+                    // Combine all image arrays, filtering out null/undefined
+                    imageSources.forEach(imageArray => {
+                      if (Array.isArray(imageArray)) {
+                        allImages = allImages.concat(imageArray);
+                      }
+                    });
+                    
+                    // Remove duplicates based on URL or ID
+                    const uniqueImages = allImages.filter((img, index, self) => 
+                      index === self.findIndex(i => i.url === img.url || (i.id && img.id && i.id === img.id))
+                    );
+                    
+                    return uniqueImages.map(img => ({
+                      id: img.id,
+                      url: img.url,
+                      name: img.name || 'image',
+                      alt: img.name || 'image'
+                    }));
+                  })() || 
                   // Fallback to chat_attachments for backward compatibility
                   msg.chat_attachments?.filter(att => att.file_type?.startsWith('image/'))?.map(att => {
                     // Use public_url or cloudinary_url from API response first

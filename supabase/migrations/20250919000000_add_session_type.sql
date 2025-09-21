@@ -3,7 +3,7 @@
 
 ALTER TABLE public.chat_sessions 
 ADD COLUMN IF NOT EXISTS session_type TEXT NOT NULL DEFAULT 'chat' 
-CHECK (session_type IN ('chat', 'enhance', 'video'));
+CHECK (session_type IN ('chat', 'enhance', 'video', 'create'));
 
 -- Create index for better performance when filtering by session type
 CREATE INDEX IF NOT EXISTS idx_chat_sessions_session_type ON public.chat_sessions(session_type);

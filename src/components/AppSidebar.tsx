@@ -104,7 +104,7 @@ export function AppSidebar() {
     }
     
     // Only create new session if current one has content
-    const newSessionId = createSession("New Chat");
+    const newSessionId = createSession("New Chat", 'chat');
     setCurrentSession(newSessionId);
     navigate(`/chat/${newSessionId}`);
   };
@@ -163,8 +163,16 @@ export function AppSidebar() {
                     <NavLink
                       to={item.url}
                       onClick={async () => {
-                        // Create a new session when navigating to main pages
-                        const newSessionId = await createSession(item.title);
+                        // Create a new session when navigating to main pages with correct session type
+                        let sessionType: 'chat' | 'enhance' | 'video' | 'create' = 'chat';
+                        if (item.url === '/') {
+                          sessionType = 'enhance';
+                        } else if (item.url === '/create') {
+                          sessionType = 'create';
+                        } else if (item.url === '/video') {
+                          sessionType = 'video';
+                        }
+                        const newSessionId = await createSession(item.title, sessionType);
                         setCurrentSession(newSessionId);
                       }}
                       className={({ isActive }) =>
@@ -213,7 +221,20 @@ export function AppSidebar() {
                     <SidebarMenuItem key={session.id}>
                       <div className="group relative">
                         <NavLink
-                          to={`/chat/${session.id}`}
+                          to={(() => {
+                            // Navigate to the correct route based on session type
+                            switch (session.session_type) {
+                              case 'enhance':
+                                return `/?session=${session.id}`;
+                              case 'create':
+                                return `/create?session=${session.id}`;
+                              case 'video':
+                                return `/video?session=${session.id}`;
+                              case 'chat':
+                              default:
+                                return `/chat/${session.id}`;
+                            }
+                          })()}
                           className={() => {
                             const isCurrentSession = currentSessionId === session.id;
                             return `flex items-center px-3 py-2 rounded-lg transition-all duration-200 text-sm w-full text-foreground hover:bg-accent hover:text-accent-foreground ${
@@ -223,6 +244,13 @@ export function AppSidebar() {
                           title={session.title}
                         >
                           <div className="flex items-center min-w-0 flex-1 gap-3">
+                            {/* Session type icon */}
+                            <div className="flex-shrink-0 text-xs">
+                              {session.session_type === 'enhance' && '✨'}
+                              {session.session_type === 'create' && '🎨'}
+                              {session.session_type === 'video' && '🎥'}
+                              {session.session_type === 'chat' && '💬'}
+                            </div>
                             {thumbnailImage && (
                               <div className="w-8 h-8 rounded-md overflow-hidden flex-shrink-0 bg-muted">
                                 <img 

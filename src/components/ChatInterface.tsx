@@ -242,7 +242,7 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
         // This prevents creating sessions when we navigate to home after deleting
         const currentPath = window.location.pathname;
         if (currentPath.startsWith('/chat') && currentPath === '/chat') {
-          const newSessionId = await createSession();
+          const newSessionId = await createSession("New Chat", 'chat');
           window.history.replaceState(null, '', `/chat/${newSessionId}`);
         }
       }
@@ -680,6 +680,26 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
                 }
               }
               
+              // Upload the generated image to Cloudinary before saving
+              let cloudinaryImageUrl = finalImageUrl;
+              let cloudinaryPath = '';
+              
+              try {
+                console.log("📤 Uploading generated image to Cloudinary...");
+                const imageName = `generated-image-${Date.now()}.png`;
+                const uploadedMedia = await CloudinaryBrowserService.uploadFromUrl(finalImageUrl, imageName, user);
+                
+                if (uploadedMedia.success && uploadedMedia.url) {
+                  cloudinaryImageUrl = uploadedMedia.url;
+                  cloudinaryPath = uploadedMedia.path || '';
+                  console.log("✅ Generated image uploaded to Cloudinary:", cloudinaryImageUrl);
+                } else {
+                  console.warn("⚠️ Failed to upload to Cloudinary, using original URL:", uploadedMedia.error);
+                }
+              } catch (error) {
+                console.error("❌ Error uploading generated image to Cloudinary:", error);
+              }
+
               const imageMessage: Message = {
                 id: (Date.now() + 2).toString(),
                 content: "Here's your generated image:",
@@ -688,10 +708,11 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
                 images: [{
                   id: `generated-${Date.now()}`,
                   name: `generated-image-${Date.now()}.png`,
-                  url: finalImageUrl,
+                  url: cloudinaryImageUrl,
                   size: 0,
                   type: 'image/png',
-                  is_generated: true
+                  is_generated: true,
+                  cloudinaryPath: cloudinaryPath
                 }]
               };
               

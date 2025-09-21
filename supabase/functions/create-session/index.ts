@@ -8,7 +8,7 @@ const corsHeaders = {
 
 interface CreateSessionRequest {
   title?: string;
-  session_type?: 'chat' | 'enhance' | 'video';
+  session_type?: 'chat' | 'enhance' | 'video' | 'create';
   session_metadata?: Record<string, any>;
 }
 

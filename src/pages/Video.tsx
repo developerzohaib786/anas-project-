@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ImageUpload } from "@/components/ImageUpload";
 import { VideoPreview } from "@/components/VideoPreview";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
@@ -15,6 +16,8 @@ import { handleError } from "@/lib/error-handler";
 import { supabase } from "@/integrations/supabase/client";
 
 const Video = () => {
+  const [searchParams] = useSearchParams();
+  const sessionFromQuery = searchParams.get('session');
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
   const [videoSize, setVideoSize] = useState<VideoSize>('horizontal');
   const [movementDescription, setMovementDescription] = useState<string>("");
@@ -94,9 +97,17 @@ const Video = () => {
     () => !!currentPrompt
   ]);
 
+  // Handle session switching from URL parameters
+  useEffect(() => {
+    if (sessionFromQuery && sessionFromQuery !== currentSessionId) {
+      console.log('🔄 Video: Switching to session from URL:', sessionFromQuery);
+      setCurrentSession(sessionFromQuery);
+    }
+  }, [sessionFromQuery, currentSessionId, setCurrentSession]);
+
   // Create session if none exists
   useEffect(() => {
-    if (!currentSessionId && !isInGenerationFlow && !isRestoringFromSession.current) {
+    if (!currentSessionId && !sessionFromQuery && !isInGenerationFlow && !isRestoringFromSession.current) {
       console.log('🆕 No session found, creating new video session');
       
       // Clear any existing state first
@@ -121,7 +132,7 @@ const Video = () => {
         console.log('🎬 Video session created:', result.sessionId);
       }
     }
-  }, [currentSessionId, isInGenerationFlow, startNewSession]);
+  }, [currentSessionId, sessionFromQuery, isInGenerationFlow, startNewSession]);
 
   // Convert uploaded image to base64
   const convertImageToBase64 = async (image: UploadedImage): Promise<string> => {

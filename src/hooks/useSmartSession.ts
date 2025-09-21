@@ -68,7 +68,7 @@ export const useSmartSession = (flowType: FlowType, contentDetectors: ContentDet
       return { type: 'cleared' as const };
     } else {
       // Current session has content, create a new one
-      const newSessionId = createSession(FLOW_SESSION_TITLES[flowType]);
+      const newSessionId = createSession(FLOW_SESSION_TITLES[flowType], flowType);
       setCurrentSession(newSessionId);
       clearStateCallback();
       toast.success(FLOW_MESSAGES[flowType].newSession);

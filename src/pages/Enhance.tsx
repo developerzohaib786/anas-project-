@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ChatInterface } from "@/components/ChatInterface";
 import { ImagePreview } from "@/components/ImagePreview";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
@@ -8,6 +9,8 @@ import { useImageGeneration } from "@/hooks/useImageGeneration";
 import { useSmartSession } from "@/hooks/useSmartSession";
 
 const Enhance = () => {
+  const [searchParams] = useSearchParams();
+  const sessionFromQuery = searchParams.get('session');
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
   const [hasAutoPrompted, setHasAutoPrompted] = useState(false);
   const [isInGenerationFlow, setIsInGenerationFlow] = useState(false);
@@ -35,14 +38,22 @@ const Enhance = () => {
     }
   }, [generateImage, uploadedImages]);
 
+  // Handle session switching from URL parameters
+  useEffect(() => {
+    if (sessionFromQuery && sessionFromQuery !== currentSessionId) {
+      console.log('🔄 Enhance: Switching to session from URL:', sessionFromQuery);
+      setCurrentSession(sessionFromQuery);
+    }
+  }, [sessionFromQuery, currentSessionId, setCurrentSession]);
+
   // Create session if none exists
   useEffect(() => {
-    if (!currentSessionId) {
+    if (!currentSessionId && !sessionFromQuery) {
       console.log("🆕 No current session, creating new one for Enhance");
-      const newSessionId = createSession("Enhance Photo");
+      const newSessionId = createSession("Enhance Photo", 'enhance');
       setCurrentSession(newSessionId);
     }
-  }, [currentSessionId, createSession, setCurrentSession]);
+  }, [currentSessionId, sessionFromQuery, createSession, setCurrentSession]);
 
   // Restore complete state when session changes - only once per session
   useEffect(() => {
@@ -62,13 +73,46 @@ const Enhance = () => {
           setCurrentPrompt(session.currentPrompt);
         }
         
-        // Restore uploaded images
+        // Restore uploaded images from session data
         if (session.uploadedImages && session.uploadedImages.length > 0) {
           setUploadedImages(session.uploadedImages);
           setHasAutoPrompted(true); // If images were uploaded before, we've already prompted
-        } else if (uploadedImages.length === 0) {
-          // Only clear images if there are no current uploaded images
-          setHasAutoPrompted(false);
+        } else {
+          // Extract input images from loaded session messages
+          const inputImagesFromMessages: UploadedImage[] = [];
+          
+          if (session.messages && session.messages.length > 0) {
+            session.messages.forEach(message => {
+              // Check for input_images in message metadata or processed_metadata
+              const inputImages = message.input_images || 
+                                message.metadata?.input_images || 
+                                message.processed_metadata?.input_images;
+              
+              if (inputImages && Array.isArray(inputImages)) {
+                inputImages.forEach(img => {
+                  // Convert to UploadedImage format
+                  const uploadedImage: UploadedImage = {
+                    id: img.id || `loaded-${Date.now()}-${Math.random()}`,
+                    url: img.url,
+                    name: img.name || 'image.jpg',
+                    fileSize: img.fileSize || 0,
+                    is_generated: img.is_generated || false,
+                    cloudinaryPath: img.cloudinaryPath || ''
+                  };
+                  inputImagesFromMessages.push(uploadedImage);
+                });
+              }
+            });
+          }
+          
+          if (inputImagesFromMessages.length > 0) {
+            console.log('🖼️ Found input images from messages:', inputImagesFromMessages.length);
+            setUploadedImages(inputImagesFromMessages);
+            setHasAutoPrompted(true);
+          } else if (uploadedImages.length === 0) {
+            // Only clear images if there are no current uploaded images
+            setHasAutoPrompted(false);
+          }
         }
         
         setStateRestored(true);
