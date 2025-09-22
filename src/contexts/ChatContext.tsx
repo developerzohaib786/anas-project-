@@ -263,16 +263,26 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         throw new Error('No access token available');
       }
 
+      // Prepare the update payload with all relevant fields
+      const updatePayload: any = {
+        session_id: sessionId,
+      };
+
+      // Include all fields that should be persisted
+      if (updates.title !== undefined) updatePayload.title = updates.title;
+      if (updates.generatedImage !== undefined) updatePayload.generated_image = updates.generatedImage;
+      if (updates.currentPrompt !== undefined) updatePayload.current_prompt = updates.currentPrompt;
+      if (updates.uploadedImages !== undefined) updatePayload.uploaded_images = updates.uploadedImages;
+      if (updates.inputValue !== undefined) updatePayload.input_value = updates.inputValue;
+      if (updates.isCompleted !== undefined) updatePayload.is_completed = updates.isCompleted;
+
       const response = await fetch('https://pbndydilyqxqmcxwadvy.supabase.co/functions/v1/update-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          session_id: sessionId,
-          title: updates.title
-        })
+        body: JSON.stringify(updatePayload)
       });
 
       if (!response.ok) {

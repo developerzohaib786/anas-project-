@@ -180,13 +180,14 @@ export const useImageGeneration = (flowType: FlowType, onImageGenerated?: (image
             setGeneratedImage(imageUrl);
             console.log("✅ Image URL set in state");
             
-            // Update session IMMEDIATELY after setting the image
-            if (currentSessionId) {
+            // Save to session immediately after generation
+            if (currentSessionId && updateSession) {
+              console.log('💾 Saving generated image to session:', currentSessionId);
               updateSession(currentSessionId, {
                 generatedImage: imageUrl,
-                currentPrompt: prompt
+                currentPrompt: prompt,
+                isCompleted: true
               });
-              console.log("💾 Session updated with generated image");
             }
 
             // Notify parent component about image generation completion

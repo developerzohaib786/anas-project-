@@ -10,6 +10,11 @@ const corsHeaders = {
 interface UpdateSessionRequest {
   session_id: string
   title?: string
+  generated_image?: string
+  current_prompt?: string
+  uploaded_images?: any[]
+  input_value?: string
+  is_completed?: boolean
 }
 
 serve(async (req) => {
@@ -46,7 +51,15 @@ serve(async (req) => {
     }
 
     // Parse request body
-    const { session_id, title }: UpdateSessionRequest = await req.json()
+    const { 
+      session_id, 
+      title, 
+      generated_image, 
+      current_prompt, 
+      uploaded_images, 
+      input_value, 
+      is_completed 
+    }: UpdateSessionRequest = await req.json()
 
     if (!session_id) {
       return new Response(
@@ -93,6 +106,26 @@ serve(async (req) => {
 
     if (title !== undefined) {
       updateData.title = title.trim()
+    }
+    
+    if (generated_image !== undefined) {
+      updateData.generated_image = generated_image
+    }
+    
+    if (current_prompt !== undefined) {
+      updateData.current_prompt = current_prompt
+    }
+    
+    if (uploaded_images !== undefined) {
+      updateData.uploaded_images = uploaded_images
+    }
+    
+    if (input_value !== undefined) {
+      updateData.input_value = input_value
+    }
+    
+    if (is_completed !== undefined) {
+      updateData.is_completed = is_completed
     }
 
     // Update the session
