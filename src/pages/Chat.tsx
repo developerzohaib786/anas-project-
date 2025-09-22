@@ -35,7 +35,7 @@ const Chat = () => {
   useEffect(() => {
     const targetSessionId = sessionFromQuery || urlSessionId;
     if (targetSessionId && targetSessionId !== currentSessionId) {
-      console.log('🔄 Chat: Switching to session from URL:', targetSessionId);
+      // console.log('🔄 Chat: Switching to session from URL:', targetSessionId);
       setCurrentSession(targetSessionId);
     }
   }, [sessionFromQuery, urlSessionId, currentSessionId, setCurrentSession]);

@@ -138,7 +138,7 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
   // Load session data when sessionId changes
   useEffect(() => {
     const loadSessionData = async () => {
-      console.log("🔄 ChatInterface loading session data:", { sessionId, currentSessionId, sessionsCount: sessions.length });
+      // console.log("🔄 ChatInterface loading session data:", { sessionId, currentSessionId, sessionsCount: sessions.length });
       
       if (sessionId && !loadedSessions.has(sessionId) && !isLoadingMessages) {
         const session = sessions.find(s => s.id === sessionId);
@@ -784,12 +784,12 @@ export function ChatInterface({ onGenerateImage, initialPrompt, showImageUpload 
                       {message.images && message.images.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-3">
                           {message.images.map((img) => {
-                            console.log('Rendering image:', {
-                              id: img.id,
-                              url: img.url,
-                              name: img.name,
-                              alt: img.alt
-                            });
+                            // console.log('Rendering image:', {
+                            //   id: img.id,
+                            //   url: img.url,
+                            //   name: img.name,
+                            //   alt: img.alt
+                            // });
                             return (
                               <div key={img.id} className="relative">
                                 <img

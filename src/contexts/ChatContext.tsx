@@ -339,8 +339,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         throw new Error('No access token available');
       }
 
-      console.log('🔍 Loading messages for session:', sessionId);
-      console.log('📡 Making API call to get-session-messages...');
+      // console.log('🔍 Loading messages for session:', sessionId);
+      // console.log('📡 Making API call to get-session-messages...');
       const response = await fetch(`https://pbndydilyqxqmcxwadvy.supabase.co/functions/v1/get-session-messages?session_id=${sessionId}`, {
         method: 'GET',
         headers: {
@@ -348,7 +348,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         }
       });
 
-      console.log('📊 get-session-messages API Response status:', response.status, response.statusText);
+      // console.log('📊 get-session-messages API Response status:', response.status, response.statusText);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -361,7 +361,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       
       // The API returns { success: true, session: {...}, messages: [...] }
       const messages = data.messages || [];
-      console.log('✅ Loaded messages count:', messages.length);
+      // console.log('✅ Loaded messages count:', messages.length);
       return messages;
     } catch (error) {
       console.error('❌ Error loading session messages:', error);
@@ -376,15 +376,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     // If switching to a session, always try to load its messages
     if (sessionId) {
       const session = sessions.find(s => s.id === sessionId);
-      console.log('🔄 Switching to session:', sessionId, 'Found session:', !!session, 'Current messages count:', session?.messages?.length || 0);
+      // console.log('🔄 Switching to session:', sessionId, 'Found session:', !!session, 'Current messages count:', session?.messages?.length || 0);
       
       // Always load messages for the session, regardless of current message count
       // This ensures we get the latest messages from the server
       if (session) {
         try {
-          console.log("📡 Loading messages for session:", sessionId);
+          // console.log("📡 Loading messages for session:", sessionId);
           const messages = await loadSessionMessages(sessionId);
-          console.log("✅ Loaded messages:", messages.length);
+          // console.log("✅ Loaded messages:", messages.length);
           
           // Update the session with loaded messages
           setSessions(prev => prev.map(s => 
